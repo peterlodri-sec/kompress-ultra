@@ -5,6 +5,41 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [11.0.0] — 2026-06-29 — grpc-synapse
+
+### Added
+- `proto/brain.proto` — Protobuf schema for BrainService: Node, Edge, BrainSnapshot types, CRUD methods, streaming, graph querying, traversal recording. Compatible with Connect-Web protocol.
+- `server/brain-grpc.ts` — gRPC-compatible Brain Graph API handler for Cloudflare Workers. Full REST → Protobuf bridge with:
+  - Node CRUD (`GET /v1/brain/node/:id`, `GET /v1/brain/nodes`)
+  - Edge CRUD (`GET /v1/brain/edge/:id`, `GET /v1/brain/edges`)
+  - Semantic graph querying (`POST /v1/brain/query`)
+  - Traversal recording with DIAD conductivity learning (`POST /v1/brain/traverse`)
+  - Deterministic snapshots (`GET /v1/brain/snapshot`)
+  - SSE edge streaming (`GET /v1/brain/stream`)
+  - Brain health check (`GET /v1/brain/health`)
+- `proto/buf.gen.yaml` — Buf code generation config
+- `src/types.ts` — Added `Node`, `Edge`, `BrainSnapshot` interfaces matching proto schema
+
+### Changed
+- Bumped `package.json` version → `11.0.0`
+- Bumped Worker `VERSION` → `11.0.0`
+- `server/worker.ts` — Wired brain routes (`/v1/brain/*` → `handleBrainRequest`). Added brain-grpc import.
+- `wrangler.toml` — VERSION var updated to 11.0.0
+
+### Brain API Endpoints
+```
+GET    /v1/brain/health          — brain service health
+GET    /v1/brain/node/:id        — get node by ID
+GET    /v1/brain/nodes           — list nodes (filterable)
+GET    /v1/brain/edge/:id        — get edge by ID
+GET    /v1/brain/edges           — list edges (filterable)
+POST   /v1/brain/query           — semantic graph query
+POST   /v1/brain/traverse        — record traversal + learn conductivity
+GET    /v1/brain/snapshot        — deterministic brain snapshot
+GET    /v1/brain/stream          — SSE edge event stream
+POST   /v1/brain/load            — load brain graph JSON
+```
+
 ## [10.0.0] — 2026-06-29 — edge-mesh
 
 ### Added

@@ -1,0 +1,145 @@
+syntax = "proto3";
+
+package kompress.v1;
+
+option go_package = "github.com/peterlodri-sec/kompress-ultra/proto;kompressv1";
+
+// ── Core Types ─────────────────────────────────────────────────────────
+
+message Node {
+  string id = 1;
+  string label = 2;
+  string type = 3;          // component, agent, data, infra
+  string layer = 4;         // temporal layer: -1, 0, +1
+  map<string, string> metadata = 5;
+  double score = 6;          // 0.0 – 1.0
+  int64 created_at_ms = 7;
+  int64 last_active_ms = 8;
+  string state = 9;          // alive, stale, dormant
+}
+
+message Edge {
+  string id = 1;
+  string source = 2;
+  string target = 3;
+  string type = 4;           // feeds, controls, depends, reflects, spawns
+  string label = 5;
+  double weight = 6;         // 0.0 – 1.0
+  double conductivity = 7;   // learned: past success rate
+  string direction = 8;      // forward, backward, bidirectional
+  int64 created_at_ms = 9;
+  int64 last_traversed_ms = 10;
+}
+
+message BrainSnapshot {
+  string version = 1;
+  string schema = 2;
+  repeated Node nodes = 3;
+  repeated Edge edges = 4;
+  map<string, string> meta = 5;
+  string checksum_sha256 = 6;
+  int64 taken_at_ms = 7;
+}
+
+// ── Request / Response ────────────────────────────────────────────────
+
+message GetNodeRequest {
+  string id = 1;
+}
+
+message GetNodeResponse {
+  Node node = 1;
+}
+
+message ListNodesRequest {
+  string layer = 1;         // filter by layer
+  string type = 2;          // filter by type
+  string state = 3;         // filter by state
+  int32 page_size = 10;
+  string page_token = 11;
+}
+
+message ListNodesResponse {
+  repeated Node nodes = 1;
+  string next_page_token = 2;
+  int32 total_count = 3;
+}
+
+message GetEdgeRequest {
+  string id = 1;
+}
+
+message GetEdgeResponse {
+  Edge edge = 1;
+}
+
+message ListEdgesRequest {
+  string source = 1;
+  string target = 2;
+  string type = 3;
+  int32 page_size = 10;
+  string page_token = 11;
+}
+
+message ListEdgesResponse {
+  repeated Edge edges = 1;
+  string next_page_token = 2;
+  int32 total_count = 3;
+}
+
+message QueryGraphRequest {
+  string query = 1;          // natural language query
+  int32 max_results = 2;
+  map<string, string> filters = 3;
+}
+
+message QueryGraphResponse {
+  repeated Node nodes = 1;
+  repeated Edge edges = 2;
+  double query_time_ms = 3;
+}
+
+message GetSnapshotRequest {}
+message GetSnapshotResponse {
+  BrainSnapshot snapshot = 1;
+}
+
+message StreamEdgesRequest {
+  string type_filter = 1;    // optional: filter by edge type
+}
+
+message StreamEdgesResponse {
+  Edge edge = 1;
+  string event = 2;          // created, updated, deleted, traversed
+}
+
+message RecordTraversalRequest {
+  string edge_id = 1;
+  bool success = 2;
+  double duration_ms = 3;
+}
+
+message RecordTraversalResponse {
+  bool ok = 1;
+  double updated_conductivity = 2;
+}
+
+// ── Service ────────────────────────────────────────────────────────────
+
+service BrainService {
+  // Node operations
+  rpc GetNode(GetNodeRequest) returns (GetNodeResponse);
+  rpc ListNodes(ListNodesRequest) returns (ListNodesResponse);
+
+  // Edge operations
+  rpc GetEdge(GetEdgeRequest) returns (GetEdgeResponse);
+  rpc ListEdges(ListEdgesRequest) returns (ListEdgesResponse);
+  rpc RecordTraversal(RecordTraversalRequest) returns (RecordTraversalResponse);
+
+  // Graph operations
+  rpc QueryGraph(QueryGraphRequest) returns (QueryGraphResponse);
+  rpc GetSnapshot(GetSnapshotRequest) returns (GetSnapshotResponse);
+
+  // Streaming
+  rpc StreamEdges(StreamEdgesRequest) returns (stream StreamEdgesResponse);
+}

@@ -35,8 +35,9 @@ import {
 } from "../src/index.js";
 import type { Message, AgentType } from "../src/types.js";
 import { recordTelemetry, readDailyStats, telemetryDisclosure } from "./telemetry.js";
+import { handleBrainRequest, loadBrain } from "./brain-grpc.js";
 
-const VERSION = "10.0.0";
+const VERSION = "11.0.0";
 const TELEMETRY_HEADER = "X-Telemetry";
 const TELEMETRY_URL = "https://github.com/peterlodri-sec/kompress-ultra/blob/main/TELEMETRY.md";
 
@@ -797,6 +798,11 @@ export default {
     if (url.pathname === "/v1/budget" && request.method === "GET") {
       const type = (url.searchParams.get("type") ?? "coder") as AgentType;
       return json(getBudget(type));
+    }
+
+    // Brain graph API (v11.0.0 grpc-synapse)
+    if (url.pathname.startsWith("/v1/brain/")) {
+      return handleBrainRequest(request);
     }
 
     return handleRoot(request);

@@ -138,3 +138,40 @@ export interface ScoredMessage {
   score: MessageScore;
   tokens: number;
 }
+
+// ── Brain Graph Types (v11.0.0 grpc-synapse) ─────────────────────────
+
+export interface Node {
+  id: string;
+  label: string;
+  type: string;
+  layer: string;
+  metadata: Record<string, string>;
+  score: number;
+  createdAtMs: number;
+  lastActiveMs: number;
+  state: string;
+}
+
+export interface Edge {
+  id: string;
+  source: string;
+  target: string;
+  type: string;
+  label: string;
+  weight: number;
+  conductivity: number;
+  direction: string;
+  createdAtMs: number;
+  lastTraversedMs: number;
+}
+
+export interface BrainSnapshot {
+  version: string;
+  schema: string;
+  nodes: Node[];
+  edges: Edge[];
+  meta: Record<string, string>;
+  checksumSha256: string;
+  takenAtMs: number;
+}
