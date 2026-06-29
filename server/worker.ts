@@ -36,7 +36,7 @@ import {
 import type { Message, AgentType } from "../src/types.js";
 import { recordTelemetry, readDailyStats, telemetryDisclosure } from "./telemetry.js";
 
-const VERSION = "4.0.0";
+const VERSION = "5.0.0";
 const TELEMETRY_HEADER = "X-Telemetry";
 const TELEMETRY_URL = "https://github.com/peterlodri-sec/kompress-ultra/blob/main/TELEMETRY.md";
 
@@ -44,7 +44,9 @@ interface Env {
   DB?: D1Database;
   VECTORIZE?: VectorizeIndex;
   KOMPRESS_STATS?: KVNamespace;
+  STATS_DO?: DurableObjectNamespace;
   AUTH_TOKEN?: string;
+  REGION?: string;
 }
 
 function requireAuth(request: Request, env: Env): boolean {
@@ -731,15 +733,15 @@ const compressed = compressMessage(text, CompressionLevel.Ultra);</pre>
   });
 }
 
-function json(data: unknown, status = 200): Response {
-  return new Response(JSON.stringify(data), {
-    status,
-    headers: {
-      "Content-Type": "application/json",
-      "Access-Control-Allow-Origin": "*",
-      [TELEMETRY_HEADER]: TELEMETRY_URL,
-    },
-  });
+function json(data: unknown, status = 200, extraHeaders?: Record<string, string>): Response {
+  const headers: Record<string, string> = {
+    "Content-Type": "application/json",
+    "Access-Control-Allow-Origin": "*",
+    [TELEMETRY_HEADER]: TELEMETRY_URL,
+    "X-Version": VERSION,
+    ...extraHeaders,
+  };
+  return new Response(JSON.stringify(data), { status, headers });
 }
 
 const corsHeaders = {

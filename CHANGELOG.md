@@ -5,6 +5,30 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [5.0.0] — 2026-06-29 — triple-crown
+
+### Added
+- `server/stats-do.ts` — `StatsDO` Durable Object for cross-region compression statistics coordination. Merges stats from US/EU/Asia regions.
+- `scripts/deploy-worker.sh` — Multi-region Worker deployment: `us`, `eu`, `asia`, or `--all`. Region-specific routes and env configs.
+- `scripts/fleet-optimize.sh` — Hetzner fleet optimization: cost tracking labels, orphan detection, firewall audit, backup policy, consolidation recommendations.
+- `docs/deploy/fleet-inventory.md` — Complete Hetzner fleet inventory: 10 machines, costs, services, optimization roadmap.
+
+### Changed
+- Bumped `package.json` version → `5.0.0`
+- Bumped Worker `VERSION` → `5.0.0`
+- `wrangler.toml` — Added `STATS_DO` Durable Object binding + migrations. Added `REGION` var. Three env sections (us/eu/asia) with region-specific routes.
+- `server/worker.ts` — Added `STATS_DO` + `REGION` to Env interface. `json()` helper now supports extra headers. Responses include `X-Region` and `X-Country` headers. Geo-awareness via `request.cf?.country`.
+
+### Infrastructure (Hetzner Fleet)
+- All 10 Hetzner machines labeled with `purpose`, `owner`, `managed-by` for cost tracking
+- **3 orphan Ubuntu instances detected** (no SSH keys, no labels, created 2026-06-16):
+  - `ubuntu-4gb-hil-1` (€7.5/mo) — Hillsboro, CPX21
+  - `ubuntu-4gb-nbg1-1` (€4.5/mo) — Nuremberg, CX23
+  - `ubuntu-2gb-sin-1` (€5.9/mo) — Singapore, CPX12
+  - **Total waste: €17.9/mo (€215/yr)**
+- **bench-node** (CPX42, 8 vCPU, 32GB, €23.8/mo) identified as most powerful underutilized machine
+- Cost optimization potential: €4.50–€22.40/mo (€54–€269/yr)
+
 ## [4.0.0] — 2026-06-29 — milvus-murmur
 
 ### Added
