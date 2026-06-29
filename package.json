@@ -1,0 +1,36 @@
+{
+  "name": "kompress-ultra",
+  "version": "0.1.0",
+  "description": "4-role living context layer: Composer, Pruner, Rewriter, Circulator",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    },
+    "./scoring": {
+      "import": "./dist/scoring.js",
+      "types": "./dist/scoring.d.ts"
+    },
+    "./circuit-breaker": {
+      "import": "./dist/circuit-breaker.js",
+      "types": "./dist/circuit-breaker.d.ts"
+    },
+    "./circulator": {
+      "import": "./dist/circulator.js",
+      "types": "./dist/circulator.d.ts"
+    }
+  },
+  "scripts": {
+    "build": "bun build src/index.ts --outdir dist --target bun",
+    "test": "bun test",
+    "typecheck": "tsc --noEmit"
+  },
+  "files": [
+    "dist",
+    "src"
+  ],
+  "license": "Apache-2.0"
+}
