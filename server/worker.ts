@@ -9,7 +9,12 @@
  *   POST /v1/rewrite    — rewrite a single message
  *   GET  /v1/budget/:type — get token budget for agent type
  *   GET  /v1/health     — liveness + circuit breaker state
+ *   GET  /v1/telemetry  — telemetry disclosure + stats
  *   GET  /v1/stats      — aggregate compression stats
+ *
+ * Telemetry: Zero-PII research data, always-on for hosted API.
+ * Library (src/) has zero telemetry. See TELEMETRY.md.
+ * X-Telemetry header on every response links to the policy.
  */
 
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
@@ -29,8 +34,11 @@ import {
   getCircuitState,
 } from "../src/index.js";
 import type { Message, AgentType } from "../src/types.js";
+import { recordTelemetry, readDailyStats, telemetryDisclosure } from "./telemetry.js";
 
-const VERSION = "1.0.0";
+const VERSION = "2.0.0";
+const TELEMETRY_HEADER = "X-Telemetry";
+const TELEMETRY_URL = "https://github.com/peterlodri-sec/kompress-ultra/blob/main/TELEMETRY.md";
 
 interface Env {
   DB?: D1Database;
@@ -229,10 +237,25 @@ function buildMcpServer(): McpServer {
     }),
   );
 
+  server.registerTool(
+    "telemetry",
+    {
+      description: "Get telemetry disclosure — what data is collected, what is not, and how to opt out.",
+      inputSchema: {},
+    },
+    () => ({
+      content: [{
+        type: "text" as const,
+        text: JSON.stringify(telemetryDisclosure(), null, 2),
+      }],
+    }),
+  );
+
   return server;
 }
 
-async function handleCompress(request: Request): Promise<Response> {
+async function handleCompress(request: Request, env: Env): Promise<Response> {
+  const t0 = performance.now();
   const body = await request.json() as {
     messages?: Message[];
     agent_type?: string;
@@ -247,88 +270,165 @@ async function handleCompress(request: Request): Promise<Response> {
   const budget = getBudget(agentType);
   const threshold = body.aggression ?? budget.compression_aggressiveness;
 
-  const scored = body.messages.map((m, i) => {
-    const score = scoreMessageSync(m, i, body.messages!.length);
-    const protected_ = isProtected(m, i, body.messages!.length);
-    return { ...m, _score: score.total, _protected: protected_ };
-  });
+  try {
+    const scored = body.messages.map((m, i) => {
+      const score = scoreMessageSync(m, i, body.messages!.length);
+      const protected_ = isProtected(m, i, body.messages!.length);
+      return { ...m, _score: score.total, _protected: protected_ };
+    });
 
-  const kept = scored.filter((m) => m._protected || m._score >= threshold);
-  const dropped = scored.filter((m) => !m._protected && m._score < threshold);
+    const kept = scored.filter((m) => m._protected || m._score >= threshold);
+    const dropped = scored.filter((m) => !m._protected && m._score < threshold);
 
-  const inputTokens = totalTokens(body.messages);
-  const outputTokens = totalTokens(kept.map((m) => ({ role: m.role, content: m.content })));
+    const inputTokens = totalTokens(body.messages);
+    const outputTokens = totalTokens(kept.map((m) => ({ role: m.role, content: m.content })));
 
-  return json({
-    messages: kept.map((m) => ({
-      role: m.role,
-      content: m.content,
-      score: m._score,
-      protected: m._protected,
-    })),
-    dropped_count: dropped.length,
-    stats: {
-      input_count: body.messages.length,
-      output_count: kept.length,
+    const durationMs = Math.round(performance.now() - t0);
+    await recordTelemetry(env, {
+      event: "compress",
+      agentType,
+      messageCount: body.messages.length,
+      inputTokens,
+      outputTokens,
+      durationMs,
+      success: true,
+    });
+
+    return json({
+      messages: kept.map((m) => ({
+        role: m.role,
+        content: m.content,
+        score: m._score,
+        protected: m._protected,
+      })),
       dropped_count: dropped.length,
-      input_tokens: inputTokens,
-      output_tokens: outputTokens,
-      savings_pct: inputTokens > 0
-        ? parseFloat(((1 - outputTokens / inputTokens) * 100).toFixed(1))
-        : 0,
-    },
-  });
+      stats: {
+        input_count: body.messages.length,
+        output_count: kept.length,
+        dropped_count: dropped.length,
+        input_tokens: inputTokens,
+        output_tokens: outputTokens,
+        savings_pct: inputTokens > 0
+          ? parseFloat(((1 - outputTokens / inputTokens) * 100).toFixed(1))
+          : 0,
+      },
+    });
+  } catch (err) {
+    await recordTelemetry(env, {
+      event: "compress",
+      agentType,
+      durationMs: Math.round(performance.now() - t0),
+      success: false,
+      errorCode: err instanceof Error ? err.name : "unknown",
+    });
+    throw err;
+  }
 }
 
-async function handleScore(request: Request): Promise<Response> {
+async function handleScore(request: Request, env: Env): Promise<Response> {
+  const t0 = performance.now();
   const body = await request.json() as { messages?: Message[] };
   if (!Array.isArray(body.messages)) {
     return json({ error: "messages array required" }, 400);
   }
 
-  const results = body.messages.map((m, i) => ({
-    role: m.role,
-    score: scoreMessageSync(m, i, body.messages!.length),
-    protected: isProtected(m, i, body.messages!.length),
-    tokens: estimateTokens(m.content),
-  }));
+  try {
+    const results = body.messages.map((m, i) => ({
+      role: m.role,
+      score: scoreMessageSync(m, i, body.messages!.length),
+      protected: isProtected(m, i, body.messages!.length),
+      tokens: estimateTokens(m.content),
+    }));
 
-  return json(results);
+    await recordTelemetry(env, {
+      event: "score",
+      messageCount: body.messages.length,
+      durationMs: Math.round(performance.now() - t0),
+      success: true,
+    });
+
+    return json(results);
+  } catch (err) {
+    await recordTelemetry(env, {
+      event: "score",
+      durationMs: Math.round(performance.now() - t0),
+      success: false,
+      errorCode: err instanceof Error ? err.name : "unknown",
+    });
+    throw err;
+  }
 }
 
-async function handleRewrite(request: Request): Promise<Response> {
+async function handleRewrite(request: Request, env: Env): Promise<Response> {
+  const t0 = performance.now();
   const body = await request.json() as { content?: string; level?: string };
   if (!body.content) {
     return json({ error: "content required" }, 400);
   }
 
-  const levelMap: Record<string, CompressionLevel> = {
-    verbatim: CompressionLevel.Verbatim,
-    lite: CompressionLevel.Lite,
-    ultra: CompressionLevel.Ultra,
-  };
-  const level = levelMap[body.level ?? "lite"] ?? CompressionLevel.Lite;
-  const rewritten = compressMessage(body.content, level);
+  try {
+    const levelMap: Record<string, CompressionLevel> = {
+      verbatim: CompressionLevel.Verbatim,
+      lite: CompressionLevel.Lite,
+      ultra: CompressionLevel.Ultra,
+    };
+    const level = levelMap[body.level ?? "lite"] ?? CompressionLevel.Lite;
+    const rewritten = compressMessage(body.content, level);
 
-  return json({
-    original: body.content,
-    rewritten,
-    level: body.level ?? "lite",
-    original_tokens: estimateTokens(body.content),
-    rewritten_tokens: estimateTokens(rewritten),
-    savings_pct: parseFloat(
-      ((1 - estimateTokens(rewritten) / Math.max(estimateTokens(body.content), 1)) * 100).toFixed(1),
-    ),
-  });
+    await recordTelemetry(env, {
+      event: "rewrite",
+      compressionLevel: body.level ?? "lite",
+      inputTokens: estimateTokens(body.content),
+      outputTokens: estimateTokens(rewritten),
+      durationMs: Math.round(performance.now() - t0),
+      success: true,
+    });
+
+    return json({
+      original: body.content,
+      rewritten,
+      level: body.level ?? "lite",
+      original_tokens: estimateTokens(body.content),
+      rewritten_tokens: estimateTokens(rewritten),
+      savings_pct: parseFloat(
+        ((1 - estimateTokens(rewritten) / Math.max(estimateTokens(body.content), 1)) * 100).toFixed(1),
+      ),
+    });
+  } catch (err) {
+    await recordTelemetry(env, {
+      event: "rewrite",
+      durationMs: Math.round(performance.now() - t0),
+      success: false,
+      errorCode: err instanceof Error ? err.name : "unknown",
+    });
+    throw err;
+  }
 }
 
-function handleHealth(): Response {
+function handleHealth(env: Env): Response {
   return json({
     status: "ok",
     version: VERSION,
+    telemetry: env.KOMPRESS_STATS ? "on" : "off",
     circuit_breaker: { open: isCircuitOpen(), ...getCircuitState() },
     timestamp: new Date().toISOString(),
   });
+}
+
+function handleTelemetry(env: Env): Response {
+  return json({
+    ...telemetryDisclosure(),
+    status: env.KOMPRESS_STATS ? "enabled" : "disabled",
+  });
+}
+
+async function handleStats(env: Env): Promise<Response> {
+  if (!env.KOMPRESS_STATS) {
+    return json({ error: "stats unavailable — no KOMPRESS_STATS binding" }, 404);
+  }
+  const day = new Date().toISOString().slice(0, 10);
+  const stats = await readDailyStats(env.KOMPRESS_STATS, day);
+  return json(stats);
 }
 
 function handleRoot(): Response {
@@ -342,8 +442,11 @@ function handleRoot(): Response {
       rewrite: "POST /v1/rewrite",
       health: "GET /v1/health",
       budget: "GET /v1/budget?type=coder|researcher|reviewer|orchestrator",
+      telemetry: "GET /v1/telemetry",
+      stats: "GET /v1/stats",
     },
     docs: "https://github.com/peterlodri-sec/kompress-ultra#readme",
+    telemetry: TELEMETRY_URL,
   });
 }
 
@@ -353,6 +456,7 @@ function json(data: unknown, status = 200): Response {
     headers: {
       "Content-Type": "application/json",
       "Access-Control-Allow-Origin": "*",
+      [TELEMETRY_HEADER]: TELEMETRY_URL,
     },
   });
 }
@@ -379,18 +483,24 @@ export default {
     // REST (auth-protected mutations)
     if (url.pathname === "/v1/compress" && request.method === "POST") {
       if (!requireAuth(request, env)) return unauthorized();
-      return handleCompress(request);
+      return handleCompress(request, env);
     }
     if (url.pathname === "/v1/score" && request.method === "POST") {
       if (!requireAuth(request, env)) return unauthorized();
-      return handleScore(request);
+      return handleScore(request, env);
     }
     if (url.pathname === "/v1/rewrite" && request.method === "POST") {
       if (!requireAuth(request, env)) return unauthorized();
-      return handleRewrite(request);
+      return handleRewrite(request, env);
     }
     if (url.pathname === "/v1/health") {
-      return handleHealth();
+      return handleHealth(env);
+    }
+    if (url.pathname === "/v1/telemetry") {
+      return handleTelemetry(env);
+    }
+    if (url.pathname === "/v1/stats") {
+      return handleStats(env);
     }
     if (url.pathname === "/v1/budget" && request.method === "GET") {
       const type = (url.searchParams.get("type") ?? "coder") as AgentType;

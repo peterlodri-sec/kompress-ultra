@@ -88,15 +88,31 @@ setTokenEstimator((text) => encoding.encode(text).length);
 The Cloudflare Worker exposes compression as a service:
 
 ```
-POST /mcp           — MCP protocol (compress, score, rewrite, budget, circuit tools)
+POST /mcp           — MCP protocol (compress, score, rewrite, budget, circuit, telemetry tools)
 POST /v1/compress   — REST: compress a conversation
 POST /v1/score      — REST: score messages for importance
 POST /v1/rewrite    — REST: rewrite a single message
 GET  /v1/budget     — REST: get token budget for agent type
-GET  /v1/health     — REST: liveness + circuit breaker state
+GET  /v1/health     — REST: liveness + circuit breaker + telemetry status
+GET  /v1/telemetry  — REST: telemetry disclosure (what's collected, how to opt out)
+GET  /v1/stats      — REST: daily aggregate stats (research telemetry)
 ```
 
-Set `AUTH_TOKEN` via `wrangler secret put AUTH_TOKEN` to enable Bearer auth on mutation endpoints. Health and root stay open.
+Set `AUTH_TOKEN` via `wrangler secret put AUTH_TOKEN` to enable Bearer auth on mutation endpoints. Health, telemetry, and root stay open.
+
+### Telemetry
+
+The hosted API has **always-on zero-PII research telemetry** — that's the "price"
+of using the free service. Every response carries an `X-Telemetry` header linking
+to the full disclosure.
+
+| | |
+|---|---|
+| Library (`npm install kompress-ultra`) | **Zero telemetry**. Pure offline. |
+| Self-hosted Worker | **Zero telemetry**. Omit `KOMPRESS_STATS` KV binding. |
+| Hosted API (`kompress.vaked.dev`) | Research telemetry (no PII, no content, day granularity). |
+
+See [TELEMETRY.md](./TELEMETRY.md) for the complete policy.
 
 ## Architecture
 
