@@ -250,7 +250,7 @@ This package implements the compression strategy described in:
 | Component | Description |
 |-----------|-------------|
 | [ultrameshai](https://github.com/peterlodri-sec/ultrameshai) | Decentralized agent lifecycle substrate |
-| [loopkit](https://github.com/peterlodri-sec/loopkit) | 4-phase autonomous training orchestrulator |
+| [loopkit](https://github.com/peterlodri-sec/loopkit) | 4-phase autonomous training orchestrator |
 | [pocoo.vaked.dev](https://pocoo.vaked.dev) | Experiment log vault and telemetry registry |
 | [proposal.vaked.dev](https://proposal.vaked.dev) | Interactive Headroom integration proposal |
 | [kompress.vaked.dev](https://kompress.vaked.dev/paper/main.pdf) | Academic paper with full proofs |

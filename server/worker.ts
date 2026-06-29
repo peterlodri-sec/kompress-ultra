@@ -46,7 +46,16 @@ function requireAuth(request: Request, env: Env): boolean {
   if (!authHeader) return false;
   const parts = authHeader.split(" ");
   if (parts.length !== 2 || parts[0] !== "Bearer") return false;
-  return parts[1] === token;
+  // Constant-time comparison to prevent timing attacks
+  const encoder = new TextEncoder();
+  const a = encoder.encode(parts[1]);
+  const b = encoder.encode(token);
+  if (a.byteLength !== b.byteLength) return false;
+  let mismatch = 0;
+  for (let i = 0; i < a.byteLength; i++) {
+    mismatch |= a[i] ^ b[i];
+  }
+  return mismatch === 0;
 }
 
 function unauthorized(): Response {
