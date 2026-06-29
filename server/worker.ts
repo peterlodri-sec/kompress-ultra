@@ -796,7 +796,6 @@ export default {
       const type = (url.searchParams.get("type") ?? "coder") as AgentType;
       return json(getBudget(type));
     }
-    if (url.pathname === "/v1/brain-graph") {
       return handleBrainGraph();
     }
 

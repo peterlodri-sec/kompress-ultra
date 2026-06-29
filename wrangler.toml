@@ -3,16 +3,10 @@ main = "server/worker.ts"
 compatibility_date = "2026-06-29"
 compatibility_flags = ["nodejs_compat"]
 
-# Bindings
 [[kv_namespaces]]
 binding = "KOMPRESS_STATS"
 id = "8dbcbdc2d5574e399abfebd7f31b7bb5"
 
-# Routes
 routes = [{ pattern = "api.kompress.vaked.dev/*", zone_name = "vaked.dev" }]
 
 [vars]
-# AUTH_TOKEN = ""  # Set via `wrangler secret put AUTH_TOKEN`
-
-# Static assets
-assets = { directory = "./assets", binding = "ASSETS" }
