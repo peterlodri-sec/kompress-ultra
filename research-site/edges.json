@@ -1,0 +1,1079 @@
+[
+  {
+    "_killed_at": 1782745398878,
+    "_prev_weight": 0.3,
+    "_repaired_at": 1782744905026,
+    "label": "reconnected",
+    "layer": [
+      0,
+      0,
+      0
+    ],
+    "source": "brain-state",
+    "target": "ultramesh-mem",
+    "weight": 0
+  },
+  {
+    "_killed_at": 1782745398878,
+    "_prev_weight": 4,
+    "label": "updates",
+    "layer": [
+      0,
+      3,
+      5
+    ],
+    "source": "mesh-loop",
+    "target": "brain-state",
+    "weight": 0
+  },
+  {
+    "_killed_at": 1782745398878,
+    "_prev_weight": 0.3,
+    "_repaired_at": 1782744905026,
+    "label": "reconnected",
+    "layer": [
+      0,
+      0,
+      0
+    ],
+    "source": "brain-state",
+    "target": "al-biruni",
+    "weight": 0
+  },
+  {
+    "_killed_at": 1782745398878,
+    "_prev_weight": 3,
+    "label": "reads_writes",
+    "layer": [
+      0,
+      2,
+      4
+    ],
+    "source": "ultramesh-mem",
+    "target": "memory-file",
+    "weight": 0
+  },
+  {
+    "_killed_at": 1782745398878,
+    "_prev_weight": 5,
+    "label": "created",
+    "layer": [
+      -1,
+      -1,
+      -1
+    ],
+    "source": "genesis",
+    "target": "memory-file",
+    "weight": 0
+  },
+  {
+    "_killed_at": 1782745398878,
+    "_prev_weight": 1,
+    "label": "contains",
+    "layer": [
+      0,
+      3,
+      5
+    ],
+    "source": "al-biruni",
+    "target": "al-biruni-2",
+    "weight": 0
+  },
+  {
+    "_killed_at": 1782745398878,
+    "_prev_weight": 5,
+    "label": "created",
+    "layer": [
+      -1,
+      -1,
+      -1
+    ],
+    "source": "genesis",
+    "target": "mesh-loop",
+    "weight": 0
+  },
+  {
+    "_killed_at": 1782745398878,
+    "_prev_weight": 3,
+    "label": "mirrors",
+    "layer": [
+      0,
+      2,
+      4
+    ],
+    "source": "brain-graph",
+    "target": "brain-state",
+    "weight": 0
+  },
+  {
+    "_killed_at": 1782745398878,
+    "_prev_weight": 1,
+    "label": "contains",
+    "layer": [
+      -1,
+      -1,
+      -1
+    ],
+    "source": "genesis",
+    "target": "genesis-commit-24",
+    "weight": 0
+  },
+  {
+    "_killed_at": 1782745398878,
+    "_prev_weight": 0.3,
+    "_repaired_at": 1782744905026,
+    "label": "reconnected",
+    "layer": [
+      0,
+      0,
+      0
+    ],
+    "source": "brain-state",
+    "target": "composer-loop",
+    "weight": 0
+  },
+  {
+    "_killed_at": 1782745398878,
+    "_prev_weight": 0.3,
+    "_repaired_at": 1782744905026,
+    "label": "reconnected",
+    "layer": [
+      0,
+      0,
+      0
+    ],
+    "source": "brain-state",
+    "target": "learning-sed",
+    "weight": 0
+  },
+  {
+    "_killed_at": 1782745398878,
+    "_prev_weight": 1,
+    "label": "contains",
+    "layer": [
+      -1,
+      -1,
+      -1
+    ],
+    "source": "genesis",
+    "target": "genesis-commit-3",
+    "weight": 0
+  },
+  {
+    "_killed_at": 1782745398878,
+    "_prev_weight": 1,
+    "label": "governs",
+    "layer": [
+      0,
+      3,
+      5
+    ],
+    "source": "entropy-loop",
+    "target": "bodhisattva",
+    "weight": 0
+  },
+  {
+    "_killed_at": 1782745398878,
+    "_prev_weight": 5,
+    "label": "created",
+    "layer": [
+      -1,
+      -1,
+      -1
+    ],
+    "source": "genesis",
+    "target": "al-biruni-2",
+    "weight": 0
+  },
+  {
+    "_killed_at": 1782745398878,
+    "_prev_weight": 1,
+    "label": "contains",
+    "layer": [
+      -1,
+      -1,
+      -1
+    ],
+    "source": "genesis",
+    "target": "genesis-commit-16",
+    "weight": 0
+  },
+  {
+    "_killed_at": 1782745398878,
+    "_prev_weight": 5,
+    "label": "created",
+    "layer": [
+      -1,
+      -1,
+      -1
+    ],
+    "source": "genesis",
+    "target": "composer-loop",
+    "weight": 0
+  },
+  {
+    "_killed_at": 1782745398878,
+    "_prev_weight": 5,
+    "label": "created",
+    "layer": [
+      -1,
+      -1,
+      -1
+    ],
+    "source": "genesis",
+    "target": "rewriter-loop",
+    "weight": 0
+  },
+  {
+    "label": "stored_in",
+    "layer": [
+      -1,
+      0,
+      0
+    ],
+    "source": "learning-npm",
+    "target": "memory-file",
+    "weight": 1
+  },
+  {
+    "label": "governs",
+    "layer": [
+      0,
+      3,
+      5
+    ],
+    "source": "entropy-loop",
+    "target": "repair-bot",
+    "weight": 1
+  },
+  {
+    "label": "contains",
+    "layer": [
+      0,
+      3,
+      5
+    ],
+    "source": "al-biruni",
+    "target": "al-biruni-1",
+    "weight": 1
+  },
+  {
+    "label": "contains",
+    "layer": [
+      -1,
+      -1,
+      -1
+    ],
+    "source": "genesis",
+    "target": "genesis-commit-9",
+    "weight": 1
+  },
+  {
+    "label": "contains",
+    "layer": [
+      -1,
+      -1,
+      -1
+    ],
+    "source": "genesis",
+    "target": "genesis-commit-8",
+    "weight": 1
+  },
+  {
+    "_repaired_at": 1782744905026,
+    "label": "reconnected",
+    "layer": [
+      0,
+      0,
+      0
+    ],
+    "source": "brain-state",
+    "target": "learning-cf521",
+    "weight": 0.3
+  },
+  {
+    "label": "updates",
+    "layer": [
+      0,
+      2,
+      3
+    ],
+    "source": "composer-loop",
+    "target": "brain-state",
+    "weight": 4
+  },
+  {
+    "label": "contains",
+    "layer": [
+      -1,
+      -1,
+      -1
+    ],
+    "source": "genesis",
+    "target": "genesis-commit-19",
+    "weight": 1
+  },
+  {
+    "label": "created",
+    "layer": [
+      -1,
+      -1,
+      -1
+    ],
+    "source": "genesis",
+    "target": "ultramesh-mem",
+    "weight": 5
+  },
+  {
+    "label": "created",
+    "layer": [
+      -1,
+      -1,
+      -1
+    ],
+    "source": "genesis",
+    "target": "entropy-loop",
+    "weight": 5
+  },
+  {
+    "label": "created",
+    "layer": [
+      -1,
+      -1,
+      -1
+    ],
+    "source": "genesis",
+    "target": "learning-sed",
+    "weight": 5
+  },
+  {
+    "label": "manages",
+    "layer": [
+      0,
+      2,
+      4
+    ],
+    "source": "ultramesh-mem",
+    "target": "brain-state",
+    "weight": 5
+  },
+  {
+    "label": "contains",
+    "layer": [
+      -1,
+      -1,
+      -1
+    ],
+    "source": "genesis",
+    "target": "genesis-commit-20",
+    "weight": 1
+  },
+  {
+    "label": "created",
+    "layer": [
+      -1,
+      -1,
+      -1
+    ],
+    "source": "genesis",
+    "target": "al-biruni-1",
+    "weight": 5
+  },
+  {
+    "label": "contains",
+    "layer": [
+      -1,
+      -1,
+      -1
+    ],
+    "source": "genesis",
+    "target": "genesis-commit-11",
+    "weight": 1
+  },
+  {
+    "label": "counters",
+    "layer": [
+      0,
+      1,
+      5
+    ],
+    "source": "repair-bot",
+    "target": "bodhisattva",
+    "weight": 2
+  },
+  {
+    "_repaired_at": 1782744905026,
+    "label": "reconnected",
+    "layer": [
+      0,
+      0,
+      0
+    ],
+    "source": "brain-state",
+    "target": "learning-ssh",
+    "weight": 0.3
+  },
+  {
+    "_reflect_count": 1,
+    "_reflected_at": 1782745398878,
+    "label": "repairs",
+    "layer": [
+      0,
+      1,
+      5
+    ],
+    "source": "repair-bot",
+    "target": "brain-state",
+    "weight": 4
+  },
+  {
+    "label": "logs_to",
+    "layer": [
+      0,
+      2,
+      5
+    ],
+    "source": "bodhisattva",
+    "target": "brain-state",
+    "weight": 3
+  },
+  {
+    "label": "contains",
+    "layer": [
+      -1,
+      -1,
+      -1
+    ],
+    "source": "genesis",
+    "target": "genesis-commit-12",
+    "weight": 1
+  },
+  {
+    "label": "created",
+    "layer": [
+      -1,
+      -1,
+      -1
+    ],
+    "source": "genesis",
+    "target": "pruner-loop",
+    "weight": 5
+  },
+  {
+    "label": "all-thanks-to-rahul",
+    "layer": [
+      0,
+      3,
+      5
+    ],
+    "source": "entropy-loop",
+    "target": "entropy-loop",
+    "weight": 1
+  },
+  {
+    "label": "stored_in",
+    "layer": [
+      -1,
+      1,
+      0
+    ],
+    "source": "learning-record",
+    "target": "memory-file",
+    "weight": 1
+  },
+  {
+    "label": "created",
+    "layer": [
+      -1,
+      -1,
+      -1
+    ],
+    "source": "genesis",
+    "target": "learning-record",
+    "weight": 5
+  },
+  {
+    "_repaired_at": 1782744905026,
+    "label": "reconnected",
+    "layer": [
+      0,
+      0,
+      0
+    ],
+    "source": "brain-state",
+    "target": "pruner-loop",
+    "weight": 0.3
+  },
+  {
+    "label": "mirrors",
+    "layer": [
+      0,
+      0,
+      0
+    ],
+    "source": "brain-state",
+    "target": "brain-graph",
+    "weight": 3
+  },
+  {
+    "label": "stored_in",
+    "layer": [
+      -1,
+      0,
+      0
+    ],
+    "source": "learning-cf521",
+    "target": "memory-file",
+    "weight": 1
+  },
+  {
+    "label": "contains",
+    "layer": [
+      -1,
+      -1,
+      -1
+    ],
+    "source": "genesis",
+    "target": "genesis-commit-13",
+    "weight": 1
+  },
+  {
+    "label": "contains",
+    "layer": [
+      -1,
+      -1,
+      -1
+    ],
+    "source": "genesis",
+    "target": "genesis-commit-15",
+    "weight": 1
+  },
+  {
+    "_reflect_count": 1,
+    "_reflected_at": 1782745398878,
+    "label": "created",
+    "layer": [
+      -1,
+      -1,
+      -1
+    ],
+    "source": "genesis",
+    "target": "learning-cf521",
+    "weight": 5
+  },
+  {
+    "label": "contains",
+    "layer": [
+      -1,
+      -1,
+      -1
+    ],
+    "source": "genesis",
+    "target": "genesis-commit-6",
+    "weight": 1
+  },
+  {
+    "label": "created",
+    "layer": [
+      -1,
+      -1,
+      -1
+    ],
+    "source": "genesis",
+    "target": "learning-ssh",
+    "weight": 5
+  },
+  {
+    "label": "contains",
+    "layer": [
+      -1,
+      -1,
+      -1
+    ],
+    "source": "genesis",
+    "target": "genesis-commit-2",
+    "weight": 1
+  },
+  {
+    "_reflect_count": 1,
+    "_reflected_at": 1782745398878,
+    "label": "contains",
+    "layer": [
+      -1,
+      -1,
+      -1
+    ],
+    "source": "genesis",
+    "target": "genesis-commit-4",
+    "weight": 1
+  },
+  {
+    "label": "opposes",
+    "layer": [
+      0,
+      2,
+      5
+    ],
+    "source": "bodhisattva",
+    "target": "repair-bot",
+    "weight": 2
+  },
+  {
+    "_repaired_at": 1782744905026,
+    "label": "reconnected",
+    "layer": [
+      0,
+      0,
+      0
+    ],
+    "source": "brain-state",
+    "target": "learning-record",
+    "weight": 0.3
+  },
+  {
+    "label": "contains",
+    "layer": [
+      -1,
+      -1,
+      -1
+    ],
+    "source": "genesis",
+    "target": "genesis-commit-7",
+    "weight": 1
+  },
+  {
+    "label": "contains",
+    "layer": [
+      -1,
+      -1,
+      -1
+    ],
+    "source": "genesis",
+    "target": "genesis-commit-18",
+    "weight": 1
+  },
+  {
+    "label": "attacks",
+    "layer": [
+      0,
+      2,
+      5
+    ],
+    "source": "bodhisattva",
+    "target": "brain-graph",
+    "weight": 3
+  },
+  {
+    "label": "contains",
+    "layer": [
+      -1,
+      -1,
+      -1
+    ],
+    "source": "genesis",
+    "target": "genesis-commit-21",
+    "weight": 1
+  },
+  {
+    "label": "contains",
+    "layer": [
+      -1,
+      -1,
+      -1
+    ],
+    "source": "genesis",
+    "target": "genesis-commit-0",
+    "weight": 1
+  },
+  {
+    "label": "stored_in",
+    "layer": [
+      -1,
+      0,
+      0
+    ],
+    "source": "learning-ssh",
+    "target": "memory-file",
+    "weight": 1
+  },
+  {
+    "label": "created",
+    "layer": [
+      -1,
+      -1,
+      -1
+    ],
+    "source": "genesis",
+    "target": "al-biruni",
+    "weight": 5
+  },
+  {
+    "label": "created",
+    "layer": [
+      -1,
+      -1,
+      -1
+    ],
+    "source": "genesis",
+    "target": "bodhisattva",
+    "weight": 5
+  },
+  {
+    "label": "contains",
+    "layer": [
+      -1,
+      -1,
+      -1
+    ],
+    "source": "genesis",
+    "target": "genesis-commit-10",
+    "weight": 1
+  },
+  {
+    "_repaired_at": 1782744905026,
+    "label": "reconnected",
+    "layer": [
+      0,
+      0,
+      0
+    ],
+    "source": "brain-state",
+    "target": "rewriter-loop",
+    "weight": 0.3
+  },
+  {
+    "label": "created",
+    "layer": [
+      -1,
+      -1,
+      -1
+    ],
+    "source": "genesis",
+    "target": "brain-graph",
+    "weight": 5
+  },
+  {
+    "_reflect_count": 1,
+    "_reflected_at": 1782745398878,
+    "label": "writes_to",
+    "layer": [
+      0,
+      1,
+      2
+    ],
+    "source": "al-biruni-2",
+    "target": "brain-state",
+    "weight": 5
+  },
+  {
+    "label": "contains",
+    "layer": [
+      -1,
+      -1,
+      -1
+    ],
+    "source": "genesis",
+    "target": "genesis-commit-22",
+    "weight": 1
+  },
+  {
+    "label": "contains",
+    "layer": [
+      -1,
+      -1,
+      -1
+    ],
+    "source": "genesis",
+    "target": "genesis-commit-5",
+    "weight": 1
+  },
+  {
+    "label": "contains",
+    "layer": [
+      -1,
+      -1,
+      -1
+    ],
+    "source": "genesis",
+    "target": "genesis-commit-17",
+    "weight": 1
+  },
+  {
+    "label": "writes_to",
+    "layer": [
+      0,
+      1,
+      2
+    ],
+    "source": "al-biruni-1",
+    "target": "brain-state",
+    "weight": 5
+  },
+  {
+    "label": "self_reflects",
+    "layer": [
+      0,
+      3,
+      5
+    ],
+    "source": "entropy-loop",
+    "target": "entropy-loop",
+    "weight": 1
+  },
+  {
+    "label": "self_destructs",
+    "layer": [
+      0,
+      2,
+      5
+    ],
+    "source": "bodhisattva",
+    "target": "bodhisattva",
+    "weight": 1
+  },
+  {
+    "_reflect_count": 1,
+    "_reflected_at": 1782745398878,
+    "label": "governs",
+    "layer": [
+      0,
+      3,
+      5
+    ],
+    "source": "entropy-loop",
+    "target": "al-biruni",
+    "weight": 1
+  },
+  {
+    "_reflect_count": 1,
+    "_reflected_at": 1782745398878,
+    "label": "contains",
+    "layer": [
+      -1,
+      -1,
+      -1
+    ],
+    "source": "genesis",
+    "target": "genesis-commit-14",
+    "weight": 1
+  },
+  {
+    "label": "self_limits",
+    "layer": [
+      0,
+      3,
+      5
+    ],
+    "source": "mesh-loop",
+    "target": "mesh-loop",
+    "weight": 1
+  },
+  {
+    "label": "created",
+    "layer": [
+      -1,
+      -1,
+      -1
+    ],
+    "source": "genesis",
+    "target": "brain-state",
+    "weight": 5
+  },
+  {
+    "label": "updates",
+    "layer": [
+      0,
+      1,
+      1
+    ],
+    "source": "rewriter-loop",
+    "target": "brain-state",
+    "weight": 4
+  },
+  {
+    "label": "updates",
+    "layer": [
+      0,
+      1,
+      1
+    ],
+    "source": "pruner-loop",
+    "target": "brain-state",
+    "weight": 4
+  },
+  {
+    "label": "created",
+    "layer": [
+      -1,
+      -1,
+      -1
+    ],
+    "source": "genesis",
+    "target": "repair-bot",
+    "weight": 5
+  },
+  {
+    "label": "stored_in",
+    "layer": [
+      -1,
+      0,
+      0
+    ],
+    "source": "learning-sed",
+    "target": "memory-file",
+    "weight": 1
+  },
+  {
+    "label": "contains",
+    "layer": [
+      -1,
+      -1,
+      -1
+    ],
+    "source": "genesis",
+    "target": "genesis-commit-23",
+    "weight": 1
+  },
+  {
+    "label": "contains",
+    "layer": [
+      -1,
+      -1,
+      -1
+    ],
+    "source": "genesis",
+    "target": "genesis-commit-1",
+    "weight": 1
+  },
+  {
+    "label": "created",
+    "layer": [
+      -1,
+      -1,
+      -1
+    ],
+    "source": "genesis",
+    "target": "learning-npm",
+    "weight": 5
+  },
+  {
+    "_repaired_at": 1782744905026,
+    "label": "reconnected",
+    "layer": [
+      0,
+      0,
+      0
+    ],
+    "source": "brain-state",
+    "target": "learning-npm",
+    "weight": 0.3
+  },
+  {
+    "label": "feeds",
+    "layer": [
+      0,
+      3,
+      5
+    ],
+    "source": "entropy-loop",
+    "target": "brain-state",
+    "weight": 5
+  },
+  {
+    "_reflect_count": 1,
+    "_reflected_at": 1782745398878,
+    "label": "feeds_into",
+    "layer": [
+      0,
+      1,
+      2
+    ],
+    "source": "al-biruni-1",
+    "target": "al-biruni-2",
+    "weight": 3
+  },
+  {
+    "_repaired_at": 1782745398965,
+    "label": "reconnected",
+    "layer": [
+      0,
+      0,
+      0
+    ],
+    "source": "brain-state",
+    "target": "genesis",
+    "weight": 0.3
+  },
+  {
+    "_boosted_at": 1782745398965,
+    "label": "layer_boost",
+    "layer": [
+      0,
+      0,
+      0
+    ],
+    "source": "brain-state",
+    "target": "brain-state",
+    "weight": 0.5
+  },
+  {
+    "_boosted_at": 1782745398965,
+    "label": "layer_boost",
+    "layer": [
+      -1,
+      0,
+      3
+    ],
+    "source": "brain-state",
+    "target": "memory-file",
+    "weight": 0.5
+  },
+  {
+    "_boosted_at": 1782745398965,
+    "label": "layer_boost",
+    "layer": [
+      0,
+      2,
+      5
+    ],
+    "source": "brain-state",
+    "target": "bodhisattva",
+    "weight": 0.5
+  },
+  {
+    "_boosted_at": 1782745398965,
+    "label": "layer_boost",
+    "layer": [
+      0,
+      2,
+      3
+    ],
+    "source": "brain-state",
+    "target": "composer-loop",
+    "weight": 0.5
+  },
+  {
+    "_boosted_at": 1782745398965,
+    "label": "layer_boost",
+    "layer": [
+      -1,
+      1,
+      0
+    ],
+    "source": "brain-state",
+    "target": "learning-record",
+    "weight": 0.5
+  },
+  {
+    "_boosted_at": 1782745398965,
+    "label": "layer_boost",
+    "layer": [
+      0,
+      1,
+      5
+    ],
+    "source": "brain-state",
+    "target": "repair-bot",
+    "weight": 0.5
+  }
+]

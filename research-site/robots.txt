@@ -1,0 +1,3 @@
+User-agent: *
+Allow: /
+Sitemap: https://brain.ultramesh.dev/sitemap.xml
