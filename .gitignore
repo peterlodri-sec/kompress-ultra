@@ -41,3 +41,4 @@ verdaccio/storage/
 verdaccio/htpasswd
 .npmrc
 .ultramesh-mem/
+ultramesh-mem/brain-state.json
