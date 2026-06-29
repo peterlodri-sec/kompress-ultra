@@ -13,3 +13,6 @@ routes = [{ pattern = "api.kompress.vaked.dev/*", zone_name = "vaked.dev" }]
 
 [vars]
 # AUTH_TOKEN = ""  # Set via `wrangler secret put AUTH_TOKEN`
+
+# Static assets
+assets = { directory = "./assets", binding = "ASSETS" }

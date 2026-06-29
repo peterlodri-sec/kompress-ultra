@@ -1,0 +1,327 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>brain-graph · ultramesh</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:#080c14;color:#cbd5e1;font-family:system-ui,'Segoe UI',sans-serif;overflow:hidden;height:100vh;width:100vw}
+#canvas{position:fixed;top:0;left:0;width:100vw;height:100vh}
+#ui{position:fixed;top:0;left:0;right:0;z-index:10;pointer-events:none;padding:1rem 1.5rem;display:flex;justify-content:space-between;align-items:flex-start}
+#title{font-size:.7rem;text-transform:uppercase;letter-spacing:.08em;color:#475569;line-height:1.5}
+#title strong{color:#00d4ff;font-weight:700;font-size:.85rem}
+#stats{font-size:.65rem;color:#334155;font-family:monospace;text-align:right;line-height:1.6;pointer-events:auto;cursor:pointer;background:#0a0a14/80;padding:.5rem .75rem;border-radius:8px;border:1px solid #1e293b;transition:border-color .3s}
+#stats:hover{border-color:#00d4ff}
+#tooltip{position:fixed;z-index:20;display:none;pointer-events:none;background:#0f172a;border:1px solid #1e293b;border-radius:8px;padding:.6rem .9rem;font-size:.7rem;max-width:280px;line-height:1.5;box-shadow:0 8px 32px rgba(0,0,0,.5)}
+#tooltip .name{color:#e2e8f0;font-weight:600;font-size:.8rem}
+#tooltip .type{color:#00d4ff;font-size:.65rem;text-transform:uppercase;letter-spacing:.04em}
+#tooltip .conn{color:#64748b;font-size:.65rem;margin-top:.3rem}
+#tooltip .conn span{color:#94a3b8}
+#info-btn{position:fixed;bottom:1rem;right:1rem;z-index:10;width:36px;height:36px;border-radius:50%;background:#0f172a;border:1px solid #1e293b;color:#64748b;font-size:1rem;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .3s;pointer-events:auto}
+#info-btn:hover{background:#1e293b;color:#00d4ff;border-color:#00d4ff}
+</style>
+</head>
+<body>
+
+<canvas id="canvas"></canvas>
+
+<div id="ui">
+  <div id="title">
+    <strong>🧠 brain-graph</strong><br>
+    singular self-contained source · ultramesh
+  </div>
+  <div id="stats">loading…</div>
+</div>
+
+<div id="tooltip"></div>
+<button id="info-btn" onclick="centerGraph()">⌖</button>
+
+<script>
+const canvas = document.getElementById('canvas');
+const ctx = canvas.getContext('2d');
+const tooltip = document.getElementById('tooltip');
+const statsEl = document.getElementById('stats');
+
+let W, H, nodes = [], edges = [], hovered = null, dragged = null, dragOff = {x:0,y:0};
+let animId = null, tick = 0;
+
+const TYPE_COLORS = {
+  agent: '#00d4ff', state: '#00e660', loop: '#b480ff',
+  learning: '#f59e0b', system: '#ef4444', memory: '#38bdf8'
+};
+const TYPE_ICONS = {
+  agent: '🤖', state: '🧠', loop: '🔄',
+  learning: '💡', system: '⚙️', memory: '📝'
+};
+const EMOJI = {'al-biruni':'🔬','brain-state':'🎯','brain-graph':'🌐','memory-file':'📄',
+  'verdaccio':'📦','bodhisattva':'☸️','pruner-loop':'✂️','rewriter-loop':'📝',
+  'circulator-loop':'🔄','composer-loop':'🎨','mesh-loop':'🔗','ultramesh-mem':'🧠'};
+
+function resize(){W=canvas.width=innerWidth;H=canvas.height=innerHeight}
+window.addEventListener('resize',resize); resize();
+
+// ── Force-directed layout ───────────────────────────────────────────────
+function initLayout(nodes, edges) {
+  const R = Math.min(W,H) * 0.35;
+  const cx = W/2, cy = H/2;
+  nodes.forEach((n,i) => {
+    const angle = (i / nodes.length) * Math.PI * 2 - Math.PI/2;
+    n.x = cx + R * Math.cos(angle) + (Math.random()-0.5)*20;
+    n.y = cy + R * Math.sin(angle) + (Math.random()-0.5)*20;
+    n.vx = 0; n.vy = 0;
+  });
+}
+
+function forceLayout(nodes, edges) {
+  const REP = 3000, ATT = 0.005, DAMP = 0.85, ITER = 3;
+  const cx = W/2, cy = H/2;
+  for (let iter = 0; iter < ITER; iter++) {
+    // Repulsion
+    for (let i = 0; i < nodes.length; i++) {
+      for (let j = i+1; j < nodes.length; j++) {
+        let dx = nodes[j].x - nodes[i].x;
+        let dy = nodes[j].y - nodes[i].y;
+        let d = Math.sqrt(dx*dx + dy*dy) || 1;
+        let f = REP / (d * d);
+        nodes[i].vx -= f * dx / d; nodes[i].vy -= f * dy / d;
+        nodes[j].vx += f * dx / d; nodes[j].vy += f * dy / d;
+      }
+    }
+    // Attraction along edges
+    for (const e of edges) {
+      const s = nodes.find(n => n.id === e.source);
+      const t = nodes.find(n => n.id === e.target);
+      if (!s || !t) continue;
+      let dx = t.x - s.x, dy = t.y - s.y;
+      let d = Math.sqrt(dx*dx + dy*dy) || 1;
+      let ew = e.weight || 1;
+      let f = d * ATT * ew;
+      s.vx += f * dx / d; s.vy += f * dy / d;
+      t.vx -= f * dx / d; t.vy -= f * dy / d;
+    }
+    // Center gravity
+    for (const n of nodes) {
+      n.vx += (cx - n.x) * 0.001;
+      n.vy += (cy - n.y) * 0.001;
+      n.vx *= DAMP; n.vy *= DAMP;
+      n.x += n.vx; n.y += n.vy;
+    }
+  }
+}
+
+// ── Render ──────────────────────────────────────────────────────────────
+function render() {
+  ctx.clearRect(0, 0, W, H);
+  tick++;
+
+  // Edges
+  for (const e of edges) {
+    const s = nodes.find(n => n.id === e.source);
+    const t = nodes.find(n => n.id === e.target);
+    if (!s || !t) continue;
+    const w = Math.max(0.3, Math.min(3, (e.weight || 1) * 0.8));
+    const dead = e.weight === 0 || (e._killed_at && !e._prev_weight);
+    const reflected = e._reflected_at;
+    ctx.beginPath();
+    ctx.moveTo(s.x, s.y);
+    ctx.lineTo(t.x, t.y);
+    if (dead) {
+      ctx.strokeStyle = `rgba(239,68,68,${0.15 + 0.1 * Math.sin(tick * 0.05)})`;
+      ctx.setLineDash([4, 6]);
+    } else if (reflected) {
+      ctx.strokeStyle = `rgba(180,128,255,${0.2 + 0.1 * Math.sin(tick * 0.03)})`;
+      ctx.setLineDash([2, 4]);
+    } else {
+      ctx.strokeStyle = `rgba(51,65,85,${0.3 + w * 0.15})`;
+      ctx.setLineDash([]);
+    }
+    ctx.lineWidth = w;
+    ctx.stroke();
+    ctx.setLineDash([]);
+
+    // Edge label (only if hovered nearby)
+    if (hovered && (hovered.id === e.source || hovered.id === e.target)) {
+      const mx = (s.x + t.x) / 2, my = (s.y + t.y) / 2;
+      ctx.fillStyle = '#475569';
+      ctx.font = '9px monospace';
+      ctx.textAlign = 'center';
+      ctx.fillText(e.label, mx, my - 4);
+    }
+  }
+
+  // Nodes
+  for (const n of nodes) {
+    const r = Math.max(6, Math.min(16, 8 + (edges.filter(e => e.source === n.id || e.target === n.id).length * 1.5)));
+    const color = TYPE_COLORS[n.type] || '#64748b';
+    const isHov = hovered && hovered.id === n.id;
+    const glow = isHov ? 20 : 4;
+
+    // Glow
+    const grad = ctx.createRadialGradient(n.x, n.y, 0, n.x, n.y, r + glow);
+    grad.addColorStop(0, isHov ? color + '80' : color + '30');
+    grad.addColorStop(1, color + '00');
+    ctx.fillStyle = grad;
+    ctx.beginPath(); ctx.arc(n.x, n.y, r + glow, 0, Math.PI*2); ctx.fill();
+
+    // Circle
+    ctx.beginPath(); ctx.arc(n.x, n.y, r, 0, Math.PI*2);
+    ctx.fillStyle = isHov ? '#0f172a' : '#080c14';
+    ctx.fill();
+    ctx.strokeStyle = isHov ? color : color + '60';
+    ctx.lineWidth = isHov ? 2 : 1;
+    ctx.stroke();
+
+    // Icon
+    const icon = EMOJI[n.id] || TYPE_ICONS[n.type] || '●';
+    ctx.fillStyle = isHov ? color : color + 'cc';
+    ctx.font = `${r * 0.9}px sans-serif`;
+    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.fillText(icon, n.x, n.y + 0.5);
+
+    // Label
+    if (isHov || r > 10) {
+      ctx.fillStyle = isHov ? '#e2e8f0' : '#64748b';
+      ctx.font = `${isHov ? 10 : 9}px system-ui, sans-serif`;
+      ctx.textAlign = 'center';
+      const label = n.label || n.id;
+      ctx.fillText(label, n.x, n.y + r + 14);
+    }
+  }
+}
+
+// ── Hit test ────────────────────────────────────────────────────────────
+function hitTest(mx, my) {
+  for (const n of nodes) {
+    const dx = mx - n.x, dy = my - n.y;
+    const r = Math.max(6, Math.min(16, 8 + (edges.filter(e => e.source === n.id || e.target === n.id).length * 1.5)));
+    if (dx*dx + dy*dy < (r+10)*(r+10)) return n;
+  }
+  return null;
+}
+
+function showTooltip(n, mx, my) {
+  const color = TYPE_COLORS[n.type] || '#64748b';
+  const out = edges.filter(e => e.source === n.id);
+  const inc = edges.filter(e => e.target === n.id);
+  let conn = '';
+  if (out.length) conn += '<div class="conn">out: ' + out.slice(0,5).map(e => `<span>${e.target}</span>`).join(', ') + '</div>';
+  if (inc.length) conn += '<div class="conn">in: ' + inc.slice(0,5).map(e => `<span>${e.source}</span>`).join(', ') + '</div>';
+  tooltip.innerHTML = `<div class="type" style="color:${color}">${TYPE_ICONS[n.type]||'●'} ${n.type}</div>
+    <div class="name">${n.label||n.id}</div>${conn}`;
+  tooltip.style.display = 'block';
+  let tx = Math.min(mx + 16, W - 300), ty = Math.min(my + 16, H - 200);
+  tooltip.style.left = tx + 'px'; tooltip.style.top = ty + 'px';
+}
+
+// ── Mouse events ────────────────────────────────────────────────────────
+canvas.addEventListener('mousemove', e => {
+  const n = hitTest(e.clientX, e.clientY);
+  if (n !== hovered) {
+    hovered = n;
+    tooltip.style.display = n ? 'block' : 'none';
+    if (n) showTooltip(n, e.clientX, e.clientY);
+    canvas.style.cursor = n ? 'pointer' : 'default';
+  } else if (n) {
+    showTooltip(n, e.clientX, e.clientY);
+  }
+  if (dragged) {
+    dragged.x = e.clientX - dragOff.x;
+    dragged.y = e.clientY - dragOff.y;
+  }
+});
+canvas.addEventListener('mousedown', e => {
+  const n = hitTest(e.clientX, e.clientY);
+  if (n) { dragged = n; dragOff = {x: e.clientX - n.x, y: e.clientY - n.y}; }
+});
+canvas.addEventListener('mouseup', () => { dragged = null; });
+canvas.addEventListener('mouseleave', () => { hovered = null; tooltip.style.display = 'none'; });
+
+function centerGraph() {
+  const cx = W/2, cy = H/2;
+  if (nodes.length) {
+    const mx = nodes.reduce((s,n) => s + n.x, 0) / nodes.length;
+    const my = nodes.reduce((s,n) => s + n.y, 0) / nodes.length;
+    for (const n of nodes) { n.x += cx - mx; n.y += cy - my; }
+  }
+}
+
+// ── Load data ───────────────────────────────────────────────────────────
+async function loadGraph() {
+  try {
+    const res = await fetch('/v1/brain-graph');
+    if (res.ok) {
+      const g = await res.json();
+      nodes = g.nodes || []; edges = g.edges || [];
+      initLayout(nodes, edges);
+      statsEl.innerHTML = `${nodes.length} nodes · ${edges.length} edges · density ${(2*edges.length/(nodes.length*(nodes.length-1)||1)).toFixed(4)}`;
+      animate();
+      return;
+    }
+  } catch(e) {}
+  // Fallback: load from JSON (for local file)
+  try {
+    const res = await fetch('/~/.brain/graph.json');
+    if (!res.ok) throw Error('no');
+    const g = await res.json();
+    nodes = g.nodes || []; edges = g.edges || [];
+  } catch(e) {
+    statsEl.innerHTML = '⚠️ offline — use demo data';
+    // Demo data
+    nodes = [
+      {id:'brain-state',type:'state',label:'Brain State'},
+      {id:'brain-graph',type:'state',label:'Brain Graph'},
+      {id:'al-biruni',type:'agent',label:'al-biruni Mesh'},
+      {id:'al-biruni-1',type:'agent',label:'Researcher'},
+      {id:'al-biruni-2',type:'agent',label:'Writer'},
+      {id:'ultramesh-mem',type:'agent',label:'Universal Memory'},
+      {id:'bodhisattva',type:'system',label:'Bodhisattva'},
+      {id:'pruner-loop',type:'loop',label:'Pruner Loop'},
+      {id:'rewriter-loop',type:'loop',label:'Rewriter Loop'},
+      {id:'circulator-loop',type:'loop',label:'Circulator Loop'},
+      {id:'composer-loop',type:'loop',label:'Composer Loop'},
+      {id:'mesh-loop',type:'loop',label:'Mesh Loop'},
+      {id:'learning-sed',type:'learning',label:'sed -i YAML bug'},
+      {id:'learning-ssh',type:'learning',label:'SSH blocked'},
+      {id:'learning-npm',type:'learning',label:'npm OTP'},
+      {id:'learning-record',type:'learning',label:'recordSuccess fix'},
+      {id:'learning-cf521',type:'learning',label:'CF 521'},
+    ];
+    edges = [
+      {source:'al-biruni',target:'al-biruni-1',label:'contains',weight:1},
+      {source:'al-biruni',target:'al-biruni-2',label:'contains',weight:1},
+      {source:'al-biruni-1',target:'brain-state',label:'writes_to',weight:5},
+      {source:'al-biruni-2',target:'brain-state',label:'writes_to',weight:5},
+      {source:'ultramesh-mem',target:'brain-state',label:'manages',weight:5},
+      {source:'pruner-loop',target:'brain-state',label:'updates',weight:4},
+      {source:'rewriter-loop',target:'brain-state',label:'updates',weight:4},
+      {source:'circulator-loop',target:'brain-state',label:'updates',weight:4},
+      {source:'composer-loop',target:'brain-state',label:'updates',weight:4},
+      {source:'mesh-loop',target:'brain-state',label:'updates',weight:4},
+      {source:'mesh-loop',target:'mesh-loop',label:'self_limits',weight:1},
+      {source:'brain-state',target:'brain-graph',label:'mirrors',weight:3},
+      {source:'brain-graph',target:'brain-state',label:'mirrors',weight:3},
+      {source:'bodhisattva',target:'brain-graph',label:'attacks',weight:3},
+      {source:'bodhisattva',target:'brain-state',label:'logs_to',weight:3},
+      {source:'bodhisattva',target:'bodhisattva',label:'self_destructs',weight:1},
+    ];
+  }
+  initLayout(nodes, edges);
+  statsEl.innerHTML = `${nodes.length} nodes · ${edges.length} edges`;
+  animate();
+}
+
+function animate() {
+  if (animId) cancelAnimationFrame(animId);
+  function loop() {
+    forceLayout(nodes, edges);
+    render();
+    animId = requestAnimationFrame(loop);
+  }
+  loop();
+}
+
+loadGraph();
+</script>
+</body>
+</html>
