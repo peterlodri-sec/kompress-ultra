@@ -1,0 +1,17 @@
+#
+# Self-hosted npm registry for kompress-ultra ecosystem — LOCAL DEV
+# No auth. No uplinks. No bullshit.
+# For production: add auth + uplinks + HTTPS.
+#
+
+storage: ./storage
+packages:
+  '**':
+    access: $all
+    publish: $all
+    unpublish: $all
+log:
+  - { type: stdout, format: pretty, level: warn }
+listen: 0.0.0.0:4873
+web:
+  enable: false

@@ -32,7 +32,9 @@
     "test": "bun test",
     "typecheck": "tsc --noEmit",
     "lint": "tsc --noEmit",
-    "prepublishOnly": "bun run build"
+    "prepublishOnly": "bun run build",
+    "registry": "verdaccio -c verdaccio/config.yaml",
+    "publish:local": "npm publish --registry http://localhost:4873"
   },
   "files": [
     "dist",
