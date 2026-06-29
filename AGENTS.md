@@ -39,11 +39,14 @@ server/
 test/
   scoring.test.ts, rewriter.test.ts, compression.test.ts,
   circuit-breaker.test.ts, circulator.test.ts, token-budget.test.ts,
-  config.test.ts, pipeline.test.ts
+  config.test.ts, pipeline.test.ts, errors.test.ts,
+  brain.test.ts, embedding.test.ts
 scripts/
   run-ultra.mjs     — CLI: compress file with Ultra, write output
 assets/
   logo.svg          — Brand mark (dark bg, cyan arcs, green compression core)
+  api-status-badge.html     — API live/offline badge snippet for proposal.vaked.dev
+  ralph-loop-telemetry.html — Live telemetry section snippet for proposal.vaked.dev
 TELEMETRY.md        — Telemetry policy and opt-out instructions
 fixtures/
   agents-md-compression/ — Comparison of caveman-compress vs kompress-ultra

@@ -145,11 +145,13 @@ POST /v1/score      — REST: score messages for importance
 POST /v1/rewrite    — REST: rewrite a single message
 GET  /v1/budget     — REST: get token budget for agent type
 GET  /v1/health     — REST: liveness + circuit breaker + telemetry status
+GET  /v1/status     — REST: lightweight live/offline badge endpoint (no auth)
 GET  /v1/telemetry  — REST: telemetry disclosure (what's collected, how to opt out)
 GET  /v1/stats      — REST: daily aggregate stats (research telemetry)
 ```
 | Protocol | Description |
 |----------|-------------|
+| **Status** | `GET /v1/status` — lightweight live/offline check. No auth. Used by proposal.vaked.dev badge. |
 | **API** | `POST /v1/compress`, `POST /v1/score`, `POST /v1/rewrite` — Bearer auth when configured. Returns JSON. |
 | **MCP** | `POST /mcp` — Full MCP protocol with 6 tools: `compress`, `score`, `rewrite`, `budget`, `circuit`, `telemetry`. Use with any MCP client (Claude Desktop, VS Code, etc.). |
 

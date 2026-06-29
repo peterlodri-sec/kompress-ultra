@@ -415,6 +415,14 @@ function handleHealth(env: Env): Response {
   });
 }
 
+function handleStatus(): Response {
+  return json({
+    status: "live",
+    version: VERSION,
+    timestamp: new Date().toISOString(),
+  });
+}
+
 function handleTelemetry(env: Env): Response {
   return json({
     ...telemetryDisclosure(),
@@ -495,6 +503,9 @@ export default {
     }
     if (url.pathname === "/v1/health") {
       return handleHealth(env);
+    }
+    if (url.pathname === "/v1/status") {
+      return handleStatus();
     }
     if (url.pathname === "/v1/telemetry") {
       return handleTelemetry(env);

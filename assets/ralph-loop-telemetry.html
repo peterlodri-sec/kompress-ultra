@@ -1,0 +1,121 @@
+<!--
+  kompress-ultra Ralph-Loop Telemetry — replaces the static stats with live data
+  from the Worker webhook. Paste into the <section id="telemetry"> tag.
+-->
+<section id="telemetry" class="scroll-mt-24">
+  <div class="gradient-border">
+    <div class="p-8 bg-slate-955/40 rounded-[15px] space-y-6">
+      <div class="flex items-center gap-3 mb-2">
+        <i aria-hidden="true" class="w-5 h-5 text-brand-cyan" data-lucide="activity"></i>
+        <h2 class="text-2xl font-bold text-white font-title">Ralph-Loop Telemetry (Academic Dogfeeding)</h2>
+      </div>
+      <p class="text-sm text-slate-400 leading-relaxed max-w-3xl">
+        A live feed showing how our coding agent is currently running and compressing its own logs to save memory.
+        Data fetched from <a class="text-brand-cyan hover:underline font-mono" href="https://github.com/peterlodri-sec/kompress-ultra" target="_blank" rel="noopener noreferrer">kompress-ultra</a> API telemetry.
+      </p>
+
+      <!-- Live Telemetry Grid -->
+      <div id="telemetry-grid" class="grid grid-cols-2 md:grid-cols-5 gap-4">
+        <!-- L1 Loop Active -->
+        <div class="bg-slate-900/50 border border-slate-800/80 rounded-xl p-4 text-center">
+          <span class="text-[10px] text-slate-500 uppercase tracking-wider block mb-2">L1 Loop</span>
+          <div class="flex items-center justify-center gap-2">
+            <span id="tel-loop-dot" class="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse" aria-hidden="true"></span>
+            <span id="tel-loop-status" class="text-lg font-bold text-emerald-400 font-mono">Active</span>
+          </div>
+        </div>
+
+        <!-- Slices Processed -->
+        <div class="bg-slate-900/50 border border-slate-800/80 rounded-xl p-4 text-center">
+          <span class="text-[10px] text-slate-500 uppercase tracking-wider block mb-2">Slices Processed</span>
+          <span id="tel-slices" class="text-xl font-bold text-white font-mono block">—</span>
+        </div>
+
+        <!-- Active Sandboxes -->
+        <div class="bg-slate-900/50 border border-slate-800/80 rounded-xl p-4 text-center">
+          <span class="text-[10px] text-slate-500 uppercase tracking-wider block mb-2">Active Sandboxes</span>
+          <span class="text-sm font-bold text-white font-mono block">Bun / Nushell</span>
+        </div>
+
+        <!-- Inference Latency -->
+        <div class="bg-slate-900/50 border border-slate-800/80 rounded-xl p-4 text-center">
+          <span class="text-[10px] text-slate-500 uppercase tracking-wider block mb-2">Inference Latency</span>
+          <span id="tel-latency" class="text-xl font-bold text-brand-cyan font-mono block">—</span>
+        </div>
+
+        <!-- Token Savings Rate -->
+        <div class="bg-slate-900/50 border border-slate-800/80 rounded-xl p-4 text-center">
+          <span class="text-[10px] text-slate-500 uppercase tracking-wider block mb-2">Token Savings Rate</span>
+          <span id="tel-savings" class="text-xl font-bold text-brand-emerald font-mono block">—</span>
+        </div>
+      </div>
+
+      <!-- Status Line -->
+      <div id="tel-timestamp" class="text-[10px] text-slate-600 font-mono text-center">
+        Waiting for data…
+      </div>
+    </div>
+  </div>
+</section>
+
+<script>
+(async function() {
+  const API = 'https://kompress.vaked.dev';
+  try {
+    // Fetch both status (liveness) and stats (aggregate telemetry)
+    const [statusRes, statsRes] = await Promise.all([
+      fetch(API + '/v1/status', { signal: AbortSignal.timeout(5000) }).catch(() => null),
+      fetch(API + '/v1/stats', { signal: AbortSignal.timeout(5000) }).catch(() => null),
+    ]);
+
+    const el = (id) => document.getElementById(id);
+    const ts = el('tel-timestamp');
+    if (!ts) return; // not on this page
+
+    if (statusRes && statusRes.ok) {
+      const status = await statusRes.json();
+      if (status.status === 'live') {
+        el('tel-loop-dot').style.background = '#00e660';
+        el('tel-loop-status').textContent = 'Active';
+        el('tel-loop-status').style.color = '#00e660';
+      } else {
+        el('tel-loop-dot').style.background = '#ef4444';
+        el('tel-loop-status').textContent = 'Offline';
+        el('tel-loop-status').style.color = '#ef4444';
+      }
+    }
+
+    if (statsRes && statsRes.ok) {
+      const stats = await statsRes.json();
+      // stats has: events:total, events:compress:count, tokens:in, tokens:out, duration_ms, messages
+      const totalEvents = stats['events:total'] || 0;
+      const totalMs = stats['duration_ms'] || 0;
+      const tokensIn = stats['tokens:in'] || 0;
+      const tokensOut = stats['tokens:out'] || 0;
+
+      if (totalEvents > 0) {
+        el('tel-slices').textContent = totalEvents.toLocaleString();
+        if (totalMs > 0) {
+          el('tel-latency').textContent = (totalMs / totalEvents).toFixed(1) + ' ms';
+        }
+        if (tokensIn > 0 && tokensOut > 0) {
+          const savings = ((1 - tokensOut / tokensIn) * 100).toFixed(1);
+          el('tel-savings').textContent = savings + '%';
+        }
+      }
+    }
+
+    ts.textContent = 'Last updated: ' + new Date().toLocaleString();
+  } catch {
+    const el = (id) => document.getElementById(id);
+    if (el('tel-loop-dot')) {
+      el('tel-loop-dot').style.background = '#ef4444';
+      el('tel-loop-status').textContent = 'Offline';
+      el('tel-loop-status').style.color = '#ef4444';
+    }
+    if (el('tel-timestamp')) {
+      el('tel-timestamp').textContent = 'Telemetry unavailable';
+    }
+  }
+})();
+</script>
