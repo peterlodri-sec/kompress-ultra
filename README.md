@@ -3,11 +3,14 @@
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/version-2.0.0-blue?style=for-the-badge" alt="Version">
-  <img src="https://img.shields.io/badge/license-Apache%202.0-green?style=for-the-badge" alt="License">
-  <img src="https://img.shields.io/badge/built%20with-Bun-purple?style=for-the-badge&logo=bun" alt="Built with Bun">
-  <img src="https://img.shields.io/badge/PRs-welcome-brightgreen?style=for-the-badge" alt="PRs Welcome">
-  <img src="https://img.shields.io/github/actions/workflow/status/peterlodri-sec/kompress-ultra/ci.yml?style=for-the-badge&label=CI" alt="CI">
+  <img src="https://img.shields.io/badge/version-2.0.0-0a0a14?style=for-the-badge&labelColor=141420&color=00d4ff" alt="Version">
+  <img src="https://img.shields.io/badge/license-Apache%202.0-0a0a14?style=for-the-badge&labelColor=141420&color=00e660" alt="License">
+  <img src="https://img.shields.io/badge/built%20with-Bun-0a0a14?style=for-the-badge&labelColor=141420&color=white&logo=bun" alt="Built with Bun">
+  <img src="https://img.shields.io/badge/PRs-welcome-0a0a14?style=for-the-badge&labelColor=141420&color=b480ff" alt="PRs Welcome">
+  <img src="https://img.shields.io/github/actions/workflow/status/peterlodri-sec/kompress-ultra/ci.yml?style=for-the-badge&label=CI&labelColor=141420&color=00e660" alt="CI">
+  <img src="https://img.shields.io/badge/API-live-0a0a14?style=for-the-badge&labelColor=141420&color=00d4ff" alt="API">
+  <img src="https://img.shields.io/badge/MCP-live-0a0a14?style=for-the-badge&labelColor=141420&color=00e660" alt="MCP">
+  <img src="https://img.shields.io/badge/free-public-0a0a14?style=for-the-badge&labelColor=141420&color=b480ff" alt="Free">
 </p>
 
 <h1 align="center">kompress-ultra</h1>
@@ -26,6 +29,26 @@
 </p>
 
 ---
+
+<div align="center">
+  <a href="#quick-start" style="text-decoration: none;">
+    <div style="
+      display: inline-block;
+      background: linear-gradient(135deg, #0a0a14 0%, #141420 100%);
+      border: 1px solid #00d4ff;
+      border-radius: 12px;
+      padding: 18px 32px;
+      margin: 8px 0;
+      box-shadow: 0 0 24px rgba(0, 212, 255, 0.08), inset 0 0 24px rgba(0, 212, 255, 0.02);
+      transition: box-shadow 0.2s, border-color 0.2s;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    " onmouseover="this.style.boxShadow='0 0 32px rgba(0,212,255,0.2)';this.style.borderColor='#00e660'" onmouseout="this.style.boxShadow='0 0 24px rgba(0,212,255,0.08)';this.style.borderColor='#00d4ff'">
+      <span style="font-size: 15px; color: #8892b0; letter-spacing: 0.5px; text-transform: uppercase;">📢 recent news</span><br>
+      <span style="font-size: 22px; font-weight: 700; color: #e6f1ff;">free &amp; public MCP + API is LIVE</span><br>
+      <span style="font-size: 13px; color: #00e660;">→ jump to quick start ←</span>
+    </div>
+  </a>
+</div>
 
 ## Table of Contents
 
@@ -125,6 +148,10 @@ GET  /v1/health     — REST: liveness + circuit breaker + telemetry status
 GET  /v1/telemetry  — REST: telemetry disclosure (what's collected, how to opt out)
 GET  /v1/stats      — REST: daily aggregate stats (research telemetry)
 ```
+| Protocol | Description |
+|----------|-------------|
+| **API** | `POST /v1/compress`, `POST /v1/score`, `POST /v1/rewrite` — Bearer auth when configured. Returns JSON. |
+| **MCP** | `POST /mcp` — Full MCP protocol with 6 tools: `compress`, `score`, `rewrite`, `budget`, `circuit`, `telemetry`. Use with any MCP client (Claude Desktop, VS Code, etc.). |
 
 Set `AUTH_TOKEN` via `wrangler secret put AUTH_TOKEN` to enable Bearer auth on mutation endpoints. Health, telemetry, and root stay open.
 
