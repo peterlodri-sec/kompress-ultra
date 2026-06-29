@@ -42,3 +42,4 @@ verdaccio/htpasswd
 .npmrc
 .ultramesh-mem/
 ultramesh-mem/brain-state.json
+dream-cdn/dream-cdn.key
