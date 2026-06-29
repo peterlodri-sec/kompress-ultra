@@ -1,11 +1,5 @@
 name: CI
 
-# Non-blocking CI gate — the fleet runs harden the pipeline, but CI itself
-# NEVER fails. All toolchain steps are advisory (continue-on-error). The gate
-# step always passes, so PRs only block on merge conflicts, never on CI red.
-# This is intentional: kompress-ultra is a research project, not a production
-# pedantic-zero-defect system.
-
 on:
   push:
     branches: [main]
@@ -25,24 +19,16 @@ jobs:
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
-
       - uses: oven-sh/setup-bun@v2
-        with:
-          bun-version: latest
-
-      - name: Install dependencies
+        with: {bun-version: latest}
+      - name: Install
         run: bun install --frozen-lockfile
         continue-on-error: true
-
-      - name: Type check
+      - name: Typecheck
         run: bun run typecheck
         continue-on-error: true
-
-      - name: Run tests
+      - name: Tests
         run: bun test
         continue-on-error: true
-
-      # The gate — always passes. The steps above are advisory; their exit codes
-      # are logged in the action output but never block the pipeline.
       - name: Gate
-        run: echo "CI gate — PASS"
+        run: echo "CI state: $(bash .github/ci-state.sh state ci-gate 2>/dev/null | python3 -c 'import json,sys;d=json.load(sys.stdin);print(d.get(\"state\",\"?\"))' || echo 'idle') — all advisory, never blocks"
