@@ -5,6 +5,31 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [7.0.0] — 2026-06-29 — terraform-sonata
+
+### Added
+- `infrastructure/` — Terraform IaC directory with modular structure:
+  - `gcp/main.tf` — GCP resources: Artifact Registry, Secret Manager (5 secrets), Cloud Build trigger
+  - `cloudflare/main.tf` — Cloudflare resources: Worker script, KV namespace, DNS record, Worker route
+  - `infrastructure/README.md` — Usage guide with prerequisites and state management
+- `infrastructure/gcp/variables.tf` — GCP variables (project_id, region)
+- `infrastructure/cloudflare/variables.tf` — Cloudflare variables (api_token, account_id, zone_id)
+
+### Changed
+- Bumped `package.json` version → `7.0.0`
+- Bumped Worker `VERSION` → `7.0.0`
+- `wrangler.toml` — VERSION var updated to 7.0.0 in all env sections
+
+### Infrastructure
+- Terraform-managed GCP resources: Artifact Registry npm repo, 5 secrets (placeholders), Cloud Build trigger
+- Terraform-managed Cloudflare resources: Worker script, KV stats namespace, DNS record, Worker route
+- State stored locally by default; GCS backend documented for team use
+- Run: `terraform -chdir=infrastructure/gcp init && terraform -chdir=infrastructure/gcp plan`
+
+### Operations
+- Hetzner fleet optimized: 3 orphan Ubuntu instances deleted (saved €17.9/mo / €215/yr)
+- Fleet reduced from 10 → 7 machines, €91.4 → €73.5/mo
+
 ## [6.0.0] — 2026-06-29 — secret-garden
 
 ### Added

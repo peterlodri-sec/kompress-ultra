@@ -36,7 +36,7 @@ import {
 import type { Message, AgentType } from "../src/types.js";
 import { recordTelemetry, readDailyStats, telemetryDisclosure } from "./telemetry.js";
 
-const VERSION = "6.0.0";
+const VERSION = "7.0.0";
 const TELEMETRY_HEADER = "X-Telemetry";
 const TELEMETRY_URL = "https://github.com/peterlodri-sec/kompress-ultra/blob/main/TELEMETRY.md";
 
