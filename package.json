@@ -1,7 +1,7 @@
 {
   "name": "kompress-ultra",
   "version": "0.1.0",
-  "description": "4-role living context layer: Composer, Pruner, Rewriter, Circulator",
+  "description": "4-role living context layer: Composer, Pruner, Rewriter, Circulator. 78% token savings, 0.993 exact-keep rate.",
   "type": "module",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
@@ -26,11 +26,40 @@
   "scripts": {
     "build": "bun build src/index.ts --outdir dist --target bun",
     "test": "bun test",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "lint": "tsc --noEmit",
+    "prepublishOnly": "bun run build"
   },
   "files": [
     "dist",
-    "src"
+    "src",
+    "README.md",
+    "LICENSE",
+    "CHANGELOG.md"
   ],
-  "license": "Apache-2.0"
+  "keywords": [
+    "context-compression",
+    "llm",
+    "agent",
+    "prompt-pruning",
+    "modernbert",
+    "asymmetric-loss",
+    "token-savings",
+    "milvus",
+    "vector-memory",
+    "headroom"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/peterlodri-sec/kompress-ultra.git"
+  },
+  "bugs": {
+    "url": "https://github.com/peterlodri-sec/kompress-ultra/issues"
+  },
+  "homepage": "https://proposal.vaked.dev",
+  "author": "Peter Lodri <peter@peterl.dev> (https://peterl.dev)",
+  "license": "Apache-2.0",
+  "engines": {
+    "node": ">=18.0.0"
+  }
 }

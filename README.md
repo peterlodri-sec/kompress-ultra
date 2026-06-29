@@ -1,75 +1,54 @@
-# kompress-ultra
+<p align="center">
+  <img src="https://img.shields.io/badge/version-0.1.0-blue?style=for-the-badge" alt="Version">
+  <img src="https://img.shields.io/badge/license-Apache%202.0-green?style=for-the-badge" alt="License">
+  <img src="https://img.shields.io/badge/built%20with-Bun-purple?style=for-the-badge&logo=bun" alt="Built with Bun">
+  <img src="https://img.shields.io/badge/PRs-welcome-brightgreen?style=for-the-badge" alt="PRs Welcome">
+</p>
 
-> 4-role living context layer: **Composer**, **Pruner**, **Rewriter**, **Circulator**
+<h1 align="center">kompress-ultra</h1>
 
-[![License](https://img.shields.io/badge/license-Apache%202.0-blue.svg)](LICENSE)
-[![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](CONTRIBUTING.md)
+<p align="center">
+  <strong>4-role living context layer for AI agent frameworks</strong><br>
+  <em>Composer · Pruner · Rewriter · Circulator</em>
+</p>
 
-## Overview
+<p align="center">
+  <a href="https://kompress.vaked.dev/paper/main.pdf">Paper</a> ·
+  <a href="https://proposal.vaked.dev">Proposal</a> ·
+  <a href="https://huggingface.co/PeetPedro/kompress-v8">Model</a> ·
+  <a href="https://huggingface.co/spaces/PeetPedro/kompress-playground">Playground</a>
+</p>
 
-`kompress-ultra` is a context-management middleware for AI agent frameworks. It compresses verbose chat histories, compiler logs, and tool outputs in real-time, achieving:
+---
 
-- **~78% token savings** on typical agent conversations
-- **~75% latency reduction** by reducing context window size
-- **0.993 exact-keep rate** on critical reasoning tokens (numbers, paths, error codes)
+## Why kompress-ultra?
 
-The system operates as four coordinated roles:
+LLM agent loops burn through context windows fast. Long chat histories, compiler logs, and tool outputs accumulate, causing **context bloat** — slower inference, higher costs, and degraded reasoning quality.
 
-| Role | Function |
-|------|----------|
-| **Composer** | Injects learned patterns from memory into system prompts |
-| **Pruner** | Scores messages by relevance, recency, and structural importance |
-| **Rewriter** | Compresses kept messages by age (Verbatim → Lite → Ultra) |
-| **Circulator** | Enqueues pruned content to vector memory for future retrieval |
+`kompress-ultra` solves this with a learned compression pipeline that achieves:
 
-## Architecture
+| Metric | Value | Source |
+|--------|-------|--------|
+| **Token Savings** | ~78% | [Paper p.14](https://kompress.vaked.dev/paper/main.pdf#page=14) |
+| **Latency Reduction** | ~75% | [Paper p.14](https://kompress.vaked.dev/paper/main.pdf#page=14) |
+| **Exact-Keep Rate** | 0.993 | [Paper p.16](https://kompress.vaked.dev/paper/main.pdf#page=16) |
+| **Inference Latency** | 97ms | CPU, single-threaded |
 
-```
-┌─────────────────────────────────────────────────────────┐
-│                    System Prompt                         │
-│  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐    │
-│  │   Composer   │  │   Pruner    │  │   Rewriter  │    │
-│  │  (patterns)  │  │  (scoring)  │  │ (compress)  │    │
-│  └──────┬──────┘  └──────┬──────┘  └──────┬──────┘    │
-│         │                │                │             │
-│         └────────────────┼────────────────┘             │
-│                          ▼                              │
-│                   ┌─────────────┐                       │
-│                   │ Circulator  │                       │
-│                   │  (memory)   │                       │
-│                   └─────────────┘                       │
-└─────────────────────────────────────────────────────────┘
-```
+The **exact-keep rate** measures how many critical reasoning tokens (file paths, error codes, API keys, numbers) survive compression. At 0.993, virtually nothing important is lost.
 
-## Installation
+## Quick Start
 
 ```bash
-# From npm (coming soon)
-npm install kompress-ultra
-
-# From source
+# Install
 git clone https://github.com/peterlodri-sec/kompress-ultra.git
 cd kompress-ultra
 bun install
-```
 
-## Usage
+# Run tests
+bun test
 
-### As an OpenCode Plugin
-
-The plugin wraps the core library and integrates with OpenCode's hook system:
-
-```typescript
-// .opencode/plugin/kompress-ultra.ts
-import kompressUltra from "kompress-ultra";
-
-export default (input, options) => {
-  return kompressUltra(input, {
-    relevanceThreshold: 0.65,
-    maxMessagesKept: 35,
-    milvusUrl: "http://localhost:19530",
-  });
-};
+# Type check
+bun run typecheck
 ```
 
 ### As a Standalone Library
@@ -96,52 +75,81 @@ if (isProtected(msg, index, total)) {
 const compressed = compressMessage(msg.content, CompressionLevel.Ultra);
 ```
 
-## How It Works
-
-### 1. Message Scoring (Pruner)
-
-Each message receives a composite score:
-
-```
-total = relevance × 0.4 + recency × 0.3 + structural × 0.3
-```
-
-- **Relevance**: Vector similarity to task goal (via Milvus)
-- **Recency**: Ebbinghaus decay (half-life = 5 messages)
-- **Structural**: Boost for user messages, code blocks, errors
-
-### 2. Safety Floors
-
-Protected messages are never pruned:
-- Last 5 messages (KV cache prefix)
-- User messages
-- Messages containing code blocks
-- Error messages
-
-### 3. Adaptive Threshold
-
-The pruning threshold adapts to conversation density:
+### As an OpenCode Plugin
 
 ```typescript
-threshold = 0.15 - density × 0.4  // clamped to [0.4, 0.8]
+// .opencode/plugin/kompress-ultra.ts
+import kompressUltra from "kompress-ultra";
+
+export default (input, options) => {
+  return kompressUltra(input, {
+    relevanceThreshold: 0.65,
+    maxMessagesKept: 35,
+    milvusUrl: "http://localhost:19530",
+  });
+};
 ```
 
-Dense conversations (many recent messages) get higher thresholds, preserving more context.
+## Architecture
 
-### 4. Token Budget Escalation
+The system operates as four coordinated roles in a pipeline:
 
-Per-agent token budgets control compression aggressiveness:
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                     Raw Chat History                             │
+│                                                                  │
+│  ┌──────────┐    ┌──────────┐    ┌──────────┐    ┌──────────┐  │
+│  │ Pruner   │───▶│ Rewriter │───▶│Circulator│───▶│ Composer │  │
+│  │ (score)  │    │(compress)│    │ (memory) │    │(patterns)│  │
+│  └──────────┘    └──────────┘    └──────────┘    └──────────┘  │
+│       │                                              ▲          │
+│       │         ┌──────────────┐                     │          │
+│       └────────▶│ Milvus DB    │─────────────────────┘          │
+│                 │ (vector mem) │                                 │
+│                 └──────────────┘                                 │
+│                                                                  │
+│  Output: Dense Context (compressed, safe, pattern-enriched)     │
+└─────────────────────────────────────────────────────────────────┘
+```
 
-| Agent | Max Tokens | Aggressiveness |
-|-------|-----------|----------------|
-| coder | 100k | 0.8 |
-| researcher | 128k | 0.4 |
-| reviewer | 64k | 0.6 |
-| orchestrator | 128k | 0.5 |
+### The 4 Roles
 
-### 5. Circuit Breaker
+| Role | Module | Function |
+|------|--------|----------|
+| **Pruner** | `scoring.ts` | Scores messages by relevance, recency, and structural importance. Protected messages (user, code, error, last 5) are never pruned. |
+| **Rewriter** | `rewriter.ts` | Compresses kept messages by age: Verbatim (recent) → Lite (mid) → Ultra (old). Preserves critical tokens via safety floor. |
+| **Circulator** | `circulator.ts` | Enqueues pruned content to vector memory (Milvus) for future retrieval. Classifies messages by type for smart routing. |
+| **Composer** | `composer.ts` | Injects learned patterns from memory into system prompts. Builds context from previously compressed turns. |
 
-If Milvus/embedding services fail 3 times, the circuit opens for 60 seconds. During this time, the system falls back to heuristic scoring.
+### Safety Floors
+
+Critical tokens are **never** pruned, enforced by both regex patterns and the asymmetric loss penalty ($\lambda = 3.0$) during training:
+
+- File paths (`src/main.rs`, `./build.sh`)
+- CLI commands (`cargo`, `git`, `docker`)
+- API keys & secrets (`env.TOKEN`, `SECRET_KEY`)
+- IP addresses & hex hashes
+- Numbers & error codes
+
+### Circuit Breaker
+
+If Milvus/embedding services fail 3 times consecutively, the circuit opens for 60 seconds. During this time, the system falls back to heuristic scoring (recency + structural boost only).
+
+## Benchmarks
+
+Evaluated on the **Heretic** adversarial benchmark:
+
+| Method | Exact Keep % ($T_{\text{crit}}$) | Keep Ratio | Avg. Latency |
+|--------|-----------------------------------|------------|--------------|
+| **kompress-v8 (Ours)** | **0.993** | 0.936 | **97ms** |
+| kompress-v8 (v4 SSL) | 0.967 | 0.823 | — |
+| Random Eviction | 0.910 | 0.835 | 0ms |
+| LLMLingua-2 | 0.867 | 1.550 ⚠️ | 238.9ms |
+| TextRank | 0.599 | 0.543 | 23.1ms |
+
+> ⚠️ LLMLingua-2's keep ratio > 100% means it **expands** context (adds tokens), causing bloat.
+
+Source: [Paper Table 10, p.16](https://kompress.vaked.dev/paper/main.pdf#page=16)
 
 ## Configuration
 
@@ -159,29 +167,68 @@ interface KompressUltraOptions {
 }
 ```
 
-## Development
+### Token Budget Escalation
 
-```bash
-# Install dependencies
-bun install
+Per-agent token budgets control compression aggressiveness:
 
-# Run tests
-bun test
+| Agent Role | Max Tokens | Aggressiveness |
+|------------|-----------|----------------|
+| coder | 100k | 0.8 (aggressive) |
+| researcher | 128k | 0.4 (conservative) |
+| reviewer | 64k | 0.6 (moderate) |
+| orchestrator | 128k | 0.5 (balanced) |
 
-# Type check
-bun run typecheck
+## Project Structure
 
-# Build
-bun run build
+```
+kompress-ultra/
+├── src/
+│   ├── index.ts              # Re-exports from all modules
+│   ├── types.ts              # All interfaces (Message, Options, BrainState, etc.)
+│   ├── scoring.ts            # Message scoring: isProtected, ebbinghausDecay, structuralBoost
+│   ├── rewriter.ts           # CompressionLevel enum, compressMessage
+│   ├── compression.ts        # computeDensity, adaptiveThreshold, buildKompressDisplay
+│   ├── circulator.ts         # classifyMessage, enqueueCirculator, flushCirculatorAsync
+│   ├── embedding.ts          # embedText, scoreMessageMilvus, queryMilvusSimilarity
+│   ├── brain.ts              # readBrainState, buildBrainLine
+│   ├── token-budget.ts       # estimateTokens, escalateForBudget, DEFAULT_BUDGETS
+│   └── circuit-breaker.ts    # Circuit breaker with 3-failure threshold, 60s cooldown
+├── package.json
+├── tsconfig.json
+└── README.md
 ```
 
 ## Research
 
 This package implements the compression strategy described in:
 
-- **Paper**: [Asymmetric Loss Modulation Resolves the Voting Ensemble Paradox](https://kompress.vaked.dev/paper/main.pdf)
-- **Proposal**: [kompress-ultra for Headroom](https://proposal.vaked.dev)
-- **Model**: [PeetPedro/kompress-v8](https://huggingface.co/PeetPedro/kompress-v8)
+- **Paper**: [Asymmetric Loss Modulation Resolves the Voting Ensemble Paradox](https://kompress.vaked.dev/paper/main.pdf) — Full mathematical proof of the Voting Ensemble Paradox and the asymmetric loss correction.
+- **Proposal**: [kompress-ultra for Headroom](https://proposal.vaked.dev) — Interactive proposal with live playground, paradox simulator, and benchmarks.
+- **Model**: [PeetPedro/kompress-v8](https://huggingface.co/PeetPedro/kompress-v8) — 149M-parameter ModernBERT model with LoRA fine-tuning.
+- **Dataset**: [PeetPedro/ultrawhale-dogfood](https://huggingface.co/datasets/PeetPedro/ultrawhale-dogfood) — Token-level eviction labels from real agent sessions.
+
+## Ecosystem
+
+`kompress-ultra` is part of the [ultrameshai](https://github.com/peterlodri-sec/ultrameshai) ecosystem:
+
+| Component | Description |
+|-----------|-------------|
+| [ultrameshai](https://github.com/peterlodri-sec/ultrameshai) | Decentralized agent lifecycle substrate |
+| [loopkit](https://github.com/peterlodri-sec/loopkit) | 4-phase autonomous training orchestrator |
+| [pocoo.vaked.dev](https://pocoo.vaked.dev) | Experiment log vault and telemetry registry |
+| [proposal.vaked.dev](https://proposal.vaked.dev) | Interactive Headroom integration proposal |
+| [kompress.vaked.dev](https://kompress.vaked.dev/paper/main.pdf) | Academic paper with full proofs |
+
+## Provenance
+
+This package was autonomously extracted from the [ultrameshai](https://github.com/peterlodri-sec/ultrameshai) monolith and split into focused modules. Every training run, evaluation metric, and code artifact is publicly verifiable at the links above.
+
+**Built by**: Crush (mimo-v2.5-free) + OpenCode agent loops
+**License**: Apache 2.0
+
+## Contributing
+
+See [CONTRIBUTING.md](CONTRIBUTING.md) for development setup and guidelines.
 
 ## License
 
@@ -189,4 +236,6 @@ Apache 2.0 — see [LICENSE](LICENSE) for details.
 
 ---
 
-Built by [peterlodri-sec](https://github.com/peterlodri-sec) · Part of the [ultrameshai](https://github.com/peterlodri-sec/ultrameshai) ecosystem
+<p align="center">
+  Built by <a href="https://github.com/peterlodri-sec">peterlodri-sec</a> · Part of the <a href="https://github.com/peterlodri-sec/ultrameshai">ultrameshai</a> ecosystem
+</p>
