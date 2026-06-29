@@ -1,6 +1,6 @@
 {
   "name": "kompress-ultra",
-  "version": "0.1.0",
+  "version": "1.0.0",
   "description": "4-role living context layer: Composer, Pruner, Rewriter, Circulator. 78% token savings, 0.993 exact-keep rate.",
   "type": "module",
   "main": "./dist/index.js",
@@ -61,5 +61,14 @@
   "license": "Apache-2.0",
   "engines": {
     "node": ">=18.0.0"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "^4.20260629.1",
+    "@modelcontextprotocol/sdk": "^1.29.0",
+    "@types/bun": "^1.3.14",
+    "@types/node": "^26.0.1",
+    "agents": "^0.17.1",
+    "typescript": "^6.0.3",
+    "zod": "^4.4.3"
   }
 }

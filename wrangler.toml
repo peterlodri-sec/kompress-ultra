@@ -1,0 +1,15 @@
+name = "kompress-ultra-api"
+main = "server/worker.ts"
+compatibility_date = "2026-06-29"
+compatibility_flags = ["nodejs_compat"]
+
+# Bindings
+[[kv_namespaces]]
+binding = "KOMPRESS_STATS"
+id = "placeholder"  # Set via `wrangler kv:namespace create KOMPRESS_STATS`
+
+# Route (uncomment after DNS setup)
+# routes = [{ pattern = "api.kompress.vaked.dev/*", zone_name = "vaked.dev" }
+
+[vars]
+# AUTH_TOKEN = ""  # Set via `wrangler secret put AUTH_TOKEN`

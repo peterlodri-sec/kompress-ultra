@@ -48,3 +48,21 @@ export async function scoreMessage(
     protected: isProtected(msg, index, total),
   };
 }
+
+export function scoreMessageSync(
+  msg: Message,
+  index: number,
+  total: number,
+): MessageScore {
+  const recency = ebbinghausDecay(total - index);
+  const structural = structuralBoost(msg);
+  const relevance = 0.5;
+  const total_score = relevance * 0.4 + recency * 0.3 + structural * 0.3;
+  return {
+    relevance,
+    recency,
+    structural,
+    total: total_score,
+    protected: isProtected(msg, index, total),
+  };
+}

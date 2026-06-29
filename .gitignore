@@ -30,3 +30,8 @@ coverage/
 
 # Bun
 bun.lockb
+
+# Wrangler
+.wrangler/
+.dev.vars
+*.tsbuildinfo

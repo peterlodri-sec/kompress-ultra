@@ -1,3 +1,7 @@
+export type AgentType = "coder" | "researcher" | "reviewer" | "orchestrator";
+
+export type CompressionLevelName = "verbatim" | "lite" | "ultra" | "brain-backed";
+
 export interface KompressUltraOptions {
   relevanceThreshold?: number;
   maxMessagesKept?: number;
@@ -9,6 +13,8 @@ export interface KompressUltraOptions {
   sliceAwareBoost?: boolean;
   displayPruneStatus?: boolean;
   transparencyMode?: boolean;
+  agentType?: AgentType;
+  aggression?: number;
 }
 
 export const DEFAULT_OPTIONS: Required<KompressUltraOptions> = {
@@ -22,11 +28,14 @@ export const DEFAULT_OPTIONS: Required<KompressUltraOptions> = {
   sliceAwareBoost: true,
   displayPruneStatus: true,
   transparencyMode: true,
+  agentType: "coder",
+  aggression: 0.8,
 };
 
 export interface Message {
   role: string;
   content: string;
+  type?: string;
   [key: string]: unknown;
 }
 
@@ -69,8 +78,38 @@ export interface MessageScore {
 }
 
 export interface AgentTokenBudget {
-  agent_type: string;
+  agent_type: AgentType;
   max_context_tokens: number;
   compression_aggressiveness: number;
   brain_injection_budget: number;
+}
+
+export interface CompressInput {
+  messages: Message[];
+  agentType?: AgentType;
+  aggression?: number;
+  taskGoal?: string;
+  sliceId?: string;
+}
+
+export interface CompressResult {
+  kept: Message[];
+  dropped: Message[];
+  stats: KompressStats;
+  circulated: number;
+}
+
+export interface RewriteResult {
+  original: string;
+  rewritten: string;
+  level: CompressionLevelName;
+  originalTokens: number;
+  rewrittenTokens: number;
+  savingsPct: number;
+}
+
+export interface ScoredMessage {
+  message: Message;
+  score: MessageScore;
+  tokens: number;
 }

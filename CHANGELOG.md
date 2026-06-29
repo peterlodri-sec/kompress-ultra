@@ -5,6 +5,30 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.0] - 2026-06-29
+
+### Changed
+- **BREAKING**: `scoreMessage` now requires `(Message, index, total)` instead of `(content, role, total)`
+- **BREAKING**: `enqueueCirculator` now accepts `CirculatorInput` (simplified shape) instead of full `CirculatorEntry`
+- `token-budget.ts` filter now correctly drops unprotected messages when over budget
+
+### Added
+- `scoreMessageSync` — synchronous scoring without Milvus dependency
+- `getBudget` — typed budget lookup by `AgentType`
+- `totalTokens` — sum token estimates across messages
+- `getCirculatorQueueLength`, `drainCirculatorQueue` — queue inspection
+- `CompressInput`, `CompressResult`, `RewriteResult`, `ScoredMessage` types
+- `AgentType`, `CompressionLevelName` type aliases
+- REST endpoints: `POST /v1/rewrite`, `GET /v1/health`
+- 52 tests across 6 modules
+- `.gitignore` with Wrangler and build artifacts
+
+### Fixed
+- Worker used `any` types throughout — now fully typed
+- Worker `scoreMessage` calls used wrong signature
+- Worker `isProtected` calls passed raw content instead of `Message`
+- Worker `enqueueCirculator` calls used wrong shape
+
 ## [0.1.0] - 2026-06-29
 
 ### Added
