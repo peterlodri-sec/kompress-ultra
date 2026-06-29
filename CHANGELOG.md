@@ -5,6 +5,30 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [6.0.0] — 2026-06-29 — secret-garden
+
+### Added
+- `scripts/secret-migrate.sh` — migrate secrets from age-encrypted files → GCP Secret Manager. Audits 7 required secrets, creates placeholders, validates age files, checks for hardcoded secrets in code.
+- `scripts/secret-inventory.sh` — comprehensive secrets inventory: GCP secrets, age-encrypted files, local env files, process.env refs in code, Cloud Build references, GitHub Actions secrets.
+- `docs/secrets/README.md` — complete secrets management guide: naming convention, creation, access control, rotation, migration from age, emergency fallback.
+
+### Changed
+- Bumped `package.json` version → `6.0.0`
+- Bumped Worker `VERSION` → `6.0.0`
+- `wrangler.toml` — VERSION var updated to 6.0.0 in all env sections
+
+### Infrastructure
+- 7 required secrets identified for kompress-ultra ecosystem:
+  - `cloudflare-api-token` — Worker deployment
+  - `npm-auth-token` — Artifact Registry publish
+  - `ovh-ssh-key` — OVH box access
+  - `ovh-verdaccio-password` — npm registry auth
+  - `worker-auth-token` — production Worker auth
+  - `openrouter-api-key` — CI fleet agents
+  - `github-pat` — GitHub API for CI
+- Migration path from `docs/deploy/ovh-secrets.json.age` documented
+- Rotation schedule defined (90 days for tokens, 180 for SSH keys)
+
 ## [5.0.0] — 2026-06-29 — triple-crown
 
 ### Added
