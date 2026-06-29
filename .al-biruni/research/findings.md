@@ -1,4 +1,4 @@
-# Deep Findings: Asymmetric Loss Modulation for Context Compression
+# Deep Findings: Genesis ingestion — self-reflection. Complete ultramesh brain graph with temporal 3D layers, DIAD edges, chaos/repairentropy loops, and hot-swappable architecture.
 
 ## Sources Surveyed
 - Academic papers
