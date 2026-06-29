@@ -149,23 +149,28 @@ with open('${BRAIN_STATE}', 'w') as f:
 # ── Store memory entry ───────────────────────────────────────────────────
 store() {
   local type="" category="" finding="" detail="" severity="advisory" action="" files="" error_msg=""
+  local loop_cycle="" effectiveness="" loop_name=""
 
   while [ $# -gt 0 ]; do
     case "$1" in
-      --type)      type="$2";       shift 2 ;;
-      --category)  category="$2";   shift 2 ;;
-      --finding)   finding="$2";    shift 2 ;;
-      --detail)    detail="$2";     shift 2 ;;
-      --severity)  severity="$2";   shift 2 ;;
-      --action)    action="$2";     shift 2 ;;
-      --files)     files="$2";      shift 2 ;;
-      --error)     error_msg="$2";  shift 2 ;;
+      --type)         type="$2";        shift 2 ;;
+      --category)     category="$2";    shift 2 ;;
+      --finding)      finding="$2";     shift 2 ;;
+      --detail)       detail="$2";      shift 2 ;;
+      --severity)     severity="$2";    shift 2 ;;
+      --action)       action="$2";      shift 2 ;;
+      --files)        files="$2";       shift 2 ;;
+      --error)        error_msg="$2";   shift 2 ;;
+      --loop-cycle)   loop_cycle="$2";  shift 2 ;;
+      --effectiveness) effectiveness="$2"; shift 2 ;;
+      --loop-name)    loop_name="$2";   shift 2 ;;
       *) echo "unknown: $1" >&2; exit 1 ;;
     esac
   done
 
   [ -z "$type" ] && { echo "ERROR: --type required" >&2; exit 1; }
 
+  # Main memory entry
   python3 -c "
 import json
 entry = {
@@ -177,7 +182,9 @@ entry = {
         'detail': '$detail',
         'severity': '$severity',
         'action': '$action',
-        'files': '$files'
+        'files': '$files',
+        'loop_cycle': '$loop_cycle',
+        'effectiveness': '$effectiveness'
     },
     'error': '$error_msg'
 }
@@ -186,10 +193,45 @@ with open('${MEM_FILE}', 'a') as f:
 print(f'stored: ${type}/${category} — ${finding}')
 " 2>/dev/null
 
-  # Update brain state
+  # If loop tracking, write to loop-specific file
+  if [ -n "$loop_name" ]; then
+    local loop_dir="${MEM_DIR}/loops"
+    mkdir -p "$loop_dir"
+    python3 -c "
+import json, time
+entry = {
+    'ts': '$NOW',
+    'ts_ms': int(time.time() * 1000),
+    'loop': '$loop_name',
+    'cycle': $([ -n "$loop_cycle" ] && echo "$loop_cycle" || echo 0),
+    'effectiveness': $([ -n "$effectiveness" ] && echo "$effectiveness" || echo "null"),
+    'type': '$type',
+    'category': '$category',
+    'finding': '$finding'
+}
+with open('${loop_dir}/${loop_name}.jsonl', 'a') as f:
+    f.write(json.dumps(entry, ensure_ascii=False) + '\n')
+" 2>/dev/null
+  fi
+
+  # Update brain state (findings_total = loop cycles)
   local count
   count=$(wc -l < "$MEM_FILE" 2>/dev/null || echo 0)
-  write_brain_state "$count" "0" "0"
+  local loop_count=0
+  if [ -n "$loop_cycle" ]; then
+    loop_count=$(python3 -c "
+import os, json
+total = 0
+for root, dirs, files in os.walk('${MEM_DIR}/loops'):
+    for f in files:
+        if f.endswith('.jsonl'):
+            with open(os.path.join(root, f)) as fh:
+                for l in fh:
+                    if l.strip(): total += 1
+print(total)
+" 2>/dev/null || echo 0)
+  fi
+  write_brain_state "$count" "$loop_count" "0"
 }
 
 # ── Query ────────────────────────────────────────────────────────────────
@@ -250,7 +292,71 @@ print(line)
 " 2>/dev/null
 }
 
-# ── Help ─────────────────────────────────────────────────────────────────
+# ── Loops (query ralph-loop data) ─────────────────────────────────────────
+loops() {
+  local name="" last_n=0
+  while [ $# -gt 0 ]; do
+    case "$1" in
+      --name) name="$2"; shift 2 ;;
+      --last) last_n="$2"; shift 2 ;;
+      *) echo "unknown: $1" >&2; exit 1 ;;
+    esac
+  done
+
+  local loop_dir="${MEM_DIR}/loops"
+  if [ ! -d "$loop_dir" ]; then
+    echo "no loop data"
+    exit 0
+  fi
+
+  if [ -n "$name" ]; then
+    local loop_file="$loop_dir/${name}.jsonl"
+    if [ ! -f "$loop_file" ]; then
+      echo "no loop data for: $name (available: $(ls "$loop_dir"/*.jsonl 2>/dev/null | xargs -n1 basename 2>/dev/null | sed 's/\.jsonl//g' | tr '\n' ' '))"
+      exit 0
+    fi
+    if [ "$last_n" -gt 0 ]; then
+      tail -n "$last_n" "$loop_file"
+    else
+      cat "$loop_file"
+    fi
+  else
+    # Summary of all loops
+    for f in "$loop_dir"/*.jsonl; do
+      local base
+      base=$(basename "$f" .jsonl)
+      local count
+      count=$(wc -l < "$f")
+      echo "${base}: ${count} cycles"
+    done
+  fi
+}
+
+# ── Mesh status (depth guard) ────────────────────────────────────────────
+mesh_status() {
+  local depth_file="${MEM_DIR}/mesh-depth.json"
+  local depth=0
+  local last_sync="never"
+  local resources="unknown"
+
+  if [ -f "$depth_file" ]; then
+    depth=$(python3 -c "import json; d=json.load(open('${depth_file}')); print(d.get('depth',0))" 2>/dev/null || echo 0)
+    last_sync=$(python3 -c "import json; d=json.load(open('${depth_file}')); print(d.get('last_sync','never'))" 2>/dev/null || echo never)
+    resources=$(python3 -c "import json; d=json.load(open('${depth_file}')); print(d.get('resources','unknown'))" 2>/dev/null || echo unknown)
+  fi
+
+  echo "═══ Mesh Depth Guard ═══"
+  echo "  MAX_DEPTH:  1 (ultra strict)"
+  echo "  Current:    ${depth}"
+  echo "  Resources:  ${resources}"
+  echo "  Last sync:  ${last_sync}"
+  if [ "$depth" -ge 1 ] 2>/dev/null; then
+    echo "  Status:     BLOCKED (depth limit reached)"
+  else
+    echo "  Status:     OPEN (sync allowed)"
+  fi
+  echo "═════════════════════════"
+}
 help() {
   cat << 'HELP'
 ultramesh-mem v1.0.0 — Universal Memory Plugin
@@ -286,14 +392,16 @@ HELP
 
 # ── Main ─────────────────────────────────────────────────────────────────
 case "${1:-help}" in
-  status)    status_cmd ;;
-  store)     shift; store "$@" ;;
-  query)     shift; query "$@" ;;
-  snapshot)  shift; write_brain_state "${1:-0}" "${2:-0}" "${3:-0}" ;;
+  status)      status_cmd ;;
+  store)       shift; store "$@" ;;
+  query)       shift; query "$@" ;;
+  snapshot)    shift; write_brain_state "${1:-0}" "${2:-0}" "${3:-0}" ;;
+  loops)       shift; loops "$@" ;;
+  mesh-status) mesh_status ;;
   help|--help|-h) help ;;
   *)
-    echo "ultramesh-mem v1.0.0 — Universal Memory Plugin"
-    echo "Usage: $0 {status|store|query|snapshot|help}"
+    echo "ultramesh-mem v1.1.0 — Universal Memory Plugin + Ralph-Loops"
+    echo "Usage: $0 {status|store|query|snapshot|loops|mesh-status|help}"
     exit 1
     ;;
 esac
