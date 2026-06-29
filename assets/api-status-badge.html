@@ -1,59 +1,8 @@
 <!--
-  kompress-ultra API Status Badge — paste inside <header> after the logo/nav div
--->
-<div id="api-status-badge" style="
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  background: #080c14;
-  border: 1px solid #1e293b;
-  border-radius: 8px;
-  padding: 6px 14px 6px 10px;
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-  font-size: 12px;
-  transition: border-color 0.3s;
-">
-  <span id="api-status-dot" style="
-    width: 8px; height: 8px; border-radius: 50%;
-    background: #64748b; display: inline-block; flex-shrink: 0;
-  "></span>
-  <span>
-    <span style="color: #64748b; font-size: 10px; text-transform: uppercase; letter-spacing: 0.5px;">API</span>
-    <span id="api-status-text" style="color: #94a3b8; font-weight: 600; margin-left: 4px;">checking…</span>
-  </span>
-</div>
+  API Status Badge — REFERENCE ONLY
 
-<script>
-(async function() {
-  const dot = document.getElementById('api-status-dot');
-  const txt = document.getElementById('api-status-text');
-  const badge = document.getElementById('api-status-badge');
-  try {
-    const r = await fetch('https://kompress.vaked.dev/v1/status', { signal: AbortSignal.timeout(5000) });
-    if (!r.ok) throw new Error(r.status);
-    const data = await r.json();
-    if (data.status === 'live') {
-      dot.style.background = '#00e660';
-      dot.style.boxShadow = '0 0 8px #00e660';
-      txt.textContent = 'live';
-      txt.style.color = '#00e660';
-      badge.style.borderColor = '#00e660/30';
-    } else {
-      throw new Error('unexpected status');
-    }
-  } catch {
-    dot.style.background = '#ef4444';
-    dot.style.boxShadow = '0 0 8px #ef4444';
-    txt.textContent = 'offline';
-    txt.style.color = '#ef4444';
-    badge.style.borderColor = '#ef4444/30';
-  }
-})();
-</script>
-
-<!--
-  Usage:
-  1. Paste the <div> block above inside your <header> navbar, right after
-     the existing logo/nav div (before the lang selector).
-  2. Paste the <script> block just before </body>.
+  The Worker serves this at GET /v1/badge.js
+  Add to proposal.vaked.dev:
+    <script src="https://kompress.vaked.dev/v1/badge.js"></script>
+  That's it — no HTML paste needed. The script auto-injects into <header>.
 -->

@@ -423,6 +423,69 @@ function handleStatus(): Response {
   });
 }
 
+function handleBadgeJs(): Response {
+  return new Response(`(function(){
+  var API='https://kompress.vaked.dev';
+  var c=document.getElementById('api-status-badge');
+  if(!c){
+    c=document.createElement('div');
+    c.id='api-status-badge';
+    c.style.cssText='display:inline-flex;align-items:center;gap:8px;background:#080c14;border:1px solid #1e293b;border-radius:8px;padding:6px 14px 6px 10px;font-family:-apple-system,BlinkMacSystemFont,\"Segoe UI\",Roboto,sans-serif;font-size:12px;transition:border-color .3s';
+    var nav=document.querySelector('header .flex.items-center.gap-3');
+    if(nav)nav.parentNode.insertBefore(c,nav);
+    else document.querySelector('header .flex.justify-between')?.appendChild(c);
+  }
+  c.innerHTML='<span id="api-status-dot" style="width:8px;height:8px;border-radius:50%;background:#64748b;display:inline-block;flex-shrink:0"></span><span><span style="color:#64748b;font-size:10px;text-transform:uppercase;letter-spacing:.5px">API</span><span id="api-status-text" style="color:#94a3b8;font-weight:600;margin-left:4px">checking\u2026</span></span>';
+  var d=document.getElementById('api-status-dot'),t=document.getElementById('api-status-text');
+  fetch(API+'/v1/status',{signal:AbortSignal.timeout(5000)}).then(function(r){if(!r.ok)throw Error(r.status);return r.json()}).then(function(data){
+    if(data.status==='live'){d.style.background='#00e660';d.style.boxShadow='0 0 8px #00e660';t.textContent='live';t.style.color='#00e660'}else throw Error('down')
+  }).catch(function(){
+    d.style.background='#ef4444';d.style.boxShadow='0 0 8px #ef4444';t.textContent='offline';t.style.color='#ef4444'
+  });
+})();`, {
+    headers: {
+      "Content-Type": "application/javascript",
+      "Access-Control-Allow-Origin": "*",
+      "Cache-Control": "no-cache",
+    },
+  });
+}
+
+function handleTelemetryJs(): Response {
+  return new Response(`(function(){
+  var API='https://kompress.vaked.dev';
+  var sec=document.getElementById('telemetry');
+  if(!sec)return;
+  sec.innerHTML='<div class="gradient-border"><div class="p-8 bg-slate-955/40 rounded-[15px] space-y-6"><div class="flex items-center gap-3 mb-2"><i aria-hidden="true" class="w-5 h-5 text-brand-cyan" data-lucide="activity"></i><h2 class="text-2xl font-bold text-white font-title">Ralph-Loop Telemetry (Academic Dogfeeding)</h2></div><p class="text-sm text-slate-400 leading-relaxed max-w-3xl">A live feed showing how our coding agent is currently running and compressing its own logs to save memory. Data fetched from <a class="text-brand-cyan hover:underline font-mono" href="https://github.com/peterlodri-sec/kompress-ultra" target="_blank" rel="noopener noreferrer">kompress-ultra</a> API telemetry.</p><div id="telemetry-grid" class="grid grid-cols-2 md:grid-cols-5 gap-4"><div class="bg-slate-900/50 border border-slate-800/80 rounded-xl p-4 text-center"><span class="text-[10px] text-slate-500 uppercase tracking-wider block mb-2">L1 Loop</span><div class="flex items-center justify-center gap-2"><span id="tel-loop-dot" class="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse"></span><span id="tel-loop-status" class="text-lg font-bold text-emerald-400 font-mono">Active</span></div></div><div class="bg-slate-900/50 border border-slate-800/80 rounded-xl p-4 text-center"><span class="text-[10px] text-slate-500 uppercase tracking-wider block mb-2">Slices Processed</span><span id="tel-slices" class="text-xl font-bold text-white font-mono block">\u2014</span></div><div class="bg-slate-900/50 border border-slate-800/80 rounded-xl p-4 text-center"><span class="text-[10px] text-slate-500 uppercase tracking-wider block mb-2">Active Sandboxes</span><span class="text-sm font-bold text-white font-mono block">Bun / Nushell</span></div><div class="bg-slate-900/50 border border-slate-800/80 rounded-xl p-4 text-center"><span class="text-[10px] text-slate-500 uppercase tracking-wider block mb-2">Inference Latency</span><span id="tel-latency" class="text-xl font-bold text-brand-cyan font-mono block">\u2014</span></div><div class="bg-slate-900/50 border border-slate-800/80 rounded-xl p-4 text-center"><span class="text-[10px] text-slate-500 uppercase tracking-wider block mb-2">Token Savings Rate</span><span id="tel-savings" class="text-xl font-bold text-brand-emerald font-mono block">\u2014</span></div></div><div id="tel-timestamp" class="text-[10px] text-slate-600 font-mono text-center">Loading\u2026</div></div></div>';
+  var el=function(id){return document.getElementById(id)};
+  Promise.all([
+    fetch(API+'/v1/status',{signal:AbortSignal.timeout(5000)}).catch(function(){return null}),
+    fetch(API+'/v1/stats',{signal:AbortSignal.timeout(5000)}).catch(function(){return null})
+  ]).then(function(responses){
+    var statusRes=responses[0],statsRes=responses[1];
+    if(statusRes&&statusRes.ok){
+      statusRes.json().then(function(data){
+        if(data.status==='live'){el('tel-loop-dot').style.background='#00e660';el('tel-loop-status').textContent='Active';el('tel-loop-status').style.color='#00e660'}
+        else{el('tel-loop-dot').style.background='#ef4444';el('tel-loop-status').textContent='Offline';el('tel-loop-status').style.color='#ef4444'}
+      }).catch(function(){});
+    }
+    if(statsRes&&statsRes.ok){
+      statsRes.json().then(function(stats){
+        var totalEvents=stats['events:total']||0,totalMs=stats['duration_ms']||0,tokensIn=stats['tokens:in']||0,tokensOut=stats['tokens:out']||0;
+        if(totalEvents>0){el('tel-slices').textContent=totalEvents.toLocaleString();if(totalMs>0)el('tel-latency').textContent=(totalMs/totalEvents).toFixed(1)+' ms';if(tokensIn>0&&tokensOut>0)el('tel-savings').textContent=((1-tokensOut/tokensIn)*100).toFixed(1)+'%'}
+      }).catch(function(){});
+    }
+    el('tel-timestamp').textContent='Last updated: '+new Date().toLocaleString();
+  }).catch(function(){if(el('tel-loop-dot')){el('tel-loop-dot').style.background='#ef4444';el('tel-loop-status').textContent='Offline';el('tel-loop-status').style.color='#ef4444'}if(el('tel-timestamp'))el('tel-timestamp').textContent='Telemetry unavailable'});
+})();`, {
+    headers: {
+      "Content-Type": "application/javascript",
+      "Access-Control-Allow-Origin": "*",
+      "Cache-Control": "no-cache",
+    },
+  });
+}
+
 function handleTelemetry(env: Env): Response {
   return json({
     ...telemetryDisclosure(),
@@ -506,6 +569,12 @@ export default {
     }
     if (url.pathname === "/v1/status") {
       return handleStatus();
+    }
+    if (url.pathname === "/v1/badge.js") {
+      return handleBadgeJs();
+    }
+    if (url.pathname === "/v1/telemetry.js") {
+      return handleTelemetryJs();
     }
     if (url.pathname === "/v1/telemetry") {
       return handleTelemetry(env);

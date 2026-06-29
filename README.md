@@ -146,12 +146,16 @@ POST /v1/rewrite    — REST: rewrite a single message
 GET  /v1/budget     — REST: get token budget for agent type
 GET  /v1/health     — REST: liveness + circuit breaker + telemetry status
 GET  /v1/status     — REST: lightweight live/offline badge endpoint (no auth)
+GET  /v1/badge.js   — JS: self-injecting API status badge for proposal.vaked.dev
+GET  /v1/telemetry.js — JS: self-injecting Ralph-Loop Telemetry for proposal.vaked.dev
 GET  /v1/telemetry  — REST: telemetry disclosure (what's collected, how to opt out)
 GET  /v1/stats      — REST: daily aggregate stats (research telemetry)
 ```
 | Protocol | Description |
 |----------|-------------|
-| **Status** | `GET /v1/status` — lightweight live/offline check. No auth. Used by proposal.vaked.dev badge. |
+| **Status** | `GET /v1/status` — lightweight live/offline check. No auth. Used by the JS badge. |
+| **Badge JS** | `GET /v1/badge.js` — self-injecting script. Add `<script src=".../v1/badge.js"></script>` to any page for a live API badge. |
+| **Telemetry JS** | `GET /v1/telemetry.js` — self-injecting script. Add `<script src=".../v1/telemetry.js"></script>` and a `<section id="telemetry">` to get live Ralph-Loop stats. |
 | **API** | `POST /v1/compress`, `POST /v1/score`, `POST /v1/rewrite` — Bearer auth when configured. Returns JSON. |
 | **MCP** | `POST /mcp` — Full MCP protocol with 6 tools: `compress`, `score`, `rewrite`, `budget`, `circuit`, `telemetry`. Use with any MCP client (Claude Desktop, VS Code, etc.). |
 
