@@ -5,6 +5,36 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [14.0.0] — 2026-06-29 — wound-healer
+
+### Added
+- `src/topology-healer.ts` — Self-healing brain graph topology. Detects: orphaned nodes (no edges), stale edges (not traversed in 7+ days), singleton islands (disconnected subgraphs), collapsed conductivity (<0.05), excessive self-loops. Generates `HealingReport` with reconnection suggestions.
+- `src/topology-healer.ts` `summarize()` — one-line health summary for logging
+- Integrated into brain-pulse cycle: `heal()` is advisory, never destructive
+
+## [13.0.0] — 2026-06-29 — conductive-reason
+
+### Added
+- `src/edge-router.ts` — `EdgeRouter` class: semantic edge routing with learned DIAD conductivity. Routes by combined score (40% conductivity + 30% semantic similarity + 15% temporal recency + 15% layer alignment).
+- `recordTraversal()` — updates conductivity with learning rate (success: +0.1, failure: −0.2). Maintains last-10 history.
+- `getLowConductivityEdges()` — threshold-based pruning for repair-bot
+- `getState()` — routing state snapshot
+
+## [12.0.0] — 2026-06-29 — vector-whisper
+
+### Added
+- `src/brain-embeddings.ts` — Vector embedding pipeline for brain graph. Generates deterministic hash embeddings (768-dim, normalized) for nodes and edges. Syncs to Milvus `brain_nodes` / `brain_edges` collections.
+- `searchSimilarNodes()` / `searchSimilarEdges()` — semantic search via Milvus vector query
+- `embedNode()` / `embedEdge()` — deterministic embedding from node/edge properties
+- Exported from `src/index.ts` — all embedding functions, EdgeRouter, topology-healer
+
+### Changed
+- Bumped `package.json` version → `14.0.0`
+- Bumped Worker `VERSION` → `14.0.0`
+- `wrangler.toml` — VERSION var updated to 14.0.0
+- `src/index.ts` — added exports for Node/Edge/BrainSnapshot types, embedding, routing, healing
+- `src/types.ts` — Node/Edge/BrainSnapshot interfaces stable
+
 ## [11.0.0] — 2026-06-29 — grpc-synapse
 
 ### Added

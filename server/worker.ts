@@ -37,7 +37,7 @@ import type { Message, AgentType } from "../src/types.js";
 import { recordTelemetry, readDailyStats, telemetryDisclosure } from "./telemetry.js";
 import { handleBrainRequest, loadBrain } from "./brain-grpc.js";
 
-const VERSION = "11.0.0";
+const VERSION = "14.0.0";
 const TELEMETRY_HEADER = "X-Telemetry";
 const TELEMETRY_URL = "https://github.com/peterlodri-sec/kompress-ultra/blob/main/TELEMETRY.md";
 

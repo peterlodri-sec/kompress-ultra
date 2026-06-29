@@ -25,5 +25,13 @@ export type {
   CompressResult,
   RewriteResult,
   ScoredMessage,
+  Node,
+  Edge,
+  BrainSnapshot,
 } from "./types.js";
 export { DEFAULT_OPTIONS } from "./types.js";
+export { embedNode, embedEdge, syncNodeToMilvus, syncEdgeToMilvus, searchSimilarNodes, searchSimilarEdges } from "./brain-embeddings.js";
+export { EdgeRouter } from "./edge-router.js";
+export type { RoutingResult } from "./edge-router.js";
+export { heal, summarize } from "./topology-healer.js";
+export type { HealingReport } from "./topology-healer.js";
