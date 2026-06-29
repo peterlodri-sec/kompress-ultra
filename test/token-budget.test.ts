@@ -1,10 +1,11 @@
-import { describe, it, expect } from "bun:test";
+import { describe, it, expect, afterEach } from "bun:test";
 import {
   estimateTokens,
   escalateForBudget,
   getBudget,
   totalTokens,
   DEFAULT_BUDGETS,
+  setTokenEstimator,
 } from "../src/token-budget.js";
 import type { Message, AgentTokenBudget } from "../src/types.js";
 
@@ -112,6 +113,30 @@ describe("token-budget", () => {
         expect(typeof budget.compression_aggressiveness).toBe("number");
         expect(typeof budget.brain_injection_budget).toBe("number");
       }
+    });
+  });
+
+  describe("pluggable token estimator", () => {
+    afterEach(() => {
+      // Reset to default estimator
+      setTokenEstimator((text) => {
+        const len = text.length;
+        if (len === 0) return 1;
+        return Math.max(1, Math.min(4096, Math.ceil(len / 4)));
+      });
+    });
+
+    it("accepts a custom estimator", () => {
+      // Custom: count words instead of chars
+      setTokenEstimator((text) => text.split(/\s+/).filter(Boolean).length || 1);
+      expect(estimateTokens("hello world")).toBe(2);
+      expect(estimateTokens("one two three four five")).toBe(5);
+    });
+
+    it("custom estimator used by totalTokens", () => {
+      setTokenEstimator(() => 10);
+      const messages = [msg("a"), msg("b"), msg("c")];
+      expect(totalTokens(messages)).toBe(30);
     });
   });
 });

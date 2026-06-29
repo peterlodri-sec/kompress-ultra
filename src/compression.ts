@@ -68,11 +68,8 @@ export async function writeCompactionStats(
   contextSizeAfter: number,
 ): Promise<void> {
   try {
-    const { execSync } = await import("child_process");
-    execSync(
-      `mempalace write -- pruned=${prunedCount} --context-size=${contextSizeAfter}`,
-      { cwd: dbPath, stdio: "ignore" },
-    );
+    const data = JSON.stringify({ pruned: prunedCount, contextSize: contextSizeAfter, ts: Date.now() });
+    await Bun.write(`${dbPath}/compaction-stats.json`, data);
   } catch {
     // skip
   }

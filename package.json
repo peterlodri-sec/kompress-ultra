@@ -1,7 +1,7 @@
 {
   "name": "kompress-ultra",
-  "version": "1.0.0",
-  "description": "4-role living context layer: Composer, Pruner, Rewriter, Circulator. 78% token savings, 0.993 exact-keep rate.",
+  "version": "2.0.0",
+  "description": "4-role living context layer for AI agent frameworks. Pluggable token estimation, instance-isolated state, auth-protected API.",
   "type": "module",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
@@ -21,6 +21,10 @@
     "./circulator": {
       "import": "./dist/circulator.js",
       "types": "./dist/circulator.d.ts"
+    },
+    "./errors": {
+      "import": "./dist/errors.js",
+      "types": "./dist/errors.d.ts"
     }
   },
   "scripts": {

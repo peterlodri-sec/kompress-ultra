@@ -11,7 +11,6 @@ export interface CirculatorEntry {
   timestamp_ms: number;
 }
 
-/** Simplified input — missing fields get sensible defaults */
 export interface CirculatorInput {
   content: string;
   classification?: "fact" | "event" | "instruction" | "task";
@@ -22,9 +21,77 @@ export interface CirculatorInput {
   message_role?: string;
 }
 
-const circulatorQueue: CirculatorEntry[] = [];
-const CIRCULATOR_CAP = 100;
-const CIRCULATOR_BATCH = 10;
+export interface CirculatorOptions {
+  cap?: number;
+  batchSize?: number;
+  milvusUrl?: string;
+}
+
+export class Circulator {
+  private queue: CirculatorEntry[] = [];
+  private readonly cap: number;
+  private readonly batchSize: number;
+  private readonly milvusUrl: string;
+
+  constructor(options: CirculatorOptions = {}) {
+    this.cap = options.cap ?? 100;
+    this.batchSize = options.batchSize ?? 10;
+    this.milvusUrl = options.milvusUrl ?? process.env.KOMPRESS_MILVUS_URL ?? "http://localhost:19530";
+  }
+
+  enqueue(input: CirculatorInput): void {
+    const entry = inputToEntry(input);
+    if (this.queue.length >= this.cap) {
+      spillOverflow([entry]);
+      return;
+    }
+    this.queue.push(entry);
+    if (this.queue.length >= this.batchSize) {
+      this.flushAsync();
+    }
+  }
+
+  getQueueLength(): number {
+    return this.queue.length;
+  }
+
+  drain(): CirculatorEntry[] {
+    return this.queue.splice(0);
+  }
+
+  async flushAsync(): Promise<void> {
+    if (this.queue.length === 0) return;
+    const entries = this.queue.splice(0);
+    try {
+      const texts = entries.map((e) => e.residual).join("\n---\n");
+      const embedding = await embedText(texts);
+      if (!embedding) {
+        spillOverflow(entries);
+        return;
+      }
+      fetch(`${this.milvusUrl}/v1/insert`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          collection_name: "pruned_context",
+          fields: {
+            finding_id: `kompress-circ-${Date.now()}`,
+            agent_id: "kompress",
+            topic: "pruned-context",
+            summary: texts.slice(0, 4096),
+            embedding,
+            tags: entries.map((e) => e.classification),
+            created_at: Date.now(),
+            embedding_model: "bge-m3",
+          },
+        }),
+        signal: AbortSignal.timeout(1000),
+      }).catch(() => spillOverflow(entries));
+    } catch {
+      spillOverflow(entries);
+    }
+  }
+}
 
 export function classifyMessage(content: string): "fact" | "event" | "instruction" | "task" {
   const lower = content.toLowerCase();
@@ -54,60 +121,7 @@ function simpleHash(s: string): string {
   return `h-${Math.abs(h).toString(36)}`;
 }
 
-export function enqueueCirculator(input: CirculatorInput): void {
-  const entry = inputToEntry(input);
-  if (circulatorQueue.length >= CIRCULATOR_CAP) {
-    spillCirculatorOverflow([entry]);
-    return;
-  }
-  circulatorQueue.push(entry);
-  if (circulatorQueue.length >= CIRCULATOR_BATCH) {
-    flushCirculatorAsync();
-  }
-}
-
-export function getCirculatorQueueLength(): number {
-  return circulatorQueue.length;
-}
-
-export function drainCirculatorQueue(): CirculatorEntry[] {
-  return circulatorQueue.splice(0);
-}
-
-export async function flushCirculatorAsync(): Promise<void> {
-  if (circulatorQueue.length === 0) return;
-  const entries = circulatorQueue.splice(0);
-  try {
-    const texts = entries.map((e) => e.residual).join("\n---\n");
-    const embedding = await embedText(texts);
-    if (!embedding) {
-      spillCirculatorOverflow(entries);
-      return;
-    }
-    fetch(`${process.env.KOMPRESS_MILVUS_URL ?? "http://localhost:19530"}/v1/insert`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        collection_name: "pruned_context",
-        fields: {
-          finding_id: `kompress-circ-${Date.now()}`,
-          agent_id: "kompress",
-          topic: "pruned-context",
-          summary: texts.slice(0, 4096),
-          embedding,
-          tags: entries.map((e) => e.classification),
-          created_at: Date.now(),
-          embedding_model: "bge-m3",
-        },
-      }),
-      signal: AbortSignal.timeout(1000),
-    }).catch(() => spillCirculatorOverflow(entries));
-  } catch {
-    spillCirculatorOverflow(entries);
-  }
-}
-
-function spillCirculatorOverflow(entries: CirculatorEntry[]): void {
+function spillOverflow(entries: CirculatorEntry[]): void {
   const path = `${process.env.HOME}/.cache/ultrameshai/overflow-circulator.jsonl`;
   try {
     const lines = entries.map((e) => JSON.stringify(e)).join("\n") + "\n";
@@ -115,4 +129,27 @@ function spillCirculatorOverflow(entries: CirculatorEntry[]): void {
   } catch {
     // silent
   }
+}
+
+// Default singleton for backward compatibility
+const defaultCirculator = new Circulator();
+
+export function enqueueCirculator(input: CirculatorInput): void {
+  defaultCirculator.enqueue(input);
+}
+
+export function getCirculatorQueueLength(): number {
+  return defaultCirculator.getQueueLength();
+}
+
+export function drainCirculatorQueue(): CirculatorEntry[] {
+  return defaultCirculator.drain();
+}
+
+export function flushCirculatorAsync(): Promise<void> {
+  return defaultCirculator.flushAsync();
+}
+
+export function createCirculator(options?: CirculatorOptions): Circulator {
+  return new Circulator(options);
 }

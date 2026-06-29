@@ -24,21 +24,23 @@ bun run build
 
 ## Project Structure
 
-- `src/types.ts` — All interfaces and type definitions
+- `src/types.ts` — All interfaces, `validateOptions()` config validation
+- `src/errors.ts` — Typed error hierarchy (`KompressError`, `CircuitOpenError`, etc.)
 - `src/scoring.ts` — Message scoring logic (relevance, recency, structural)
-- `src/rewriter.ts` — Compression levels and message rewriting
+- `src/rewriter.ts` — Compression levels and message rewriting (fenced + inline code protection)
 - `src/compression.ts` — Density computation and adaptive thresholds
-- `src/circulator.ts` — Memory enqueueing and message classification
+- `src/circulator.ts` — `Circulator` class + singleton compat functions
 - `src/embedding.ts` — Milvus integration and vector similarity
 - `src/brain.ts` — Brain state management
-- `src/token-budget.ts` — Per-agent token budgets
-- `src/circuit-breaker.ts` — Failure detection and fallback
+- `src/token-budget.ts` — Per-agent token budgets, pluggable `setTokenEstimator()`
+- `src/circuit-breaker.ts` — `CircuitBreaker` class + singleton compat functions
+- `server/worker.ts` — Cloudflare Worker (MCP + REST API with optional auth)
 
 ## Code Style
 
 - TypeScript strict mode
-- No external dependencies (Bun stdlib only)
-- Functional style where possible
+- No external runtime dependencies (Bun stdlib only; Zod/dev deps for types)
+- Functional style where possible; class-based for stateful modules
 - JSDoc comments for public APIs
 
 ## Testing
@@ -52,9 +54,12 @@ bun test --watch      # Watch mode
 
 Tests should cover:
 - Edge cases (empty input, max length, Unicode)
-- Safety floor guarantees (critical tokens never pruned)
-- Circuit breaker state transitions
-- Adaptive threshold calculations
+- Safety floor guarantees (critical tokens never pruned, inline code preserved)
+- Circuit breaker state transitions and instance isolation
+- Circulator queue isolation between instances
+- Config validation (range checks, invalid types)
+- Pluggable token estimator behavior
+- Full pipeline integration (score → filter → rewrite → token accounting)
 
 ## Pull Requests
 

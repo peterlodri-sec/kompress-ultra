@@ -2,10 +2,22 @@ import type { Message, AgentTokenBudget, AgentType } from "./types.js";
 import { compressMessage, CompressionLevel } from "./rewriter.js";
 import { isProtected } from "./scoring.js";
 
-export function estimateTokens(text: string): number {
+export type TokenEstimator = (text: string) => number;
+
+function defaultEstimator(text: string): number {
   const len = text.length;
   if (len === 0) return 1;
   return Math.max(1, Math.min(4096, Math.ceil(len / 4)));
+}
+
+let activeEstimator: TokenEstimator = defaultEstimator;
+
+export function setTokenEstimator(estimator: TokenEstimator): void {
+  activeEstimator = estimator;
+}
+
+export function estimateTokens(text: string): number {
+  return activeEstimator(text);
 }
 
 export const DEFAULT_BUDGETS: Record<AgentType, AgentTokenBudget> = {
