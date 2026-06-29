@@ -5,6 +5,38 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [10.0.0] — 2026-06-29 — edge-mesh
+
+### Added
+- `docs/deploy/edge-mesh.md` — Global edge mesh topology: Cloudflare Workers (330+ cities) + GCP Cloud Run (us) + OVH bare metal (eu) + Hetzner fleet (de/fi). Full routing map, failover strategy (RTO/RPO), cost breakdown (~€90/mo total).
+- Global health check system — all endpoints monitored via dogfood CI every 60s
+
+### Operations
+- Complete service topology documented: 4 layers (Edge → Compute → Data → Fleet)
+- Failover strategy defined for every component (RTO: 2min–1h)
+- Total monthly cost: ~€90/mo (€1,086/yr)
+
+### Changed
+- Bumped Worker version → `10.0.0`
+
+## [9.0.0] — 2026-06-29 — canary-song
+
+### Added
+- `scripts/canary-deploy.sh` — Canary Worker deployment: deploy to X% traffic, monitor for 60s with health checks, promote or rollback. Supports `canary-deploy.sh 10` (10% canary) and `canary-deploy.sh 100` (full rollout).
+- Auto-rollback after 3 health check failures — production unchanged
+
+### Changed
+- Bumped `package.json` version → `9.0.0`
+
+## [8.0.0] — 2026-06-29 — signed-blood
+
+### Added
+- `scripts/verify-signature.sh` — Cosign/OpenSSL signature verification for build artifacts. Verifies SLSA Level 2 provenance.
+- Security: signature verification with Cosign (primary) or OpenSSL (fallback)
+
+### Changed
+- Bumped `package.json` version → `8.0.0`
+
 ## [7.0.0] — 2026-06-29 — terraform-sonata
 
 ### Added
