@@ -43,11 +43,18 @@ test/
   brain.test.ts, embedding.test.ts
 scripts/
   run-ultra.mjs     — CLI: compress file with Ultra, write output
+  deploy-ovh.sh     — One-shot OVH Verdaccio deploy script
+  registry.sh       — Local Verdaccio start/stop/publish helpers
 assets/
   logo.svg          — Brand mark (dark bg, cyan arcs, green compression core)
   api-status-badge.html     — API live/offline badge snippet for proposal.vaked.dev
   ralph-loop-telemetry.html — Live telemetry section snippet for proposal.vaked.dev
 TELEMETRY.md        — Telemetry policy and opt-out instructions
+docs/
+  deploy/
+    README.md       — Deployment index
+    ovh-verdaccio.md — OVH Warsaw full provisioning guide
+    ovh-secrets.json.age — Encrypted secrets (age)
 fixtures/
   agents-md-compression/ — Comparison of caveman-compress vs kompress-ultra
 ```
