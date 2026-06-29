@@ -1,4 +1,8 @@
 <p align="center">
+  <img src="./assets/logo.svg" width="120" height="120" alt="kompress-ultra logo">
+</p>
+
+<p align="center">
   <img src="https://img.shields.io/badge/version-2.0.0-blue?style=for-the-badge" alt="Version">
   <img src="https://img.shields.io/badge/license-Apache%202.0-green?style=for-the-badge" alt="License">
   <img src="https://img.shields.io/badge/built%20with-Bun-purple?style=for-the-badge&logo=bun" alt="Built with Bun">
