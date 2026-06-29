@@ -25,6 +25,7 @@ export class CircuitBreaker {
 
   recordSuccess(): void {
     this.failures = 0;
+    this.openUntil = 0;
   }
 
   recordFailure(): void {
