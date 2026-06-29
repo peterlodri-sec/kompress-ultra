@@ -40,3 +40,4 @@ bun.lockb
 verdaccio/storage/
 verdaccio/htpasswd
 .npmrc
+.ultramesh-mem/
