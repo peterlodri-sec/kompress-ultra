@@ -36,7 +36,7 @@ import {
 import type { Message, AgentType } from "../src/types.js";
 import { recordTelemetry, readDailyStats, telemetryDisclosure } from "./telemetry.js";
 
-const VERSION = "2.0.0";
+const VERSION = "3.0.0";
 const TELEMETRY_HEADER = "X-Telemetry";
 const TELEMETRY_URL = "https://github.com/peterlodri-sec/kompress-ultra/blob/main/TELEMETRY.md";
 
@@ -795,8 +795,6 @@ export default {
     if (url.pathname === "/v1/budget" && request.method === "GET") {
       const type = (url.searchParams.get("type") ?? "coder") as AgentType;
       return json(getBudget(type));
-    }
-      return handleBrainGraph();
     }
 
     return handleRoot(request);

@@ -5,6 +5,33 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [3.0.0] — 2026-06-29 — gilded-pipeline
+
+### Added
+- `cloudbuild.yaml` — GCP Cloud Build pipeline: install → typecheck → test (advisory) → build → brain snapshot → Worker deploy → Artifact Registry publish → CI state update (advisory steps never block)
+- `cloudbuild-trigger.json` — Cloud Build trigger config for GitHub push to main
+- `scripts/setup-gcp.sh` — One-time GCP setup: creates Artifact Registry npm repo, enables APIs, prepares Secret Manager, creates Cloud Build trigger
+- `ci.yml` `cloud-build` job — non-blocking Cloud Build submission via `gcloud builds submit` on main push (GCP Workload Identity Federation auth)
+- `ci-state.sh` registers `cloud-build` agent — state machine tracks pipeline status through the full lifecycle
+
+### Changed
+- Bumped `package.json` version → `3.0.0`
+- Bumped Worker `VERSION` → `3.0.0`
+- `wrangler.toml` — added `VERSION = "3.0.0"` var
+- CI workflow — added GCP auth step + `cloud-build` job (advisory, never blocks)
+
+### Infrastructure
+- Artifact Registry npm repository `kompress-ultra-npm` created in `us-east1` (project `datapy-spider`)
+- Cloud Build SA granted `artifactregistry.writer`
+- Secrets prepared: `cloudflare-api-token` (create manually), `npm-auth-token` (create manually)
+- `E2_HIGHCPU_8` machine type, 600s timeout, Cloud Logging-only logging
+
+### Notes
+- Cloud Build GitHub trigger requires manual GitHub App installation → available via GCP Console > Cloud Build > Triggers > Connect Repository
+- `gcloud builds submit` from CI bypasses the need for direct GitHub trigger — CI uses Workload Identity Federation for GCP auth
+- All build steps are advisory (`allowFailure: true`) — the gate is a non-blocking witness
+- `npm publish` to Artifact Registry requires manual `npm-auth-token` secret creation
+
 ## [2.0.0] - 2026-06-29
 
 ### Added

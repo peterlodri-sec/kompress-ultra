@@ -1,0 +1,18 @@
+{
+  "name": "kompress-ultra-main",
+  "description": "Cloud Build trigger for kompress-ultra main branch (v3.0.0 gilded-pipeline)",
+  "github": {
+    "owner": "peterlodri-sec",
+    "name": "kompress-ultra",
+    "push": {
+      "branch": "^main$"
+    }
+  },
+  "build": {
+    "config": "cloudbuild.yaml",
+    "substitutions": {
+      "_REGION": "us-east1"
+    },
+    "includeLogsWithStatus": true
+  }
+}

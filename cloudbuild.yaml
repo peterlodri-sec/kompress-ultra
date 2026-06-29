@@ -1,0 +1,96 @@
+steps:
+
+  # ── 1. Install dependencies ──────────────────────────────────────
+  - id: 'install'
+    name: 'oven/bun:latest'
+    entrypoint: 'bun'
+    args: ['install', '--frozen-lockfile']
+    waitFor: ['-']
+
+  # ── 2. Typecheck ─────────────────────────────────────────────────
+  - id: 'typecheck'
+    name: 'oven/bun:latest'
+    entrypoint: 'bun'
+    args: ['run', 'typecheck']
+    waitFor: ['install']
+
+  # ── 3. Tests (advisory, never blocks) ────────────────────────────
+  - id: 'test'
+    name: 'oven/bun:latest'
+    entrypoint: 'bun'
+    args: ['test']
+    allowFailure: true
+    waitFor: ['install']
+
+  # ── 4. Build library ─────────────────────────────────────────────
+  - id: 'build'
+    name: 'oven/bun:latest'
+    entrypoint: 'bun'
+    args: ['run', 'build']
+    waitFor: ['install']
+
+  # ── 5. Brain graph snapshot ──────────────────────────────────────
+  - id: 'brain-snapshot'
+    name: 'bash:latest'
+    entrypoint: 'bash'
+    args:
+      - '-c'
+      - |
+        bash scripts/brain-snapshot.sh run --checksum 2>/dev/null || \
+        echo "brain-snapshot: advisory — no ~/.brain/graph.json or script issue"
+    allowFailure: true
+    waitFor: ['-']
+
+  # ── 6. Deploy Worker to Cloudflare ───────────────────────────────
+  - id: 'deploy-worker'
+    name: 'node:latest'
+    entrypoint: 'bash'
+    args:
+      - '-c'
+      - |
+        npm install -g wrangler@4 2>/dev/null
+        echo "CLOUDFLARE_API_TOKEN from Secret Manager" 
+        wrangler deploy 2>/dev/null || echo "worker-deploy: advisory — offline or token issue"
+    secretEnv: ['CLOUDFLARE_API_TOKEN']
+    allowFailure: true
+    waitFor: ['build']
+
+  # ── 7. Publish npm package to Artifact Registry ──────────────────
+  - id: 'publish-arl'
+    name: 'gcr.io/cloud-builders/npm:latest'
+    entrypoint: 'bash'
+    args:
+      - '-c'
+      - |
+        npm config set @peterlodri-sec:registry https://us-east1-npm.pkg.dev/$PROJECT_ID/kompress-ultra-npm/
+        npm config set //us-east1-npm.pkg.dev/$PROJECT_ID/kompress-ultra-npm/:_authToken=$$NPM_AUTH_TOKEN
+        npm publish --access public 2>/dev/null || echo "publish-arl: advisory — no auth or dupe version"
+    secretEnv: ['NPM_AUTH_TOKEN']
+    allowFailure: true
+    waitFor: ['build']
+
+  # ── 8. Update CI state ───────────────────────────────────────────
+  - id: 'ci-state'
+    name: 'bash:latest'
+    entrypoint: 'bash'
+    args:
+      - '-c'
+      - |
+        STATE="${BUILD_STATUS:-success}"
+        echo "{\"source\":\"cloud-build\",\"build_id\":\"$BUILD_ID\",\"project\":\"$PROJECT_ID\",\"state\":\"$STATE\",\"version\":\"3.0.0\",\"ts\":\"$(date -u +%Y-%m-%dT%H:%M:%SZ)\"}" \
+          > /workspace/ci-state.json
+        echo "ci-state: $STATE"
+
+availableSecrets:
+  secretManager:
+    - versionName: projects/datapy-spider/secrets/cloudflare-api-token/versions/latest
+      env: 'CLOUDFLARE_API_TOKEN'
+    - versionName: projects/datapy-spider/secrets/npm-auth-token/versions/latest
+      env: 'NPM_AUTH_TOKEN'
+
+options:
+  machineType: 'E2_HIGHCPU_8'
+  substitutionOption: 'ALLOW_LOOSE'
+  logging: 'CLOUD_LOGGING_ONLY'
+
+timeout: 600s

@@ -8,6 +8,7 @@ on:
 
 permissions:
   contents: read
+  id-token: write
 
 concurrency:
   group: ci-${{ github.event.pull_request.number || github.sha }}
@@ -32,3 +33,28 @@ jobs:
         continue-on-error: true
       - name: Gate
         run: echo "CI state: $(bash .github/ci-state.sh state ci-gate 2>/dev/null | python3 -c 'import json,sys;d=json.load(sys.stdin);print(d.get(\"state\",\"?\"))' || echo 'idle') — all advisory, never blocks"
+
+  cloud-build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - uses: actions/checkout@v4
+      - name: Authenticate to GCP
+        uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${{ vars.GCP_WIF_PROVIDER }}
+          service_account: ${{ vars.GCP_SERVICE_ACCOUNT }}
+      - name: Setup gcloud
+        uses: google-github-actions/setup-gcloud@v2
+      - name: Register cloud-build agent
+        run: bash .github/ci-state.sh register cloud-build "GCP Cloud Build pipeline (v3.0.0)" 2>/dev/null || true
+      - name: Submit Cloud Build
+        run: |
+          bash .github/ci-state.sh transition cloud-build running "gcloud builds submit"
+          gcloud builds submit --config=cloudbuild.yaml --project=${{ vars.GCP_PROJECT }} \
+            --substitutions=COMMIT_SHA=${{ github.sha }},BRANCH_NAME=main \
+            2>&1 || bash .github/ci-state.sh transition cloud-build failed "advisory"
