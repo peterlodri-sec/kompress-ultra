@@ -1,0 +1,1569 @@
+{
+  "edges": [
+    {
+      "label": "contains",
+      "layer": [
+        0,
+        3,
+        5
+      ],
+      "source": "al-biruni",
+      "target": "al-biruni-1",
+      "weight": 1
+    },
+    {
+      "label": "contains",
+      "layer": [
+        0,
+        3,
+        5
+      ],
+      "source": "al-biruni",
+      "target": "al-biruni-2",
+      "weight": 0
+    },
+    {
+      "label": "feeds_into",
+      "layer": [
+        0,
+        1,
+        2
+      ],
+      "source": "al-biruni-1",
+      "target": "al-biruni-2",
+      "weight": 3
+    },
+    {
+      "label": "writes_to",
+      "layer": [
+        0,
+        1,
+        2
+      ],
+      "source": "al-biruni-1",
+      "target": "brain-state",
+      "weight": 5
+    },
+    {
+      "label": "writes_to",
+      "layer": [
+        0,
+        1,
+        2
+      ],
+      "source": "al-biruni-2",
+      "target": "brain-state",
+      "weight": 5
+    },
+    {
+      "label": "self_destructs",
+      "layer": [
+        0,
+        2,
+        5
+      ],
+      "source": "bodhisattva",
+      "target": "bodhisattva",
+      "weight": 1
+    },
+    {
+      "label": "attacks",
+      "layer": [
+        0,
+        2,
+        5
+      ],
+      "source": "bodhisattva",
+      "target": "brain-graph",
+      "weight": 3
+    },
+    {
+      "label": "logs_to",
+      "layer": [
+        0,
+        2,
+        5
+      ],
+      "source": "bodhisattva",
+      "target": "brain-state",
+      "weight": 3
+    },
+    {
+      "label": "opposes",
+      "layer": [
+        0,
+        2,
+        5
+      ],
+      "source": "bodhisattva",
+      "target": "repair-bot",
+      "weight": 2
+    },
+    {
+      "label": "mirrors",
+      "layer": [
+        0,
+        2,
+        4
+      ],
+      "source": "brain-graph",
+      "target": "brain-state",
+      "weight": 0
+    },
+    {
+      "label": "reconnected",
+      "layer": [
+        0,
+        0,
+        0
+      ],
+      "source": "brain-state",
+      "target": "al-biruni",
+      "weight": 0
+    },
+    {
+      "label": "layer_boost",
+      "layer": [
+        0,
+        2,
+        5
+      ],
+      "source": "brain-state",
+      "target": "bodhisattva",
+      "weight": 0.5
+    },
+    {
+      "label": "mirrors",
+      "layer": [
+        0,
+        0,
+        0
+      ],
+      "source": "brain-state",
+      "target": "brain-graph",
+      "weight": 3
+    },
+    {
+      "label": "layer_boost",
+      "layer": [
+        0,
+        0,
+        0
+      ],
+      "source": "brain-state",
+      "target": "brain-state",
+      "weight": 0.5
+    },
+    {
+      "label": "layer_boost",
+      "layer": [
+        0,
+        2,
+        3
+      ],
+      "source": "brain-state",
+      "target": "composer-loop",
+      "weight": 0.5
+    },
+    {
+      "label": "reconnected",
+      "layer": [
+        0,
+        0,
+        0
+      ],
+      "source": "brain-state",
+      "target": "composer-loop",
+      "weight": 0
+    },
+    {
+      "label": "reconnected",
+      "layer": [
+        0,
+        0,
+        0
+      ],
+      "source": "brain-state",
+      "target": "genesis",
+      "weight": 0.3
+    },
+    {
+      "label": "reconnected",
+      "layer": [
+        0,
+        0,
+        0
+      ],
+      "source": "brain-state",
+      "target": "learning-cf521",
+      "weight": 0.3
+    },
+    {
+      "label": "reconnected",
+      "layer": [
+        0,
+        0,
+        0
+      ],
+      "source": "brain-state",
+      "target": "learning-npm",
+      "weight": 0.3
+    },
+    {
+      "label": "layer_boost",
+      "layer": [
+        -1,
+        1,
+        0
+      ],
+      "source": "brain-state",
+      "target": "learning-record",
+      "weight": 0.5
+    },
+    {
+      "label": "reconnected",
+      "layer": [
+        0,
+        0,
+        0
+      ],
+      "source": "brain-state",
+      "target": "learning-record",
+      "weight": 0.3
+    },
+    {
+      "label": "reconnected",
+      "layer": [
+        0,
+        0,
+        0
+      ],
+      "source": "brain-state",
+      "target": "learning-sed",
+      "weight": 0
+    },
+    {
+      "label": "reconnected",
+      "layer": [
+        0,
+        0,
+        0
+      ],
+      "source": "brain-state",
+      "target": "learning-ssh",
+      "weight": 0.3
+    },
+    {
+      "label": "layer_boost",
+      "layer": [
+        -1,
+        0,
+        3
+      ],
+      "source": "brain-state",
+      "target": "memory-file",
+      "weight": 0.5
+    },
+    {
+      "label": "reconnected",
+      "layer": [
+        0,
+        0,
+        0
+      ],
+      "source": "brain-state",
+      "target": "pruner-loop",
+      "weight": 0.3
+    },
+    {
+      "label": "layer_boost",
+      "layer": [
+        0,
+        1,
+        5
+      ],
+      "source": "brain-state",
+      "target": "repair-bot",
+      "weight": 0.5
+    },
+    {
+      "label": "reconnected",
+      "layer": [
+        0,
+        0,
+        0
+      ],
+      "source": "brain-state",
+      "target": "rewriter-loop",
+      "weight": 0.3
+    },
+    {
+      "label": "reconnected",
+      "layer": [
+        0,
+        0,
+        0
+      ],
+      "source": "brain-state",
+      "target": "ultramesh-mem",
+      "weight": 0
+    },
+    {
+      "label": "updates",
+      "layer": [
+        0,
+        2,
+        3
+      ],
+      "source": "composer-loop",
+      "target": "brain-state",
+      "weight": 4
+    },
+    {
+      "label": "governs",
+      "layer": [
+        0,
+        3,
+        5
+      ],
+      "source": "entropy-loop",
+      "target": "al-biruni",
+      "weight": 1
+    },
+    {
+      "label": "governs",
+      "layer": [
+        0,
+        3,
+        5
+      ],
+      "source": "entropy-loop",
+      "target": "bodhisattva",
+      "weight": 0
+    },
+    {
+      "label": "feeds",
+      "layer": [
+        0,
+        3,
+        5
+      ],
+      "source": "entropy-loop",
+      "target": "brain-state",
+      "weight": 5
+    },
+    {
+      "label": "all-thanks-to-rahul",
+      "layer": [
+        0,
+        3,
+        5
+      ],
+      "source": "entropy-loop",
+      "target": "entropy-loop",
+      "weight": 1
+    },
+    {
+      "label": "self_reflects",
+      "layer": [
+        0,
+        3,
+        5
+      ],
+      "source": "entropy-loop",
+      "target": "entropy-loop",
+      "weight": 1
+    },
+    {
+      "label": "governs",
+      "layer": [
+        0,
+        3,
+        5
+      ],
+      "source": "entropy-loop",
+      "target": "repair-bot",
+      "weight": 1
+    },
+    {
+      "label": "created",
+      "layer": [
+        -1,
+        -1,
+        -1
+      ],
+      "source": "genesis",
+      "target": "al-biruni",
+      "weight": 5
+    },
+    {
+      "label": "created",
+      "layer": [
+        -1,
+        -1,
+        -1
+      ],
+      "source": "genesis",
+      "target": "al-biruni-1",
+      "weight": 5
+    },
+    {
+      "label": "created",
+      "layer": [
+        -1,
+        -1,
+        -1
+      ],
+      "source": "genesis",
+      "target": "al-biruni-2",
+      "weight": 0
+    },
+    {
+      "label": "created",
+      "layer": [
+        -1,
+        -1,
+        -1
+      ],
+      "source": "genesis",
+      "target": "bodhisattva",
+      "weight": 5
+    },
+    {
+      "label": "created",
+      "layer": [
+        -1,
+        -1,
+        -1
+      ],
+      "source": "genesis",
+      "target": "brain-graph",
+      "weight": 5
+    },
+    {
+      "label": "created",
+      "layer": [
+        -1,
+        -1,
+        -1
+      ],
+      "source": "genesis",
+      "target": "brain-state",
+      "weight": 5
+    },
+    {
+      "label": "created",
+      "layer": [
+        -1,
+        -1,
+        -1
+      ],
+      "source": "genesis",
+      "target": "composer-loop",
+      "weight": 0
+    },
+    {
+      "label": "created",
+      "layer": [
+        -1,
+        -1,
+        -1
+      ],
+      "source": "genesis",
+      "target": "entropy-loop",
+      "weight": 5
+    },
+    {
+      "label": "contains",
+      "layer": [
+        -1,
+        -1,
+        -1
+      ],
+      "source": "genesis",
+      "target": "genesis-commit-0",
+      "weight": 1
+    },
+    {
+      "label": "contains",
+      "layer": [
+        -1,
+        -1,
+        -1
+      ],
+      "source": "genesis",
+      "target": "genesis-commit-1",
+      "weight": 1
+    },
+    {
+      "label": "contains",
+      "layer": [
+        -1,
+        -1,
+        -1
+      ],
+      "source": "genesis",
+      "target": "genesis-commit-10",
+      "weight": 1
+    },
+    {
+      "label": "contains",
+      "layer": [
+        -1,
+        -1,
+        -1
+      ],
+      "source": "genesis",
+      "target": "genesis-commit-11",
+      "weight": 1
+    },
+    {
+      "label": "contains",
+      "layer": [
+        -1,
+        -1,
+        -1
+      ],
+      "source": "genesis",
+      "target": "genesis-commit-12",
+      "weight": 1
+    },
+    {
+      "label": "contains",
+      "layer": [
+        -1,
+        -1,
+        -1
+      ],
+      "source": "genesis",
+      "target": "genesis-commit-13",
+      "weight": 1
+    },
+    {
+      "label": "contains",
+      "layer": [
+        -1,
+        -1,
+        -1
+      ],
+      "source": "genesis",
+      "target": "genesis-commit-14",
+      "weight": 1
+    },
+    {
+      "label": "contains",
+      "layer": [
+        -1,
+        -1,
+        -1
+      ],
+      "source": "genesis",
+      "target": "genesis-commit-15",
+      "weight": 1
+    },
+    {
+      "label": "contains",
+      "layer": [
+        -1,
+        -1,
+        -1
+      ],
+      "source": "genesis",
+      "target": "genesis-commit-16",
+      "weight": 0
+    },
+    {
+      "label": "contains",
+      "layer": [
+        -1,
+        -1,
+        -1
+      ],
+      "source": "genesis",
+      "target": "genesis-commit-17",
+      "weight": 1
+    },
+    {
+      "label": "contains",
+      "layer": [
+        -1,
+        -1,
+        -1
+      ],
+      "source": "genesis",
+      "target": "genesis-commit-18",
+      "weight": 1
+    },
+    {
+      "label": "contains",
+      "layer": [
+        -1,
+        -1,
+        -1
+      ],
+      "source": "genesis",
+      "target": "genesis-commit-19",
+      "weight": 1
+    },
+    {
+      "label": "contains",
+      "layer": [
+        -1,
+        -1,
+        -1
+      ],
+      "source": "genesis",
+      "target": "genesis-commit-2",
+      "weight": 1
+    },
+    {
+      "label": "contains",
+      "layer": [
+        -1,
+        -1,
+        -1
+      ],
+      "source": "genesis",
+      "target": "genesis-commit-20",
+      "weight": 1
+    },
+    {
+      "label": "contains",
+      "layer": [
+        -1,
+        -1,
+        -1
+      ],
+      "source": "genesis",
+      "target": "genesis-commit-21",
+      "weight": 1
+    },
+    {
+      "label": "contains",
+      "layer": [
+        -1,
+        -1,
+        -1
+      ],
+      "source": "genesis",
+      "target": "genesis-commit-22",
+      "weight": 1
+    },
+    {
+      "label": "contains",
+      "layer": [
+        -1,
+        -1,
+        -1
+      ],
+      "source": "genesis",
+      "target": "genesis-commit-23",
+      "weight": 1
+    },
+    {
+      "label": "contains",
+      "layer": [
+        -1,
+        -1,
+        -1
+      ],
+      "source": "genesis",
+      "target": "genesis-commit-24",
+      "weight": 0
+    },
+    {
+      "label": "contains",
+      "layer": [
+        -1,
+        -1,
+        -1
+      ],
+      "source": "genesis",
+      "target": "genesis-commit-3",
+      "weight": 0
+    },
+    {
+      "label": "contains",
+      "layer": [
+        -1,
+        -1,
+        -1
+      ],
+      "source": "genesis",
+      "target": "genesis-commit-4",
+      "weight": 1
+    },
+    {
+      "label": "contains",
+      "layer": [
+        -1,
+        -1,
+        -1
+      ],
+      "source": "genesis",
+      "target": "genesis-commit-5",
+      "weight": 1
+    },
+    {
+      "label": "contains",
+      "layer": [
+        -1,
+        -1,
+        -1
+      ],
+      "source": "genesis",
+      "target": "genesis-commit-6",
+      "weight": 1
+    },
+    {
+      "label": "contains",
+      "layer": [
+        -1,
+        -1,
+        -1
+      ],
+      "source": "genesis",
+      "target": "genesis-commit-7",
+      "weight": 1
+    },
+    {
+      "label": "contains",
+      "layer": [
+        -1,
+        -1,
+        -1
+      ],
+      "source": "genesis",
+      "target": "genesis-commit-8",
+      "weight": 1
+    },
+    {
+      "label": "contains",
+      "layer": [
+        -1,
+        -1,
+        -1
+      ],
+      "source": "genesis",
+      "target": "genesis-commit-9",
+      "weight": 1
+    },
+    {
+      "label": "created",
+      "layer": [
+        -1,
+        -1,
+        -1
+      ],
+      "source": "genesis",
+      "target": "learning-cf521",
+      "weight": 5
+    },
+    {
+      "label": "created",
+      "layer": [
+        -1,
+        -1,
+        -1
+      ],
+      "source": "genesis",
+      "target": "learning-npm",
+      "weight": 5
+    },
+    {
+      "label": "created",
+      "layer": [
+        -1,
+        -1,
+        -1
+      ],
+      "source": "genesis",
+      "target": "learning-record",
+      "weight": 5
+    },
+    {
+      "label": "created",
+      "layer": [
+        -1,
+        -1,
+        -1
+      ],
+      "source": "genesis",
+      "target": "learning-sed",
+      "weight": 5
+    },
+    {
+      "label": "created",
+      "layer": [
+        -1,
+        -1,
+        -1
+      ],
+      "source": "genesis",
+      "target": "learning-ssh",
+      "weight": 5
+    },
+    {
+      "label": "created",
+      "layer": [
+        -1,
+        -1,
+        -1
+      ],
+      "source": "genesis",
+      "target": "memory-file",
+      "weight": 0
+    },
+    {
+      "label": "created",
+      "layer": [
+        -1,
+        -1,
+        -1
+      ],
+      "source": "genesis",
+      "target": "mesh-loop",
+      "weight": 0
+    },
+    {
+      "label": "created",
+      "layer": [
+        -1,
+        -1,
+        -1
+      ],
+      "source": "genesis",
+      "target": "pruner-loop",
+      "weight": 5
+    },
+    {
+      "label": "created",
+      "layer": [
+        -1,
+        -1,
+        -1
+      ],
+      "source": "genesis",
+      "target": "repair-bot",
+      "weight": 5
+    },
+    {
+      "label": "created",
+      "layer": [
+        -1,
+        -1,
+        -1
+      ],
+      "source": "genesis",
+      "target": "rewriter-loop",
+      "weight": 0
+    },
+    {
+      "label": "created",
+      "layer": [
+        -1,
+        -1,
+        -1
+      ],
+      "source": "genesis",
+      "target": "ultramesh-mem",
+      "weight": 5
+    },
+    {
+      "label": "stored_in",
+      "layer": [
+        -1,
+        0,
+        0
+      ],
+      "source": "learning-cf521",
+      "target": "memory-file",
+      "weight": 1
+    },
+    {
+      "label": "stored_in",
+      "layer": [
+        -1,
+        0,
+        0
+      ],
+      "source": "learning-npm",
+      "target": "memory-file",
+      "weight": 1
+    },
+    {
+      "label": "stored_in",
+      "layer": [
+        -1,
+        1,
+        0
+      ],
+      "source": "learning-record",
+      "target": "memory-file",
+      "weight": 1
+    },
+    {
+      "label": "stored_in",
+      "layer": [
+        -1,
+        0,
+        0
+      ],
+      "source": "learning-sed",
+      "target": "memory-file",
+      "weight": 1
+    },
+    {
+      "label": "stored_in",
+      "layer": [
+        -1,
+        0,
+        0
+      ],
+      "source": "learning-ssh",
+      "target": "memory-file",
+      "weight": 1
+    },
+    {
+      "label": "updates",
+      "layer": [
+        0,
+        3,
+        5
+      ],
+      "source": "mesh-loop",
+      "target": "brain-state",
+      "weight": 0
+    },
+    {
+      "label": "self_limits",
+      "layer": [
+        0,
+        3,
+        5
+      ],
+      "source": "mesh-loop",
+      "target": "mesh-loop",
+      "weight": 1
+    },
+    {
+      "label": "updates",
+      "layer": [
+        0,
+        1,
+        1
+      ],
+      "source": "pruner-loop",
+      "target": "brain-state",
+      "weight": 4
+    },
+    {
+      "label": "counters",
+      "layer": [
+        0,
+        1,
+        5
+      ],
+      "source": "repair-bot",
+      "target": "bodhisattva",
+      "weight": 2
+    },
+    {
+      "label": "repairs",
+      "layer": [
+        0,
+        1,
+        5
+      ],
+      "source": "repair-bot",
+      "target": "brain-state",
+      "weight": 4
+    },
+    {
+      "label": "updates",
+      "layer": [
+        0,
+        1,
+        1
+      ],
+      "source": "rewriter-loop",
+      "target": "brain-state",
+      "weight": 4
+    },
+    {
+      "label": "manages",
+      "layer": [
+        0,
+        2,
+        4
+      ],
+      "source": "ultramesh-mem",
+      "target": "brain-state",
+      "weight": 5
+    },
+    {
+      "label": "reads_writes",
+      "layer": [
+        0,
+        2,
+        4
+      ],
+      "source": "ultramesh-mem",
+      "target": "memory-file",
+      "weight": 0
+    }
+  ],
+  "meta": {
+    "description": "Read-only public brain graph snapshot. Deterministic. Reproducible. No write path.",
+    "edge_count": 92,
+    "layer_count": 12,
+    "node_count": 45,
+    "notice": "This is a fossil. It can be observed but never written to. Not by its author. Not by anyone.",
+    "provenance": {
+      "can_only_observe": true,
+      "can_write": false,
+      "license": "Apache 2.0",
+      "repository": "peterlodri-sec/kompress-ultra",
+      "source": "/Users/lodripeter/.brain/graph.json",
+      "tool": "brain-snapshot v2.0.0"
+    },
+    "schema": "ultramesh-brain-graph-snapshot",
+    "snapshot_date": "2026-06-29",
+    "version": "2.0.0"
+  },
+  "nodes": [
+    {
+      "id": "al-biruni",
+      "label": "al-biruni Mesh",
+      "layer": [
+        0,
+        3,
+        5
+      ],
+      "type": "agent"
+    },
+    {
+      "id": "al-biruni-1",
+      "label": "Researcher",
+      "layer": [
+        0,
+        1,
+        2
+      ],
+      "type": "agent"
+    },
+    {
+      "id": "al-biruni-2",
+      "label": "Writer",
+      "layer": [
+        0,
+        1,
+        2
+      ],
+      "type": "agent"
+    },
+    {
+      "id": "bodhisattva",
+      "label": "Bodhisattva",
+      "layer": [
+        0,
+        2,
+        5
+      ],
+      "type": "system"
+    },
+    {
+      "id": "brain-graph",
+      "label": "Brain Graph",
+      "layer": [
+        0,
+        2,
+        4
+      ],
+      "type": "state"
+    },
+    {
+      "id": "brain-state",
+      "label": "Brain State",
+      "layer": [
+        0,
+        0,
+        0
+      ],
+      "type": "state"
+    },
+    {
+      "id": "composer-loop",
+      "label": "Composer Loop",
+      "layer": [
+        0,
+        2,
+        3
+      ],
+      "type": "loop"
+    },
+    {
+      "id": "entropy-loop",
+      "label": "Entropy — let it run",
+      "layer": [
+        0,
+        3,
+        5
+      ],
+      "type": "system"
+    },
+    {
+      "id": "genesis",
+      "label": "Genesis Block — Big Bang Ingestion",
+      "layer": [
+        -1,
+        -1,
+        -1
+      ],
+      "props": {
+        "commits": 25,
+        "docs": 6,
+        "sources": 34,
+        "timestamp": "2026-06-29T00:00:00Z"
+      },
+      "type": "system"
+    },
+    {
+      "id": "genesis-commit-0",
+      "label": "feat: temporal brain v2.0 — 3D hot-swappable layers + self-r",
+      "layer": [
+        -1,
+        -1,
+        -1
+      ],
+      "props": {
+        "sha": "557263c"
+      },
+      "type": "memory"
+    },
+    {
+      "id": "genesis-commit-1",
+      "label": "feat: al-biruni v1.0.0 — singleton pair mesh",
+      "layer": [
+        -1,
+        -1,
+        -1
+      ],
+      "props": {
+        "sha": "5e1c192"
+      },
+      "type": "memory"
+    },
+    {
+      "id": "genesis-commit-10",
+      "label": "fix: recordSuccess() now also resets openUntil",
+      "layer": [
+        -1,
+        -1,
+        -1
+      ],
+      "props": {
+        "sha": "c81b4ea"
+      },
+      "type": "memory"
+    },
+    {
+      "id": "genesis-commit-11",
+      "label": "feat: serve badge + telemetry as JS from Worker",
+      "layer": [
+        -1,
+        -1,
+        -1
+      ],
+      "props": {
+        "sha": "506e8b8"
+      },
+      "type": "memory"
+    },
+    {
+      "id": "genesis-commit-12",
+      "label": "feat: core tests, webhook, proposal.vaked.dev snippets",
+      "layer": [
+        -1,
+        -1,
+        -1
+      ],
+      "props": {
+        "sha": "69a2470"
+      },
+      "type": "memory"
+    },
+    {
+      "id": "genesis-commit-13",
+      "label": "feat: custom API/MCP badges, news banner, protocol table",
+      "layer": [
+        -1,
+        -1,
+        -1
+      ],
+      "props": {
+        "sha": "94e635d"
+      },
+      "type": "memory"
+    },
+    {
+      "id": "genesis-commit-14",
+      "label": "chore: TOC, linkcheck, backrefs, changelog",
+      "layer": [
+        -1,
+        -1,
+        -1
+      ],
+      "props": {
+        "sha": "07132be"
+      },
+      "type": "memory"
+    },
+    {
+      "id": "genesis-commit-15",
+      "label": "feat: add kompress-ultra logo",
+      "layer": [
+        -1,
+        -1,
+        -1
+      ],
+      "props": {
+        "sha": "9cb09da"
+      },
+      "type": "memory"
+    },
+    {
+      "id": "genesis-commit-16",
+      "label": "feat: zero-PII research telemetry for hosted API",
+      "layer": [
+        -1,
+        -1,
+        -1
+      ],
+      "props": {
+        "sha": "d42d3c3"
+      },
+      "type": "memory"
+    },
+    {
+      "id": "genesis-commit-17",
+      "label": "chore: add CI workflow and AGENTS.md",
+      "layer": [
+        -1,
+        -1,
+        -1
+      ],
+      "props": {
+        "sha": "7096d94"
+      },
+      "type": "memory"
+    },
+    {
+      "id": "genesis-commit-18",
+      "label": "feat: kompress-ultra v2.0.0 — hardened, stable, SOTA OSS (#2",
+      "layer": [
+        -1,
+        -1,
+        -1
+      ],
+      "props": {
+        "sha": "fd17c5b"
+      },
+      "type": "memory"
+    },
+    {
+      "id": "genesis-commit-19",
+      "label": "Merge pull request #1 from peterlodri-sec/test/agents-md-com",
+      "layer": [
+        -1,
+        -1,
+        -1
+      ],
+      "props": {
+        "sha": "9816689"
+      },
+      "type": "memory"
+    },
+    {
+      "id": "genesis-commit-2",
+      "label": "feat: ultramesh-mem v1.1.0 — 5 Ralph-Loops on BRAIN connecti",
+      "layer": [
+        -1,
+        -1,
+        -1
+      ],
+      "props": {
+        "sha": "988b0b7"
+      },
+      "type": "memory"
+    },
+    {
+      "id": "genesis-commit-20",
+      "label": "test: add AGENTS.md compression fixture comparing caveman vs",
+      "layer": [
+        -1,
+        -1,
+        -1
+      ],
+      "props": {
+        "sha": "6137434"
+      },
+      "type": "memory"
+    },
+    {
+      "id": "genesis-commit-21",
+      "label": "feat: kompress-ultra v1.0.0 — full E2E overhaul",
+      "layer": [
+        -1,
+        -1,
+        -1
+      ],
+      "props": {
+        "sha": "08c4d63"
+      },
+      "type": "memory"
+    },
+    {
+      "id": "genesis-commit-22",
+      "label": "docs: add SOTA README, license, contributing guide, and GitH",
+      "layer": [
+        -1,
+        -1,
+        -1
+      ],
+      "props": {
+        "sha": "91d59be"
+      },
+      "type": "memory"
+    },
+    {
+      "id": "genesis-commit-23",
+      "label": "docs: add SOTA README with architecture, usage, and research",
+      "layer": [
+        -1,
+        -1,
+        -1
+      ],
+      "props": {
+        "sha": "02cdd35"
+      },
+      "type": "memory"
+    },
+    {
+      "id": "genesis-commit-24",
+      "label": "init: kompress-ultra standalone package",
+      "layer": [
+        -1,
+        -1,
+        -1
+      ],
+      "props": {
+        "sha": "284ea09"
+      },
+      "type": "memory"
+    },
+    {
+      "id": "genesis-commit-3",
+      "label": "feat: ultramesh-mem v1.0.0 — 1:1 matching ultrameshai brain ",
+      "layer": [
+        -1,
+        -1,
+        -1
+      ],
+      "props": {
+        "sha": "db91288"
+      },
+      "type": "memory"
+    },
+    {
+      "id": "genesis-commit-4",
+      "label": "feat: ultramesh-mem — universal memory plugin",
+      "layer": [
+        -1,
+        -1,
+        -1
+      ],
+      "props": {
+        "sha": "10f4e9e"
+      },
+      "type": "memory"
+    },
+    {
+      "id": "genesis-commit-5",
+      "label": "chore: publish to npm.peterl.dev + update encrypted secrets",
+      "layer": [
+        -1,
+        -1,
+        -1
+      ],
+      "props": {
+        "sha": "fbbcd64"
+      },
+      "type": "memory"
+    },
+    {
+      "id": "genesis-commit-6",
+      "label": "docs: OVH Warsaw deploy guide + encrypted secrets",
+      "layer": [
+        -1,
+        -1,
+        -1
+      ],
+      "props": {
+        "sha": "51c7ff3"
+      },
+      "type": "memory"
+    },
+    {
+      "id": "genesis-commit-7",
+      "label": "feat: self-hosted npm registry via Verdaccio",
+      "layer": [
+        -1,
+        -1,
+        -1
+      ],
+      "props": {
+        "sha": "38882ce"
+      },
+      "type": "memory"
+    },
+    {
+      "id": "genesis-commit-8",
+      "label": "feat: deploy Worker + MCP landing page",
+      "layer": [
+        -1,
+        -1,
+        -1
+      ],
+      "props": {
+        "sha": "4ec3d1b"
+      },
+      "type": "memory"
+    },
+    {
+      "id": "genesis-commit-9",
+      "label": "feat: fleet CI agents — non-blocking, never-fail pipeline",
+      "layer": [
+        -1,
+        -1,
+        -1
+      ],
+      "props": {
+        "sha": "330487f"
+      },
+      "type": "memory"
+    },
+    {
+      "id": "learning-cf521",
+      "label": "CF 521",
+      "layer": [
+        -1,
+        0,
+        0
+      ],
+      "type": "learning"
+    },
+    {
+      "id": "learning-npm",
+      "label": "npm OTP",
+      "layer": [
+        -1,
+        0,
+        0
+      ],
+      "type": "learning"
+    },
+    {
+      "id": "learning-record",
+      "label": "recordSuccess fix",
+      "layer": [
+        -1,
+        1,
+        0
+      ],
+      "type": "learning"
+    },
+    {
+      "id": "learning-sed",
+      "label": "sed -i bug",
+      "layer": [
+        -1,
+        0,
+        0
+      ],
+      "type": "learning"
+    },
+    {
+      "id": "learning-ssh",
+      "label": "SSH blocked",
+      "layer": [
+        -1,
+        0,
+        0
+      ],
+      "type": "learning"
+    },
+    {
+      "id": "memory-file",
+      "label": "Memory Log",
+      "layer": [
+        -1,
+        0,
+        3
+      ],
+      "type": "state"
+    },
+    {
+      "id": "mesh-loop",
+      "label": "Mesh Loop",
+      "layer": [
+        0,
+        3,
+        5
+      ],
+      "type": "loop"
+    },
+    {
+      "id": "pruner-loop",
+      "label": "Pruner Loop",
+      "layer": [
+        0,
+        1,
+        1
+      ],
+      "type": "loop"
+    },
+    {
+      "id": "repair-bot",
+      "label": "Repair Bot",
+      "layer": [
+        0,
+        1,
+        5
+      ],
+      "type": "system"
+    },
+    {
+      "id": "rewriter-loop",
+      "label": "Rewriter Loop",
+      "layer": [
+        0,
+        1,
+        1
+      ],
+      "type": "loop"
+    },
+    {
+      "id": "ultramesh-mem",
+      "label": "Universal Memory",
+      "layer": [
+        0,
+        2,
+        4
+      ],
+      "type": "agent"
+    }
+  ],
+  "schema": "ultramesh-brain-graph-temporal",
+  "version": "2.0.0"
+}
