@@ -6,10 +6,10 @@ compatibility_flags = ["nodejs_compat"]
 # Bindings
 [[kv_namespaces]]
 binding = "KOMPRESS_STATS"
-id = "placeholder"  # Set via `wrangler kv:namespace create KOMPRESS_STATS`
+id = "8dbcbdc2d5574e399abfebd7f31b7bb5"
 
-# Route (uncomment after DNS setup)
-# routes = [{ pattern = "api.kompress.vaked.dev/*", zone_name = "vaked.dev" }
+# Routes
+routes = [{ pattern = "api.kompress.vaked.dev/*", zone_name = "vaked.dev" }]
 
 [vars]
 # AUTH_TOKEN = ""  # Set via `wrangler secret put AUTH_TOKEN`
