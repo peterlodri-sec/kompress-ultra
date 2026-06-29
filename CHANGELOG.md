@@ -19,6 +19,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Config validation tests** — `test/config.test.ts` covers all validation paths.
 - **CI workflow** — GitHub Actions: `bun test` + `bun run typecheck` on push and PR.
 - **Security policy** — `SECURITY.md` with vulnerability reporting process.
+- **Zero-PII research telemetry** — `server/telemetry.ts` records anonymous KV counters (event type, token counts, duration, day granularity). `GET /v1/telemetry` for full disclosure. `TELEMETRY.md` policy document. `X-Telemetry` header on every response. Library (`src/`) has zero telemetry.
+- **Logo** — `assets/logo.svg`: dark rounded-square brand mark with 4 compression arcs → 4 role nodes → green collapsed diamond.
 
 ### Changed
 - **BREAKING**: `circuit-breaker.ts` — module-level mutable state replaced with `CircuitBreaker` class. Singleton functions (`isCircuitOpen`, `recordSuccess`, `recordFailure`, `getCircuitState`) preserved as backward-compatible wrappers around a default instance.

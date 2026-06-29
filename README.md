@@ -27,6 +27,30 @@
 
 ---
 
+## Table of Contents
+
+- [Why kompress-ultra?](#why-kompress-ultra)
+- [Quick Start](#quick-start)
+  - [As a Library](#as-a-library)
+  - [As an MCP Server](#as-an-mcp-server)
+  - [Telemetry](#telemetry)
+- [Architecture](#architecture)
+  - [The 4 Roles](#the-4-roles)
+  - [v2.0 Improvements](#v20-improvements)
+  - [Safety Floors](#safety-floors)
+  - [Circuit Breaker](#circuit-breaker)
+  - [Token Budgets](#token-budgets)
+- [Benchmarks](#benchmarks)
+- [Configuration](#configuration)
+- [Project Structure](#project-structure)
+- [Research](#research)
+- [Ecosystem](#ecosystem)
+- [Security](#security)
+- [Contributing](#contributing)
+- [License](#license)
+
+---
+
 ## Why kompress-ultra?
 
 LLM agent loops burn through context windows fast. Long chat histories, compiler logs, and tool outputs accumulate, causing **context bloat** — slower inference, higher costs, and degraded reasoning quality.

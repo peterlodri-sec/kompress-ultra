@@ -35,12 +35,16 @@ src/
   index.ts          — Public API re-exports
 server/
   worker.ts         — Cloudflare Worker (MCP + REST API with optional auth)
+  telemetry.ts      — Zero-PII research telemetry (Worker only; src/ has none)
 test/
   scoring.test.ts, rewriter.test.ts, compression.test.ts,
   circuit-breaker.test.ts, circulator.test.ts, token-budget.test.ts,
   config.test.ts, pipeline.test.ts
 scripts/
   run-ultra.mjs     — CLI: compress file with Ultra, write output
+assets/
+  logo.svg          — Brand mark (dark bg, cyan arcs, green compression core)
+TELEMETRY.md        — Telemetry policy and opt-out instructions
 fixtures/
   agents-md-compression/ — Comparison of caveman-compress vs kompress-ultra
 ```
@@ -203,3 +207,15 @@ import type { Message } from "./types.js";
 Constant-time comparison (no timing attack) — the `requireAuth` function in
 `worker.ts` compares byte-by-byte with XOR. The `AUTH_TOKEN` binding is
 optional; if unset, all endpoints are open.
+
+### Telemetry
+
+- Zero-PII research telemetry lives in `server/telemetry.ts` — **never** in `src/`
+- Hosted API (`KOMPRESS_STATS` KV bound): records event type, agent type, token
+  counts, duration — **no content, no IPs, no IDs**
+- Self-hosted Worker or library: zero telemetry (no KV binding = no-op)
+- `GET /v1/telemetry` returns full disclosure inline
+- `X-Telemetry` header on every response → `TELEMETRY.md`
+- `GET /v1/stats` reads daily aggregated counters from KV
+- MCP `telemetry` tool returns disclosure in the MCP response
+- KV counters auto-expire after 90 days
