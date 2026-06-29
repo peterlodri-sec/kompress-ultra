@@ -1,0 +1,109 @@
+name: pr-review
+
+# Advisory PR reviewer using DeepSeek V4 Flash (no thinking mode).
+# Runs on every PR — posts ONE comment review, then exits. NEVER blocks.
+# Best-effort: if OPENROUTER_API_KEY is unset (fork PR without secrets),
+# the script no-ops cleanly. The review is advisory — post-merge reviews
+# have no effect on the target branch.
+#
+# Model: deepseek/deepseek-v4-flash
+#   No thinking tokens — fast, cheap, good-enough for advisory reviews.
+#   Cost: ~$0.25/Mtok in, $0.50/Mtok out.
+
+on:
+  pull_request:
+    types: [opened, synchronize]
+
+permissions:
+  contents: read
+  pull-requests: write
+
+concurrency:
+  group: pr-review-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  review:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    if: github.event.pull_request.draft == false
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Guard — require OpenRouter key
+        id: guard
+        env:
+          OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
+        run: |
+          if [ -z "$OPENROUTER_API_KEY" ]; then
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+            echo "::notice::no OPENROUTER_API_KEY — review disabled (fork PR or secrets not configured)"
+          else
+            echo "skip=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Generate diff
+        if: steps.guard.outputs.skip != 'true'
+        id: diff
+        run: |
+          BASE="${{ github.event.pull_request.base.sha }}"
+          HEAD="${{ github.event.pull_request.head.sha }}"
+          git diff "$BASE..$HEAD" -- src/ test/ server/ > "$RUNNER_TEMP/diff.txt" 2>/dev/null || true
+          echo "lines=$(wc -l < "$RUNNER_TEMP/diff.txt")" >> "$GITHUB_OUTPUT"
+
+      - name: Review via DeepSeek V4 Flash
+        if: steps.guard.outputs.skip != 'true' && steps.diff.outputs.lines > 0
+        id: review
+        env:
+          OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
+          DIFF: ${{ steps.diff.outputs.lines }}
+        run: |
+          DIFF_CONTENT=$(cat "$RUNNER_TEMP/diff.txt" | head -2000)
+
+          # Build payload with raw diff as JSON string — no sub() regex issues
+          jq -n \
+            --arg model "deepseek/deepseek-v4-flash" \
+            --arg system "You are a code reviewer for kompress-ultra, a TypeScript context-compression library for AI agents. Review the diff for correctness, edge cases, and non-obvious bugs. Keep comments short, specific, and actionable. If the diff looks clean, say 'LGTM'. Rate each finding: critical / advisory / nit." \
+            --arg diff "$DIFF_CONTENT" \
+            '{
+              model: $model,
+              messages: [
+                {role: "system", content: $system},
+                {role: "user", content: ("Review this diff:\n```diff\n" + $diff + "\n```")}
+              ],
+              max_tokens: 1024,
+              temperature: 0.3
+            }' > "$RUNNER_TEMP/payload.json"
+
+          # Call OpenRouter
+          curl -s -X POST "https://openrouter.ai/api/v1/chat/completions" \
+            -H "Authorization: Bearer $OPENROUTER_API_KEY" \
+            -H "Content-Type: application/json" \
+            -d @"$RUNNER_TEMP/payload.json" > "$RUNNER_TEMP/response.json" 2>/dev/null || echo "{}" > "$RUNNER_TEMP/response.json"
+
+          # Extract review text
+          jq -r '.choices[0].message.content // "Review unavailable"' "$RUNNER_TEMP/response.json" > "$RUNNER_TEMP/review.md"
+          echo "--- review ---"
+          cat "$RUNNER_TEMP/review.md"
+
+      - name: Post review comment
+        if: steps.guard.outputs.skip != 'true' && steps.diff.outputs.lines > 0
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          REVIEW=$(cat "$RUNNER_TEMP/review.md" 2>/dev/null || echo "Review unavailable")
+          BODY="$RUNNER_TEMP/comment-body.md"
+          cat > "$BODY" <<- COMMITEOF
+          <!-- kompress-pr-review -->
+          ## 🤖 Advisory Review
+
+          ${REVIEW}
+
+          ---
+          <sub>DeepSeek V4 Flash · advisory · never blocks CI</sub>
+          COMMITEOF
+          gh pr comment "${{ github.event.pull_request.number }}" \
+            --repo "${{ github.repository }}" \
+            --body-file "$BODY"

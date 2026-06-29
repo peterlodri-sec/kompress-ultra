@@ -1,0 +1,60 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" width="200" height="200">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#0a0a14"/>
+      <stop offset="100%" style="stop-color:#141420"/>
+    </linearGradient>
+    <linearGradient id="arcGlow" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" style="stop-color:#00d4ff;stop-opacity:0"/>
+      <stop offset="30%" style="stop-color:#00d4ff;stop-opacity:0.3"/>
+      <stop offset="70%" style="stop-color:#00d4ff;stop-opacity:0.7"/>
+      <stop offset="100%" style="stop-color:#00d4ff;stop-opacity:1"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Background -->
+  <rect width="200" height="200" fill="url(#bg)" rx="24"/>
+
+  <!-- Compression funnel: 4 descending arcs → tight center -->
+  <!-- Arc 1 — outermost stage (wide prune sweep) -->
+  <path d="M 30,120 A 80,80 0 0,1 170,120" fill="none" stroke="url(#arcGlow)" stroke-width="1.2" opacity="0.12"/>
+  
+  <!-- Arc 2 — score stage -->
+  <path d="M 42,107 A 68,68 0 0,1 158,107" fill="none" stroke="url(#arcGlow)" stroke-width="1.2" opacity="0.2"/>
+  
+  <!-- Arc 3 — rewrite stage -->
+  <path d="M 56,94 A 56,56 0 0,1 144,94" fill="none" stroke="url(#arcGlow)" stroke-width="1.4" opacity="0.35"/>
+  
+  <!-- Arc 4 — circulate stage (tightest) -->
+  <path d="M 72,81 A 44,44 0 0,1 128,81" fill="none" stroke="url(#arcGlow)" stroke-width="1.6" opacity="0.55"/>
+
+  <!-- 4 Role nodes on the descending arcs (left → right, high → low) -->
+  <!-- Pruner (top-left) -->
+  <circle cx="42" cy="107" r="4" fill="#00d4ff" opacity="0.9"/>
+  <!-- Rewriter (top-right) -->
+  <circle cx="158" cy="107" r="4" fill="#00d4ff" opacity="0.9"/>
+  <!-- Circulator (lower-left) -->
+  <circle cx="72" cy="81" r="4" fill="#00d4ff" opacity="0.9"/>
+  <!-- Composer (lower-right) -->
+  <circle cx="128" cy="81" r="4" fill="#00d4ff" opacity="0.9"/>
+
+  <!-- Pipeline flow lines between roles (clockwise) -->
+  <path d="M 48,106 L 152,106" fill="none" stroke="#00d4ff" stroke-width="0.6" opacity="0.2" stroke-dasharray="3,4"/>
+  <path d="M 156,103 L 132,81" fill="none" stroke="#00d4ff" stroke-width="0.6" opacity="0.15" stroke-dasharray="3,4"/>
+  <path d="M 68,81 L 44,103" fill="none" stroke="#00d4ff" stroke-width="0.6" opacity="0.15" stroke-dasharray="3,4"/>
+
+  <!-- Central compression core — collapsed diamond (4→1) -->
+  <rect x="90" y="70" width="20" height="20" fill="none" stroke="#00e660" stroke-width="1.5" transform="rotate(45,100,80)"/>
+
+  <!-- Collapse lines from 4 nodes into core -->
+  <line x1="46" y1="107" x2="92" y2="80" stroke="#00e660" stroke-width="0.6" opacity="0.15" stroke-dasharray="2,3"/>
+  <line x1="154" y1="107" x2="108" y2="80" stroke="#00e660" stroke-width="0.6" opacity="0.15" stroke-dasharray="2,3"/>
+  <line x1="76" y1="81" x2="93" y2="80" stroke="#00e660" stroke-width="0.6" opacity="0.15" stroke-dasharray="2,3"/>
+  <line x1="124" y1="81" x2="107" y2="80" stroke="#00e660" stroke-width="0.6" opacity="0.15" stroke-dasharray="2,3"/>
+
+  <!-- Ultra-compression spark (the output) -->
+  <circle cx="100" cy="80" r="3" fill="#00e660"/>
+  
+  <!-- Pulse ring -->
+  <circle cx="100" cy="80" r="8" fill="none" stroke="#00e660" stroke-width="0.5" opacity="0.4"/>
+</svg>

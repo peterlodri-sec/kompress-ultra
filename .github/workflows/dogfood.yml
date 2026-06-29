@@ -1,0 +1,67 @@
+name: dogfood
+
+# Dogfood loop: pings the live kompress-ultra Worker every 6 hours to
+# dogfood the API and generate telemetry. NEVER blocks — if the Worker
+# is down, the failure is logged but CI stays green.
+#
+# This is the fleet's own compression pipeline being compressed by itself.
+# Each run sends a small test payload through compress/score/rewrite.
+
+on:
+  schedule:
+    - cron: "0 */6 * * *" # every 6 hours
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: dogfood
+  cancel-in-progress: true
+
+jobs:
+  dogfood:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - name: Dogfood — compress
+        continue-on-error: true
+        run: |
+          PAYLOAD='{"messages":[{"role":"user","content":"Fix the bug in `src/auth.ts` where tokens expire too early."},{"role":"assistant","content":"I will look into the auth token expiry issue."},{"role":"tool","content":"Error: ENOENT: no such file or directory"}],"agent_type":"coder"}'
+          RESULT=$(curl -s --max-time 10 -X POST "https://kompress.vaked.dev/v1/compress" \
+            -H "Content-Type: application/json" \
+            -d "$PAYLOAD" 2>/dev/null || echo '{"error":"unreachable"}')
+          echo "compress: $(echo "$RESULT" | jq -r '.stats.savings_pct // "FAIL"')% savings"
+
+      - name: Dogfood — score
+        continue-on-error: true
+        run: |
+          PAYLOAD='{"messages":[{"role":"user","content":"Fix the bug in src/auth.ts"},{"role":"assistant","content":"Looking into it..."}]}'
+          RESULT=$(curl -s --max-time 10 -X POST "https://kompress.vaked.dev/v1/score" \
+            -H "Content-Type: application/json" \
+            -d "$PAYLOAD" 2>/dev/null || echo '[]')
+          COUNT=$(echo "$RESULT" | jq '. | length' 2>/dev/null || echo "0")
+          echo "score: $COUNT messages scored"
+
+      - name: Dogfood — rewrite
+        continue-on-error: true
+        run: |
+          PAYLOAD='{"content":"I would be happy to help you with that. Sure! Great! Here is the result.","level":"ultra"}'
+          RESULT=$(curl -s --max-time 10 -X POST "https://kompress.vaked.dev/v1/rewrite" \
+            -H "Content-Type: application/json" \
+            -d "$PAYLOAD" 2>/dev/null || echo '{"error":"unreachable"}')
+          SAVINGS=$(echo "$RESULT" | jq -r '.savings_pct // "FAIL"')
+          echo "rewrite: ${SAVINGS}% compression"
+
+      - name: Dogfood — health
+        continue-on-error: true
+        run: |
+          RESULT=$(curl -s --max-time 5 "https://kompress.vaked.dev/v1/health" 2>/dev/null || echo '{"status":"unreachable"}')
+          echo "health: $(echo "$RESULT" | jq -r '.status // "unknown"')"
+
+      - name: Gate
+        run: echo "dogfood run complete — $(date -u +%Y-%m-%dT%H:%M:%SZ)"

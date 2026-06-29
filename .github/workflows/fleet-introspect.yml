@@ -1,0 +1,162 @@
+name: fleet-introspect
+
+# Daily fleet introspection: reads telemetry from the live Worker, generates
+# a digest, and opens an advisory issue with findings. NEVER blocks anything.
+#
+# Model: deepseek/deepseek-v4-flash — fast, cheap, no thinking tokens.
+# Best-effort: if OPENROUTER_API_KEY or the Worker is unreachable, clean no-op.
+
+on:
+  schedule:
+    - cron: "0 8 * * *"   # daily, 08:00 UTC
+  workflow_dispatch:
+    inputs:
+      focus:
+        description: "Optional focus area for the digest"
+        required: false
+        default: ""
+
+permissions:
+  contents: read
+  issues: write
+
+concurrency:
+  group: fleet-introspect
+  cancel-in-progress: false
+
+jobs:
+  introspect:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - name: Fetch live telemetry
+        id: telemetry
+        continue-on-error: true
+        run: |
+          # Try the live API; fall back to static defaults if unreachable.
+          STATS=$(curl -s --max-time 5 "https://kompress.vaked.dev/v1/stats" 2>/dev/null || echo "{}")
+          echo "stats<<JSONEOF" >> "$GITHUB_OUTPUT"
+          echo "$STATS" >> "$GITHUB_OUTPUT"
+          echo "JSONEOF" >> "$GITHUB_OUTPUT"
+
+      - name: Build digest
+        id: digest
+        env:
+          STATS: ${{ steps.telemetry.outputs.stats }}
+        run: |
+          DATE=$(date -u +%Y-%m-%d)
+          echo "date=$DATE" >> "$GITHUB_OUTPUT"
+
+          # Parse telemetry or use defaults
+          EVENTS=$(echo "$STATS" | jq -r '.["events:total"] // 0' 2>/dev/null || echo "0")
+          COMPRESS=$(echo "$STATS" | jq -r '.["events:compress:count"] // 0' 2>/dev/null || echo "0")
+          TOKENS_IN=$(echo "$STATS" | jq -r '.["tokens:in"] // 0' 2>/dev/null || echo "0")
+          TOKENS_OUT=$(echo "$STATS" | jq -r '.["tokens:out"] // 0' 2>/dev/null || echo "0")
+          DURATION=$(echo "$STATS" | jq -r '.["duration_ms"] // 0' 2>/dev/null || echo "0")
+
+          echo "events=$EVENTS" >> "$GITHUB_OUTPUT"
+          echo "compress=$COMPRESS" >> "$GITHUB_OUTPUT"
+          echo "tokens_in=$TOKENS_IN" >> "$GITHUB_OUTPUT"
+          echo "tokens_out=$TOKENS_OUT" >> "$GITHUB_OUTPUT"
+          echo "duration=$DURATION" >> "$GITHUB_OUTPUT"
+
+      - name: Generate insight via DeepSeek V4 Flash
+        id: insight
+        continue-on-error: true
+        env:
+          OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
+        run: |
+          if [ -z "$OPENROUTER_API_KEY" ]; then
+            echo "::notice::no OPENROUTER_API_KEY — skipping insight generation"
+            echo "Insight generation skipped (no API key configured)." > "$RUNNER_TEMP/insight.md"
+            exit 0
+          fi
+
+          EVENTS=${{ steps.digest.outputs.events }}
+          COMPRESS=${{ steps.digest.outputs.compress }}
+          TOKENS_IN=${{ steps.digest.outputs.tokens_in }}
+          TOKENS_OUT=${{ steps.digest.outputs.tokens_out }}
+          DURATION=${{ steps.digest.outputs.duration }}
+
+          SAVINGS=0
+          if [ "$TOKENS_IN" -gt 0 ] && [ "$TOKENS_OUT" -gt 0 ]; then
+            SAVINGS=$(echo "scale=1; (1 - $TOKENS_OUT / $TOKENS_IN) * 100" | bc 2>/dev/null || echo "0")
+          fi
+          AVG_LATENCY=0
+          if [ "$EVENTS" -gt 0 ] && [ "$DURATION" -gt 0 ]; then
+            AVG_LATENCY=$(echo "scale=1; $DURATION / $EVENTS" | bc 2>/dev/null || echo "0")
+          fi
+
+          jq -n \
+            --argjson events "$EVENTS" \
+            --argjson compress "$COMPRESS" \
+            --argjson tokens_in "$TOKENS_IN" \
+            --argjson tokens_out "$TOKENS_OUT" \
+            --argjson savings "$SAVINGS" \
+            --argjson latency "$AVG_LATENCY" \
+            '{
+              model: "deepseek/deepseek-v4-flash",
+              messages: [
+                {role: "system", content: "You are a fleet analyst for kompress-ultra, a context-compression library. Given today telemetry, write 2-4 sentences of insight. Mention trends, anomalies, or notable metrics. End with a recommendation if relevant. Be concise."},
+                {role: "user", content: ("Today telemetry: " + ($events|tostring) + " total events, " + ($compress|tostring) + " compress calls, " + ($tokens_in|tostring) + " tokens in, " + ($tokens_out|tostring) + " tokens out, " + ($savings|tostring) + "% savings rate, " + ($latency|tostring) + "ms avg latency.")}
+              ],
+              max_tokens: 512,
+              temperature: 0.3
+            }' > "$RUNNER_TEMP/payload.json"
+
+          curl -s -X POST "https://openrouter.ai/api/v1/chat/completions" \
+            -H "Authorization: Bearer $OPENROUTER_API_KEY" \
+            -H "Content-Type: application/json" \
+            -d @"$RUNNER_TEMP/payload.json" > "$RUNNER_TEMP/response.json" 2>/dev/null || echo "{}" > "$RUNNER_TEMP/response.json"
+
+          jq -r '.choices[0].message.content // "Insight generation failed."' "$RUNNER_TEMP/response.json" > "$RUNNER_TEMP/insight.md"
+
+      - name: Open advisory issue
+        continue-on-error: true
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          DATE="${{ steps.digest.outputs.date }}"
+          EVENTS="${{ steps.digest.outputs.events }}"
+          COMPRESS="${{ steps.digest.outputs.compress }}"
+          TOKENS_IN="${{ steps.digest.outputs.tokens_in }}"
+          TOKENS_OUT="${{ steps.digest.outputs.tokens_out }}"
+          DURATION="${{ steps.digest.outputs.duration }}"
+
+          SAVINGS="-"; [ "$TOKENS_IN" -gt 0 ] && [ "$TOKENS_OUT" -gt 0 ] && SAVINGS=$(echo "scale=1; (1 - $TOKENS_OUT / $TOKENS_IN) * 100" | bc 2>/dev/null || echo "-")
+          AVG_LATENCY="-"; [ "$EVENTS" -gt 0 ] && [ "$DURATION" -gt 0 ] && AVG_LATENCY=$(echo "scale=1; $DURATION / $EVENTS" | bc 2>/dev/null || echo "-")
+
+          INSIGHT=$(cat "$RUNNER_TEMP/insight.md" 2>/dev/null || echo "No insight generated.")
+
+          EXISTING=$(gh issue list --repo "${{ github.repository }}" --state open \
+            --search "Fleet Introspect — $DATE in:title" --json number --jq '.[0].number' 2>/dev/null)
+
+          BODY_FILE="$RUNNER_TEMP/body.md"
+          {
+            printf '## Fleet Introspect — %s\n\n' "$DATE"
+            printf '### Telemetry Snapshot\n\n'
+            printf '| Metric | Value |\n'
+            printf '|--------|-------|\n'
+            printf '| Total events | %s |\n' "$EVENTS"
+            printf '| Compress calls | %s |\n' "$COMPRESS"
+            printf '| Tokens in | %s |\n' "$TOKENS_IN"
+            printf '| Tokens out | %s |\n' "$TOKENS_OUT"
+            printf '| Savings rate | %s%% |\n' "$SAVINGS"
+            printf '| Avg latency | %sms |\n' "$AVG_LATENCY"
+            printf '\n### Insight\n\n%s\n\n' "$INSIGHT"
+            printf '---\n<sub>fleet-introspect · DeepSeek V4 Flash · advisory · never blocks CI</sub>\n'
+          } > "$BODY_FILE"
+
+          if [ -n "$EXISTING" ] && [ "$EXISTING" != "null" ]; then
+            gh issue comment "$EXISTING" --repo "${{ github.repository }}" --body-file "$BODY_FILE" 2>/dev/null || true
+            echo "::notice::Updated existing issue #$EXISTING"
+          else
+            gh issue create --repo "${{ github.repository }}" \
+              --title "Fleet Introspect — ${DATE}" \
+              --body-file "$BODY_FILE" \
+              --label type/chore 2>/dev/null || true
+          fi
