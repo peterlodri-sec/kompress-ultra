@@ -32,6 +32,29 @@ export const DEFAULT_OPTIONS: Required<KompressUltraOptions> = {
   aggression: 0.8,
 };
 
+export function validateOptions(options: Partial<KompressUltraOptions>): Required<KompressUltraOptions> {
+  const merged = { ...DEFAULT_OPTIONS, ...options };
+
+  if (typeof merged.relevanceThreshold !== "number" || merged.relevanceThreshold < 0 || merged.relevanceThreshold > 1) {
+    throw new Error("relevanceThreshold must be a number between 0 and 1");
+  }
+  if (typeof merged.maxMessagesKept !== "number" || merged.maxMessagesKept < 1) {
+    throw new Error("maxMessagesKept must be a positive integer");
+  }
+  if (typeof merged.aggression !== "number" || merged.aggression < 0 || merged.aggression > 1) {
+    throw new Error("aggression must be a number between 0 and 1");
+  }
+  if (typeof merged.pollIntervalMs !== "number" || merged.pollIntervalMs < 0) {
+    throw new Error("pollIntervalMs must be a non-negative number");
+  }
+  const validAgentTypes: AgentType[] = ["coder", "researcher", "reviewer", "orchestrator"];
+  if (!validAgentTypes.includes(merged.agentType)) {
+    throw new Error(`agentType must be one of: ${validAgentTypes.join(", ")}`);
+  }
+
+  return merged;
+}
+
 export interface Message {
   role: string;
   content: string;

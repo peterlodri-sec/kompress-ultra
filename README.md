@@ -1,8 +1,9 @@
 <p align="center">
-  <img src="https://img.shields.io/badge/version-1.0.0-blue?style=for-the-badge" alt="Version">
+  <img src="https://img.shields.io/badge/version-2.0.0-blue?style=for-the-badge" alt="Version">
   <img src="https://img.shields.io/badge/license-Apache%202.0-green?style=for-the-badge" alt="License">
   <img src="https://img.shields.io/badge/built%20with-Bun-purple?style=for-the-badge&logo=bun" alt="Built with Bun">
   <img src="https://img.shields.io/badge/PRs-welcome-brightgreen?style=for-the-badge" alt="PRs Welcome">
+  <img src="https://img.shields.io/github/actions/workflow/status/peterlodri-sec/kompress-ultra/ci.yml?style=for-the-badge&label=CI" alt="CI">
 </p>
 
 <h1 align="center">kompress-ultra</h1>
@@ -13,10 +14,11 @@
 </p>
 
 <p align="center">
-  <a href="https://kompress.vaked.dev/paper/main.pdf">Paper</a> ·
   <a href="https://proposal.vaked.dev">Proposal</a> ·
+  <a href="https://huggingface.co/datasets/PeetPedro/ultrawhale-dogfood">Training Dataset</a> ·
   <a href="https://huggingface.co/PeetPedro/kompress-v8">Model</a> ·
-  <a href="https://huggingface.co/spaces/PeetPedro/kompress-playground">Playground</a>
+  <a href="https://huggingface.co/spaces/PeetPedro/kompress-playground">Playground</a> ·
+  <a href="https://kompress.vaked.dev/paper/main.pdf">Paper</a>
 </p>
 
 ---
@@ -39,60 +41,64 @@ The **exact-keep rate** measures how many critical reasoning tokens (file paths,
 ## Quick Start
 
 ```bash
-# Install
 git clone https://github.com/peterlodri-sec/kompress-ultra.git
 cd kompress-ultra
 bun install
-
-# Run tests
 bun test
-
-# Type check
-bun run typecheck
 ```
 
-### As a Standalone Library
+### As a Library
 
 ```typescript
 import {
-  scoreMessage,
+  scoreMessageSync,
   isProtected,
   compressMessage,
   CompressionLevel,
   adaptiveThreshold,
   computeDensity,
+  validateOptions,
+  createCircuitBreaker,
+  createCirculator,
+  setTokenEstimator,
 } from "kompress-ultra";
 
-// Score a message for relevance
-const score = await scoreMessage(msg, index, total, taskGoal);
+// Validate and merge config
+const options = validateOptions({ agentType: "coder", aggression: 0.7 });
 
-// Check if a message is protected (user, code, error, last 5)
-if (isProtected(msg, index, total)) {
-  // Never prune protected messages
-}
+// Score a message for relevance (sync — no Milvus needed)
+const score = scoreMessageSync(msg, index, total);
+
+// Check if protected (user, code, error, last 5)
+if (isProtected(msg, index, total)) { /* never prune */ }
 
 // Compress by age
 const compressed = compressMessage(msg.content, CompressionLevel.Ultra);
+
+// Instance-isolated state (multi-tenant safe)
+const breaker = createCircuitBreaker({ failureThreshold: 5, cooldownMs: 30_000 });
+const circulator = createCirculator({ cap: 200, batchSize: 20 });
+
+// Plug in a real tokenizer (e.g., tiktoken)
+setTokenEstimator((text) => encoding.encode(text).length);
 ```
 
-### As an OpenCode Plugin
+### As an MCP Server
 
-```typescript
-// .opencode/plugin/kompress-ultra.ts
-import kompressUltra from "kompress-ultra";
+The Cloudflare Worker exposes compression as a service:
 
-export default (input, options) => {
-  return kompressUltra(input, {
-    relevanceThreshold: 0.65,
-    maxMessagesKept: 35,
-    milvusUrl: "http://localhost:19530",
-  });
-};
 ```
+POST /mcp           — MCP protocol (compress, score, rewrite, budget, circuit tools)
+POST /v1/compress   — REST: compress a conversation
+POST /v1/score      — REST: score messages for importance
+POST /v1/rewrite    — REST: rewrite a single message
+GET  /v1/budget     — REST: get token budget for agent type
+GET  /v1/health     — REST: liveness + circuit breaker state
+```
+
+Set `AUTH_TOKEN` via `wrangler secret put AUTH_TOKEN` to enable Bearer auth on mutation endpoints. Health and root stay open.
 
 ## Architecture
-
-The system operates as four coordinated roles in a pipeline:
 
 ```
 ┌─────────────────────────────────────────────────────────────────┐
@@ -116,24 +122,48 @@ The system operates as four coordinated roles in a pipeline:
 
 | Role | Module | Function |
 |------|--------|----------|
-| **Pruner** | `scoring.ts` | Scores messages by relevance, recency, and structural importance. Protected messages (user, code, error, last 5) are never pruned. |
-| **Rewriter** | `rewriter.ts` | Compresses kept messages by age: Verbatim (recent) → Lite (mid) → Ultra (old). Preserves critical tokens via safety floor. |
-| **Circulator** | `circulator.ts` | Enqueues pruned content to vector memory (Milvus) for future retrieval. Classifies messages by type for smart routing. |
-| **Composer** | `composer.ts` | Injects learned patterns from memory into system prompts. Builds context from previously compressed turns. |
+| **Pruner** | `scoring.ts` | Scores messages by relevance, recency (Ebbinghaus decay), and structural importance. Protected messages (user, code, error, last 5) are never pruned. |
+| **Rewriter** | `rewriter.ts` | Compresses kept messages by age: Verbatim (recent) → Lite (mid) → Ultra (old). Protects fenced blocks AND inline code spans. |
+| **Circulator** | `circulator.ts` | Enqueues pruned content to vector memory (Milvus) for future retrieval. Classifies messages by type for smart routing. Instance-isolated queue. |
+| **Composer** | `brain.ts` | Reads brain state from cross-session learning, builds liveness indicators for context injection. |
+
+### v2.0 Improvements
+
+| Feature | v1.0 | v2.0 |
+|---------|------|------|
+| Inline code protection | Fenced blocks only | Fenced + inline `` `code` `` spans |
+| State isolation | Module-level singletons | Class-based instances (`createCircuitBreaker`, `createCirculator`) |
+| Worker auth | None | Bearer token via `AUTH_TOKEN` env |
+| Token estimation | Hardcoded `chars/4` | Pluggable via `setTokenEstimator()` |
+| Config validation | None | `validateOptions()` with range checks |
+| Error types | Generic `Error` | Typed hierarchy (`KompressError`, `CircuitOpenError`, etc.) |
+| Shell-out deps | `execSync` to `mempalace` | Direct `Bun.write()` |
 
 ### Safety Floors
 
-Critical tokens are **never** pruned, enforced by both regex patterns and the asymmetric loss penalty ($\lambda = 3.0$) during training:
+Critical tokens are **never** pruned:
 
 - File paths (`src/main.rs`, `./build.sh`)
 - CLI commands (`cargo`, `git`, `docker`)
 - API keys & secrets (`env.TOKEN`, `SECRET_KEY`)
 - IP addresses & hex hashes
 - Numbers & error codes
+- **Inline code spans** (`` `backtick-wrapped` ``)
 
 ### Circuit Breaker
 
-If Milvus/embedding services fail 3 times consecutively, the circuit opens for 60 seconds. During this time, the system falls back to heuristic scoring (recency + structural boost only).
+If Milvus/embedding services fail N times consecutively (default 3), the circuit opens for a configurable cooldown (default 60s). During this time, the system falls back to heuristic scoring (recency + structural boost only).
+
+### Token Budgets
+
+Per-agent token budgets control compression aggressiveness:
+
+| Agent Role | Max Tokens | Aggressiveness |
+|------------|-----------|----------------|
+| coder | 100k | 0.8 (aggressive) |
+| researcher | 128k | 0.4 (conservative) |
+| reviewer | 64k | 0.6 (moderate) |
+| orchestrator | 128k | 0.5 (balanced) |
 
 ## Benchmarks
 
@@ -164,37 +194,43 @@ interface KompressUltraOptions {
   droppedMessageDigest?: boolean; // default true
   sliceAwareBoost?: boolean;      // default true
   transparencyMode?: boolean;     // default true
+  agentType?: AgentType;          // "coder" | "researcher" | "reviewer" | "orchestrator"
+  aggression?: number;            // 0-1, default 0.8
 }
 ```
 
-### Token Budget Escalation
-
-Per-agent token budgets control compression aggressiveness:
-
-| Agent Role | Max Tokens | Aggressiveness |
-|------------|-----------|----------------|
-| coder | 100k | 0.8 (aggressive) |
-| researcher | 128k | 0.4 (conservative) |
-| reviewer | 64k | 0.6 (moderate) |
-| orchestrator | 128k | 0.5 (balanced) |
+Use `validateOptions()` to merge partial config with defaults and validate ranges.
 
 ## Project Structure
 
 ```
 kompress-ultra/
 ├── src/
-│   ├── index.ts              # Re-exports from all modules
-│   ├── types.ts              # All interfaces (Message, Options, BrainState, etc.)
+│   ├── index.ts              # Public API re-exports
+│   ├── types.ts              # All interfaces + validateOptions()
+│   ├── errors.ts             # Typed error hierarchy
 │   ├── scoring.ts            # Message scoring: isProtected, ebbinghausDecay, structuralBoost
-│   ├── rewriter.ts           # CompressionLevel enum, compressMessage
+│   ├── rewriter.ts           # CompressionLevel enum, compressMessage (fenced + inline protection)
 │   ├── compression.ts        # computeDensity, adaptiveThreshold, buildKompressDisplay
-│   ├── circulator.ts         # classifyMessage, enqueueCirculator, flushCirculatorAsync
+│   ├── circulator.ts         # Circulator class + singleton compat functions
 │   ├── embedding.ts          # embedText, scoreMessageMilvus, queryMilvusSimilarity
 │   ├── brain.ts              # readBrainState, buildBrainLine
-│   ├── token-budget.ts       # estimateTokens, escalateForBudget, DEFAULT_BUDGETS
-│   └── circuit-breaker.ts    # Circuit breaker with 3-failure threshold, 60s cooldown
+│   ├── token-budget.ts       # estimateTokens, setTokenEstimator, escalateForBudget
+│   └── circuit-breaker.ts    # CircuitBreaker class + singleton compat functions
+├── server/
+│   └── worker.ts             # Cloudflare Worker (MCP + REST API with auth)
+├── test/
+│   ├── scoring.test.ts
+│   ├── rewriter.test.ts
+│   ├── compression.test.ts
+│   ├── circuit-breaker.test.ts
+│   ├── circulator.test.ts
+│   ├── token-budget.test.ts
+│   ├── config.test.ts
+│   └── pipeline.test.ts      # Full E2E integration test
 ├── package.json
 ├── tsconfig.json
+├── wrangler.toml
 └── README.md
 ```
 
@@ -202,8 +238,8 @@ kompress-ultra/
 
 This package implements the compression strategy described in:
 
-- **Paper**: [Asymmetric Loss Modulation Resolves the Voting Ensemble Paradox](https://kompress.vaked.dev/paper/main.pdf) — Full mathematical proof of the Voting Ensemble Paradox and the asymmetric loss correction.
-- **Proposal**: [kompress-ultra for Headroom](https://proposal.vaked.dev) — Interactive proposal with live playground, paradox simulator, and benchmarks.
+- **Paper**: [Asymmetric Loss Modulation Resolves the Voting Ensemble Paradox](https://kompress.vaked.dev/paper/main.pdf) — Full mathematical proof.
+- **Proposal**: [kompress-ultra for Headroom](https://proposal.vaked.dev) — Interactive proposal with live playground and benchmarks.
 - **Model**: [PeetPedro/kompress-v8](https://huggingface.co/PeetPedro/kompress-v8) — 149M-parameter ModernBERT model with LoRA fine-tuning.
 - **Dataset**: [PeetPedro/ultrawhale-dogfood](https://huggingface.co/datasets/PeetPedro/ultrawhale-dogfood) — Token-level eviction labels from real agent sessions.
 
@@ -214,17 +250,14 @@ This package implements the compression strategy described in:
 | Component | Description |
 |-----------|-------------|
 | [ultrameshai](https://github.com/peterlodri-sec/ultrameshai) | Decentralized agent lifecycle substrate |
-| [loopkit](https://github.com/peterlodri-sec/loopkit) | 4-phase autonomous training orchestrator |
+| [loopkit](https://github.com/peterlodri-sec/loopkit) | 4-phase autonomous training orchestrulator |
 | [pocoo.vaked.dev](https://pocoo.vaked.dev) | Experiment log vault and telemetry registry |
 | [proposal.vaked.dev](https://proposal.vaked.dev) | Interactive Headroom integration proposal |
 | [kompress.vaked.dev](https://kompress.vaked.dev/paper/main.pdf) | Academic paper with full proofs |
 
-## Provenance
+## Security
 
-This package was autonomously extracted from the [ultrameshai](https://github.com/peterlodri-sec/ultrameshai) monolith and split into focused modules. Every training run, evaluation metric, and code artifact is publicly verifiable at the links above.
-
-**Built by**: Crush (mimo-v2.5-free) + OpenCode agent loops
-**License**: Apache 2.0
+See [SECURITY.md](SECURITY.md) for vulnerability reporting. Auth-protected endpoints require `Authorization: Bearer <token>` when `AUTH_TOKEN` is configured.
 
 ## Contributing
 

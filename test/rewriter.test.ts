@@ -45,5 +45,23 @@ describe("rewriter", () => {
       expect(ultra).not.toContain("happy to help");
       expect(ultra).not.toContain("Sure!");
     });
+
+    it("preserves inline code spans at all levels", () => {
+      const input = "Edit the `AGENTS.md` file and check `.gitignore` for the `src/main.rs` path.";
+      const lite = compressMessage(input, CompressionLevel.Lite);
+      const ultra = compressMessage(input, CompressionLevel.Ultra);
+      expect(lite).toContain("`AGENTS.md`");
+      expect(lite).toContain("`.gitignore`");
+      expect(ultra).toContain("`AGENTS.md`");
+      expect(ultra).toContain("`.gitignore`");
+      expect(ultra).toContain("`src/main.rs`");
+    });
+
+    it("preserves both fenced blocks and inline code together", () => {
+      const input = "Run `cargo build` then fix the ```rust\nfn main() {}\n``` block.";
+      const ultra = compressMessage(input, CompressionLevel.Ultra);
+      expect(ultra).toContain("`cargo build`");
+      expect(ultra).toContain("```rust\nfn main() {}\n```");
+    });
   });
 });

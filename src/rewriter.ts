@@ -8,9 +8,15 @@ export enum CompressionLevel {
 export function compressMessage(content: string, level: CompressionLevel): string {
   if (level === CompressionLevel.Verbatim) return content;
 
-  // Protect code fences
+  // Protect code fences (fenced blocks)
   const codeBlocks: string[] = [];
   let result = content.replace(/```[\s\S]*?```/g, (match) => {
+    codeBlocks.push(match);
+    return `__CODE_BLOCK_${codeBlocks.length - 1}__`;
+  });
+
+  // Protect inline code spans
+  result = result.replace(/`[^`\n]+`/g, (match) => {
     codeBlocks.push(match);
     return `__CODE_BLOCK_${codeBlocks.length - 1}__`;
   });

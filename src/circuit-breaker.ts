@@ -1,20 +1,68 @@
-const circuitBreaker = { failures: 0, open_until: 0 };
-
-export function isCircuitOpen(): boolean {
-  return Date.now() < circuitBreaker.open_until;
+export interface CircuitBreakerState {
+  failures: number;
+  openUntil: number;
 }
 
-export function recordSuccess(): void {
-  circuitBreaker.failures = 0;
+export interface CircuitBreakerOptions {
+  failureThreshold?: number;
+  cooldownMs?: number;
 }
 
-export function recordFailure(): void {
-  circuitBreaker.failures++;
-  if (circuitBreaker.failures >= 3) {
-    circuitBreaker.open_until = Date.now() + 60_000;
+export class CircuitBreaker {
+  private failures = 0;
+  private openUntil = 0;
+  private readonly failureThreshold: number;
+  private readonly cooldownMs: number;
+
+  constructor(options: CircuitBreakerOptions = {}) {
+    this.failureThreshold = options.failureThreshold ?? 3;
+    this.cooldownMs = options.cooldownMs ?? 60_000;
+  }
+
+  isOpen(): boolean {
+    return Date.now() < this.openUntil;
+  }
+
+  recordSuccess(): void {
+    this.failures = 0;
+  }
+
+  recordFailure(): void {
+    this.failures++;
+    if (this.failures >= this.failureThreshold) {
+      this.openUntil = Date.now() + this.cooldownMs;
+    }
+  }
+
+  getState(): CircuitBreakerState {
+    return { failures: this.failures, openUntil: this.openUntil };
+  }
+
+  reset(): void {
+    this.failures = 0;
+    this.openUntil = 0;
   }
 }
 
+// Default singleton for backward compatibility
+const defaultBreaker = new CircuitBreaker();
+
+export function isCircuitOpen(): boolean {
+  return defaultBreaker.isOpen();
+}
+
+export function recordSuccess(): void {
+  defaultBreaker.recordSuccess();
+}
+
+export function recordFailure(): void {
+  defaultBreaker.recordFailure();
+}
+
 export function getCircuitState(): { failures: number; openUntil: number } {
-  return { failures: circuitBreaker.failures, openUntil: circuitBreaker.open_until };
+  return defaultBreaker.getState();
+}
+
+export function createCircuitBreaker(options?: CircuitBreakerOptions): CircuitBreaker {
+  return new CircuitBreaker(options);
 }

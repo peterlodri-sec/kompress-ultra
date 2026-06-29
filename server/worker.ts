@@ -39,6 +39,20 @@ interface Env {
   AUTH_TOKEN?: string;
 }
 
+function requireAuth(request: Request, env: Env): boolean {
+  const token = env.AUTH_TOKEN;
+  if (!token) return true; // No token configured = open access
+  const authHeader = request.headers.get("Authorization");
+  if (!authHeader) return false;
+  const parts = authHeader.split(" ");
+  if (parts.length !== 2 || parts[0] !== "Bearer") return false;
+  return parts[1] === token;
+}
+
+function unauthorized(): Response {
+  return json({ error: "Unauthorized" }, 401);
+}
+
 function buildMcpServer(): McpServer {
   const server = new McpServer({ name: "kompress-ultra", version: VERSION });
 
@@ -353,14 +367,17 @@ export default {
       return createMcpHandler(buildMcpServer())(request, env, ctx);
     }
 
-    // REST
+    // REST (auth-protected mutations)
     if (url.pathname === "/v1/compress" && request.method === "POST") {
+      if (!requireAuth(request, env)) return unauthorized();
       return handleCompress(request);
     }
     if (url.pathname === "/v1/score" && request.method === "POST") {
+      if (!requireAuth(request, env)) return unauthorized();
       return handleScore(request);
     }
     if (url.pathname === "/v1/rewrite" && request.method === "POST") {
+      if (!requireAuth(request, env)) return unauthorized();
       return handleRewrite(request);
     }
     if (url.pathname === "/v1/health") {
