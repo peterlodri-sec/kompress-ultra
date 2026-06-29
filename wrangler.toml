@@ -10,4 +10,4 @@ id = "8dbcbdc2d5574e399abfebd7f31b7bb5"
 routes = [{ pattern = "api.kompress.vaked.dev/*", zone_name = "vaked.dev" }]
 
 [vars]
-VERSION = "3.0.0"
+VERSION = "4.0.0"

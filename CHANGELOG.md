@@ -5,6 +5,32 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [4.0.0] — 2026-06-29 — milvus-murmur
+
+### Added
+- `milvus/docker-compose.yaml` — Milvus stack: etcd, minio, milvus-standalone (v2.5.5), attu web UI. Persisted to `/opt/milvus/data/`
+- `scripts/deploy-milvus.sh` — Deploy Milvus on OVH Warsaw: Docker Compose, nginx reverse proxy (milvus.peterl.dev, attu.milvus.peterl.dev), health checks
+- `scripts/milvus-init.sh` — Create 6 collections with schemas and indexes: `research_findings`, `learning_patterns`, `pruned_context`, `brain_edges`, `brain_nodes`, `agent_memory`
+- `scripts/milvus-sync-brain.sh` — Sync brain graph edges → Milvus vectors. Each edge becomes an embedding (source→target:type:label), stored with metadata (type, layer, conductivity, tags)
+- `docs/deploy/ovh-milvus.md` — Full Milvus deployment guide with DNS, certbot, and usage instructions
+
+### Changed
+- Bumped `package.json` version → `4.0.0`
+- Bumped Worker `VERSION` → `4.0.0`
+- `wrangler.toml` — VERSION var updated to 4.0.0
+
+### Infrastructure
+- Milvus HTTP API at `localhost:9091` (internal) / `https://milvus.peterl.dev` (public)
+- Milvus gRPC at `localhost:19530`
+- Attu web UI at `localhost:8000` / `https://attu.milvus.peterl.dev`
+- All collections: IVFFlat index, COSINE metric, 1024-dim vectors (except brain_nodes: 768-dim)
+- Automatic load on creation, idempotent init (skips existing collections)
+
+### Edge Routing
+- Brain edges now searchable via vector similarity
+- `queryMilvusSimilarity()` can route requests based on semantic edge type
+- Future: conductivity becomes learned function of past routing success
+
 ## [3.0.0] — 2026-06-29 — gilded-pipeline
 
 ### Added
