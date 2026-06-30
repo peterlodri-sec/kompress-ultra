@@ -1,0 +1,342 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>qubit watch</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    background: #14110e;
+    color: #e8e0d8;
+    font-family: 'Segoe UI', system-ui, sans-serif;
+    min-height: 100vh;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+  }
+  .wrap {
+    text-align: center;
+    padding: 20px;
+  }
+  h1 {
+    font-family: monospace;
+    font-size: 12px;
+    letter-spacing: 4px;
+    color: #78716c;
+    margin-bottom: 40px;
+    text-transform: uppercase;
+  }
+
+  /* qubit orb */
+  .orb-wrap {
+    position: relative;
+    width: 200px;
+    height: 200px;
+    margin: 0 auto 32px;
+  }
+  .orb {
+    width: 200px;
+    height: 200px;
+    border-radius: 50%;
+    background: radial-gradient(circle at 35% 30%, #2dd4bf, #0f766e);
+    transition: background 0.3s, box-shadow 0.3s, transform 0.3s;
+    box-shadow: 0 0 40px rgba(45, 212, 191, 0.2);
+  }
+  .orb.alive {
+    background: radial-gradient(circle at 35% 30%, #fbbf24, #d97706);
+    box-shadow: 0 0 60px rgba(251, 191, 36, 0.4), 0 0 120px rgba(251, 191, 36, 0.15);
+    animation: pulse 2s ease-in-out infinite;
+  }
+  .orb.dead {
+    background: radial-gradient(circle at 35% 30%, #78716c, #292524);
+    box-shadow: 0 0 10px rgba(120, 113, 108, 0.1);
+    transform: scale(0.85);
+  }
+  .orb.decohering {
+    background: radial-gradient(circle at 35% 30%, #f59e0b, #78716c);
+    box-shadow: 0 0 30px rgba(245, 158, 11, 0.15);
+    animation: flicker 0.3s ease-in-out 3;
+  }
+
+  @keyframes pulse {
+    0%, 100% { box-shadow: 0 0 60px rgba(251, 191, 36, 0.4); }
+    50% { box-shadow: 0 0 80px rgba(251, 191, 36, 0.6), 0 0 140px rgba(251, 191, 36, 0.2); }
+  }
+  @keyframes flicker {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.4; }
+  }
+
+  /* state label */
+  .state-label {
+    font-family: monospace;
+    font-size: 14px;
+    margin-bottom: 24px;
+    height: 20px;
+  }
+  .state-label.alive { color: #fbbf24; }
+  .state-label.dead { color: #78716c; }
+  .state-label.waiting { color: #2dd4bf; }
+
+  /* stats */
+  .stats {
+    display: flex;
+    gap: 24px;
+    justify-content: center;
+    margin-bottom: 24px;
+    font-family: monospace;
+    font-size: 13px;
+  }
+  .stat { color: #9e9284; }
+  .stat span { color: #e8e0d8; font-weight: 600; }
+
+  /* controls */
+  .controls {
+    display: flex;
+    gap: 12px;
+    justify-content: center;
+    flex-wrap: wrap;
+    margin-bottom: 24px;
+  }
+  .controls label {
+    font-family: monospace;
+    font-size: 11px;
+    color: #78716c;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .controls input {
+    background: #1c1815;
+    border: 1px solid #292524;
+    border-radius: 4px;
+    color: #e8e0d8;
+    font-family: monospace;
+    font-size: 12px;
+    padding: 4px 8px;
+    width: 120px;
+    outline: none;
+  }
+  .controls input:focus { border-color: #f59e0b; }
+  .controls input::selection { background: #f59e0b; color: #14110e; }
+
+  .btn {
+    background: #1c1815;
+    border: 1px solid #292524;
+    border-radius: 6px;
+    color: #e8e0d8;
+    font-family: monospace;
+    font-size: 12px;
+    padding: 8px 20px;
+    cursor: pointer;
+    transition: border-color 0.2s;
+  }
+  .btn:hover { border-color: #f59e0b; }
+  .btn:active { background: #292524; }
+  .btn:disabled { opacity: 0.3; cursor: default; border-color: #292524; }
+
+  /* history */
+  .history {
+    display: flex;
+    gap: 8px;
+    justify-content: center;
+    flex-wrap: wrap;
+    margin-top: 24px;
+    padding-top: 24px;
+    border-top: 1px solid #1c1815;
+    max-width: 600px;
+    margin-left: auto;
+    margin-right: auto;
+  }
+  .history .dot {
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    font-size: 8px;
+    line-height: 16px;
+    text-align: center;
+    color: #14110e;
+    font-weight: 700;
+    transition: all 0.3s;
+  }
+  .history .dot.alive { background: #fbbf24; }
+  .history .dot.dead { background: #292524; }
+  .history .dot.current { transform: scale(1.3); box-shadow: 0 0 8px rgba(251, 191, 36, 0.5); }
+
+  .footer {
+    margin-top: 32px;
+    font-family: monospace;
+    font-size: 10px;
+    color: #525252;
+  }
+
+  @media (max-width: 500px) {
+    .orb-wrap { width: 140px; height: 140px; }
+    .orb { width: 140px; height: 140px; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>qubit watch</h1>
+
+  <div class="orb-wrap">
+    <div class="orb" id="orb"></div>
+  </div>
+
+  <div class="state-label waiting" id="stateLabel">— waiting —</div>
+
+  <div class="stats">
+    <div class="stat">lifetime <span id="lifetime">0</span>s</div>
+    <div class="stat">runs <span id="runCount">0</span></div>
+    <div class="stat">avg <span id="avgLife">—</span>s</div>
+  </div>
+
+  <div class="controls">
+    <label>seed <input type="text" id="seedInput" value="kompress" placeholder="any text"></label>
+    <label>noise <input type="range" id="noiseSlider" min="1" max="10" value="5" style="width:80px"></label>
+  </div>
+
+  <div class="controls">
+    <button class="btn" id="runBtn">▶ run once</button>
+    <button class="btn" id="autoBtn">▶▶ run 10</button>
+    <button class="btn" id="clearBtn">clear</button>
+  </div>
+
+  <div class="history" id="history"></div>
+
+  <div class="footer">seed → lifetime. no amplitudes. just watching.</div>
+</div>
+
+<script>
+// Simple seeded PRNG (mulberry32)
+function mulberry32(seed) {
+  let s = seed | 0;
+  return function() {
+    s = (s + 0x6D2B79F5) | 0;
+    let t = Math.imul(s ^ (s >>> 15), 1 | s);
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+
+// String → number seed
+function hashSeed(str) {
+  let h = 0;
+  for (let i = 0; i < str.length; i++) {
+    h = ((h << 5) - h + str.charCodeAt(i)) | 0;
+  }
+  return h;
+}
+
+const orb = document.getElementById('orb');
+const stateLabel = document.getElementById('stateLabel');
+const lifetimeEl = document.getElementById('lifetime');
+const runCountEl = document.getElementById('runCount');
+const avgLifeEl = document.getElementById('avgLife');
+const seedInput = document.getElementById('seedInput');
+const noiseSlider = document.getElementById('noiseSlider');
+const runBtn = document.getElementById('runBtn');
+const autoBtn = document.getElementById('autoBtn');
+const clearBtn = document.getElementById('clearBtn');
+const historyEl = document.getElementById('history');
+
+let running = false;
+let lifetimes = [];
+
+function updateStats() {
+  runCountEl.textContent = lifetimes.length;
+  if (lifetimes.length > 0) {
+    avgLifeEl.textContent = (lifetimes.reduce((a, b) => a + b, 0) / lifetimes.length).toFixed(1);
+  }
+}
+
+function addHistoryDot(lifetime, isAlive) {
+  const dot = document.createElement('div');
+  dot.className = 'dot ' + (isAlive ? 'alive' : 'dead');
+  dot.textContent = lifetime;
+  dot.title = `${lifetime}s`;
+  historyEl.appendChild(dot);
+  historyEl.scrollTop = historyEl.scrollHeight;
+}
+
+function sleep(ms) {
+  return new Promise(r => setTimeout(r, ms));
+}
+
+async function runOnce(auto = false) {
+  if (running) return;
+  running = true;
+  if (!auto) runBtn.disabled = true;
+  autoBtn.disabled = true;
+
+  const seed = hashSeed(seedInput.value || 'kompress');
+  const rng = mulberry32(seed);
+  const noiseLevel = parseInt(noiseSlider.value) / 10; // 0.1 to 1.0
+
+  // Every tick, there's a chance to decohere
+  // Base lifetime depends on seed (deterministic)
+  // Noise scales the probability
+  let lifetime = 0;
+  const maxLifetime = 3 + Math.abs(seed % 23) * 0.5; // 3–14s base range
+
+  orb.className = 'orb alive';
+  stateLabel.className = 'state-label alive';
+  stateLabel.textContent = 'alive';
+
+  // Decohere tick by tick
+  while (lifetime < maxLifetime * 10) {
+    const decohereChance = (lifetime / (maxLifetime * 10)) * noiseLevel;
+    if (rng() < decohereChance) {
+      // Decohering animation
+      orb.className = 'orb decohering';
+      await sleep(300);
+      orb.className = 'orb dead';
+      stateLabel.className = 'state-label dead';
+      stateLabel.textContent = `dead at ${(lifetime / 10).toFixed(1)}s`;
+      break;
+    }
+    lifetime++;
+    lifetimeEl.textContent = (lifetime / 10).toFixed(1);
+    await sleep(100);
+  }
+
+  // If it survived the whole range
+  if (lifetime >= maxLifetime * 10) {
+    orb.className = 'orb dead';
+    stateLabel.className = 'state-label dead';
+    stateLabel.textContent = `faded at ${(lifetime / 10).toFixed(1)}s (max)`;
+  }
+
+  const lifeSec = Math.round((lifetime / 10) * 10) / 10;
+  lifetimes.push(lifeSec);
+  addHistoryDot(lifeSec, lifeSec > 2);
+  updateStats();
+
+  running = false;
+  if (!auto) runBtn.disabled = false;
+  autoBtn.disabled = false;
+}
+
+runBtn.addEventListener('click', () => runOnce(false));
+clearBtn.addEventListener('click', () => {
+  lifetimes = [];
+  historyEl.innerHTML = '';
+  lifetimeEl.textContent = '0';
+  runCountEl.textContent = '0';
+  avgLifeEl.textContent = '—';
+  orb.className = 'orb';
+  stateLabel.className = 'state-label waiting';
+  stateLabel.textContent = '— waiting —';
+});
+
+autoBtn.addEventListener('click', async () => {
+  if (running) return;
+  for (let i = 0; i < 10; i++) {
+    await runOnce(true);
+  }
+});
+</script>
+</body>
+</html>

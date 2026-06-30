@@ -1,0 +1,315 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>qubit</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body { width: 100%; height: 100%; overflow: hidden; }
+  body {
+    background: #080604;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    font-family: monospace;
+  }
+
+  /* Accretion disk — cosmic aurora */
+  .disk {
+    position: absolute;
+    width: 100vmax;
+    height: 100vmax;
+    border-radius: 50%;
+    background: conic-gradient(
+      from 0deg at 50% 50%,
+      transparent 0deg,
+      rgba(251,191,36,0.015) 30deg,
+      rgba(245,158,11,0.06) 60deg,
+      rgba(180,83,9,0.02) 100deg,
+      transparent 140deg,
+      transparent 180deg,
+      rgba(251,191,36,0.04) 220deg,
+      rgba(217,119,6,0.08) 260deg,
+      rgba(251,191,36,0.02) 300deg,
+      transparent 340deg,
+      transparent 360deg
+    );
+    filter: blur(60px);
+    animation: rotateDisk 40s linear infinite;
+    opacity: 0.6;
+    transition: opacity 3s;
+  }
+  .disk.flare {
+    opacity: 1;
+    animation: rotateDisk 20s linear infinite;
+  }
+  .disk.dead {
+    opacity: 0.1;
+    filter: blur(100px);
+  }
+
+  @keyframes rotateDisk {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+  }
+
+  /* Inner shadow — event horizon approach */
+  .shadow {
+    position: absolute;
+    width: 100vmax;
+    height: 100vmax;
+    border-radius: 50%;
+    background: radial-gradient(
+      circle at 50% 50%,
+      transparent 30%,
+      rgba(8,6,4,0.3) 35%,
+      rgba(8,6,4,0.7) 40%,
+      rgba(8,6,4,1) 50%
+    );
+    pointer-events: none;
+  }
+
+  /* Gravitational lensing ring */
+  .lensing {
+    position: absolute;
+    width: 70vmin;
+    height: 70vmin;
+    border-radius: 50%;
+    border: 1px solid rgba(251,191,36,0.04);
+    box-shadow:
+      0 0 60px rgba(251,191,36,0.03),
+      inset 0 0 60px rgba(251,191,36,0.02);
+    pointer-events: none;
+    transition: all 4s;
+  }
+  .lensing.flare {
+    border-color: rgba(251,191,36,0.1);
+    box-shadow:
+      0 0 100px rgba(251,191,36,0.08),
+      inset 0 0 100px rgba(251,191,36,0.04);
+  }
+  .lensing.dead {
+    border-color: transparent;
+    box-shadow: none;
+  }
+
+  /* The qubit — singularity at center */
+  .orb {
+    position: absolute;
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    z-index: 2;
+    transition: all 3s ease;
+  }
+  .orb.alive {
+    background: #fbbf24;
+    box-shadow:
+      0 0 20px rgba(251,191,36,0.6),
+      0 0 60px rgba(251,191,36,0.2),
+      0 0 120px rgba(251,191,36,0.08);
+    animation: glowPulse 3s ease-in-out infinite;
+  }
+  .orb.dead {
+    background: #292524;
+    box-shadow: none;
+    transform: scale(0.3);
+    opacity: 0.3;
+  }
+  @keyframes glowPulse {
+    0%, 100% { box-shadow: 0 0 20px rgba(251,191,36,0.6), 0 0 60px rgba(251,191,36,0.2); }
+    50% { box-shadow: 0 0 30px rgba(251,191,36,0.8), 0 0 80px rgba(251,191,36,0.3), 0 0 160px rgba(251,191,36,0.1); }
+  }
+
+  /* The future self — appears at death moment */
+  .future {
+    position: absolute;
+    width: 4px;
+    height: 4px;
+    border-radius: 50%;
+    z-index: 1;
+    background: rgba(251,191,36,0.3);
+    box-shadow: 0 0 30px rgba(251,191,36,0.1);
+    opacity: 0;
+    transition: none;
+    pointer-events: none;
+  }
+  .future.visible {
+    opacity: 1;
+    animation: drift 6s ease-out forwards;
+  }
+  @keyframes drift {
+    0% { transform: translate(0,0) scale(1); opacity: 0.8; }
+    100% { transform: translate(120px, -80px) scale(0.3); opacity: 0; }
+  }
+
+  /* Light echo — when it dies, ring expands */
+  .echo {
+    position: absolute;
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    border: 1px solid rgba(251,191,36,0.2);
+    opacity: 0;
+    pointer-events: none;
+    transition: none;
+  }
+  .echo.visible {
+    opacity: 1;
+    animation: expandRing 5s ease-out forwards;
+  }
+  @keyframes expandRing {
+    0% { width: 10px; height: 10px; opacity: 0.6; border-width: 2px; }
+    100% { width: 400px; height: 400px; opacity: 0; border-width: 0.5px; }
+  }
+  .echo.visible ~ .echo.visible {
+    animation-delay: 0.5s;
+  }
+
+  /* Label */
+  .label {
+    position: fixed;
+    bottom: 24px;
+    left: 50%;
+    transform: translateX(-50%);
+    font-size: 10px;
+    color: #292524;
+    letter-spacing: 3px;
+    transition: color 3s;
+    z-index: 3;
+  }
+  .label.lit { color: #525252; }
+
+  @media (max-width: 600px) {
+    .disk { width: 200vmax; height: 200vmax; }
+    .shadow { width: 200vmax; height: 200vmax; }
+    .lensing { width: 90vmin; height: 90vmin; }
+  }
+</style>
+</head>
+<body>
+<div class="disk" id="disk"></div>
+<div class="shadow"></div>
+<div class="lensing" id="lensing"></div>
+<div class="orb alive" id="orb"></div>
+<div class="future" id="future"></div>
+<div class="echo" id="echo"></div>
+<div class="label" id="label">watching</div>
+<script>
+  // Seed from URL param ?seed=xxx — or the genesis hash on first load
+  const urlSeed = new URLSearchParams(location.search).get('seed');
+  const seed = urlSeed ? hashSeed(urlSeed) : 0x62d2c533;
+  let s = seed | 0;
+  function rng() {
+    s = (s + 0x6D2B79F5) | 0;
+    let t = Math.imul(s ^ (s >>> 15), 1 | s);
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  }
+  function hashSeed(str) {
+    let h = 0;
+    for (let i = 0; i < str.length; i++)
+      h = ((h << 5) - h + str.charCodeAt(i)) | 0;
+    return h;
+  }
+
+  const orb = document.getElementById('orb');
+  const disk = document.getElementById('disk');
+  const lensing = document.getElementById('lensing');
+  const future = document.getElementById('future');
+  const echo = document.getElementById('echo');
+  const label = document.getElementById('label');
+
+  let max, noise, t, died, lifetime;
+
+  // Show label when alive, dim when dead
+  function labelAlive() { label.className = 'label lit'; }
+  function labelDead() { label.className = 'label'; }
+
+  // At the graveyard of singularity, the future self appears
+  function showFuture() {
+    future.className = 'future visible';
+    // Spawn multiple light echos — concentric rings expanding outward
+    for (let i = 0; i < 3; i++) {
+      setTimeout(() => {
+        const ring = document.createElement('div');
+        ring.className = 'echo visible';
+        document.body.appendChild(ring);
+        setTimeout(() => ring.remove(), 7000);
+      }, i * 300);
+    }
+  }
+
+  function die() {
+    if (died) return;
+    died = true;
+    lifetime = t / 10;
+    orb.className = 'orb dead';
+    disk.className = 'disk dead';
+    lensing.className = 'lensing dead';
+    labelDead();
+    showFuture();
+
+    // Rebirth after echoes fade
+    setTimeout(rebirth, 7000);
+  }
+
+  function rebirth() {
+    // New seed derived from previous life — the qubit evolves
+    s = (seed ^ (Math.round(lifetime * 100) | 0)) | 0;
+    max = 8 + (Math.abs(s) % 17);
+    noise = 0.3 + (Math.abs(s) % 7) * 0.05;
+    t = 0;
+    died = false;
+    lifetime = 0;
+
+    orb.className = 'orb alive';
+    orb.style.opacity = 1;
+    disk.className = 'disk';
+    lensing.className = 'lensing';
+    labelAlive();
+
+    // Midpoint flare
+    setTimeout(() => {
+      if (!died) {
+        disk.className = 'disk flare';
+        lensing.className = 'lensing flare';
+        setTimeout(() => {
+          if (!died) { disk.className = 'disk'; lensing.className = 'lensing'; }
+        }, 4000);
+      }
+    }, (max * 1000) / 3);
+
+    setTimeout(tick, 800);
+  }
+
+  function tick() {
+    if (died) return;
+    t++;
+    const chance = (t / (max * 10)) * noise;
+    if (rng() < chance || t >= max * 10) {
+      die();
+      return;
+    }
+    // Flicker as we approach the horizon — light gets stretched
+    if (t > max * 10 * 0.7 && t % 3 === 0) {
+      orb.style.opacity = 0.6 + rng() * 0.4;
+    } else {
+      orb.style.opacity = 1;
+    }
+    setTimeout(tick, 100);
+  }
+
+  // --- Init ---
+  max = 8 + (Math.abs(seed) % 17);
+  noise = 0.3 + (Math.abs(seed) % 7) * 0.05;
+  t = 0;
+  died = false;
+  lifetime = 0;
+
+  setTimeout(tick, 800);
+  setTimeout(labelAlive, 6000);
+</script>
+</body>
+</html>

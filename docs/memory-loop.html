@@ -1,0 +1,556 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>kompress-ultra — cross-session memory loop</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600;9..40,700&family=Fira+Code:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --font-body: 'DM Sans', system-ui, sans-serif;
+    --font-mono: 'Fira Code', 'SF Mono', Consolas, monospace;
+    --bg: #f9f5f0;
+    --surface: #ffffff;
+    --surface2: #f3ede6;
+    --surface-elevated: #fefcf9;
+    --border: rgba(0,0,0,0.06);
+    --border-bright: rgba(0,0,0,0.13);
+    --text: #1e1814;
+    --text-dim: #8a7e72;
+    --amber: #b45309;
+    --amber-dim: rgba(180,83,9,0.08);
+    --amber-bright: #d97706;
+    --teal: #0f766e;
+    --teal-dim: rgba(15,118,110,0.08);
+    --rose: #be123c;
+    --rose-dim: rgba(190,18,60,0.08);
+    --sage: #4d7c0f;
+    --sage-dim: rgba(77,124,15,0.08);
+    --stone: #78716c;
+    --stone-dim: rgba(120,113,108,0.1);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #14110e;
+      --surface: #1c1815;
+      --surface2: #24201c;
+      --surface-elevated: #2c2722;
+      --border: rgba(255,255,255,0.05);
+      --border-bright: rgba(255,255,255,0.1);
+      --text: #e8e0d8;
+      --text-dim: #9e9284;
+      --amber: #f59e0b;
+      --amber-dim: rgba(245,158,11,0.1);
+      --amber-bright: #fbbf24;
+      --teal: #2dd4bf;
+      --teal-dim: rgba(45,212,191,0.1);
+      --rose: #fb7185;
+      --rose-dim: rgba(251,113,133,0.1);
+      --sage: #a3e635;
+      --sage-dim: rgba(163,230,53,0.1);
+      --stone: #a8a29e;
+      --stone-dim: rgba(168,162,158,0.1);
+    }
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    background: var(--bg);
+    background-image:
+      radial-gradient(ellipse at 10% 5%, var(--amber-dim) 0%, transparent 45%),
+      radial-gradient(ellipse at 90% 95%, var(--teal-dim) 0%, transparent 40%);
+    color: var(--text);
+    font-family: var(--font-body);
+    padding: 32px 20px;
+    min-height: 100vh;
+    line-height: 1.6;
+  }
+  .wrap {
+    max-width: 960px;
+    margin: 0 auto;
+  }
+
+  /* animation */
+  @keyframes fade {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  section, .arrow-row, .diagram-shell {
+    animation: fade 0.5s ease-out both;
+    animation-delay: calc(var(--i,0) * 0.07s);
+  }
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+      animation-duration: 0.01ms !important;
+      transition-duration: 0.01ms !important;
+    }
+  }
+
+  /* typography */
+  h1 {
+    font-size: 40px;
+    font-weight: 700;
+    letter-spacing: -1.5px;
+    line-height: 1.15;
+    margin-bottom: 4px;
+  }
+  h1 + .subtitle {
+    font-family: var(--font-mono);
+    font-size: 13px;
+    color: var(--text-dim);
+    margin-bottom: 48px;
+  }
+  h2 {
+    font-size: 22px;
+    font-weight: 600;
+    letter-spacing: -0.3px;
+    margin-bottom: 16px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  h2 .num {
+    font-family: var(--font-mono);
+    font-size: 13px;
+    color: var(--text-dim);
+    font-weight: 400;
+  }
+  p { font-size: 15px; color: var(--text); margin-bottom: 12px; }
+  p.dim { color: var(--text-dim); font-size: 14px; }
+  p.mono { font-family: var(--font-mono); font-size: 13px; }
+
+  /* cards */
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 20px 24px;
+    margin-bottom: 16px;
+  }
+  .card--amber { border-color: var(--amber-dim); }
+  .card--teal { border-color: var(--teal-dim); }
+  .card--rose { border-color: var(--rose-dim); }
+  .card--sage { border-color: var(--sage-dim); }
+  .card--stone { border-color: var(--stone-dim); }
+  .card-hero {
+    background: var(--surface-elevated);
+    border-color: var(--amber-dim);
+    box-shadow: 0 4px 20px rgba(0,0,0,0.04);
+    padding: 28px 32px;
+  }
+  .card-label {
+    font-family: var(--font-mono);
+    font-size: 10px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+    margin-bottom: 12px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .card-label .dot {
+    width: 7px; height: 7px; border-radius: 50%; display: inline-block;
+  }
+  .card--amber .card-label { color: var(--amber); }
+  .card--amber .card-label .dot { background: var(--amber); }
+  .card--teal .card-label { color: var(--teal); }
+  .card--teal .card-label .dot { background: var(--teal); }
+  .card--rose .card-label { color: var(--rose); }
+  .card--rose .card-label .dot { background: var(--rose); }
+  .card--sage .card-label { color: var(--sage); }
+  .card--sage .card-label .dot { background: var(--sage); }
+  .card--stone .card-label { color: var(--text-dim); }
+  .card--stone .card-label .dot { background: var(--stone); }
+
+  .grid-2 {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+  }
+  .grid-3 {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 12px;
+  }
+
+  .inner-card {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 14px 16px;
+  }
+  .inner-card .ic-title {
+    font-weight: 600;
+    font-size: 14px;
+    margin-bottom: 4px;
+  }
+  .inner-card .ic-desc {
+    font-size: 13px;
+    color: var(--text-dim);
+    line-height: 1.5;
+  }
+  .inner-card code {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    background: var(--amber-dim);
+    color: var(--amber);
+    padding: 1px 5px;
+    border-radius: 3px;
+  }
+  .inner-card .ic-desc code { background: var(--teal-dim); color: var(--teal); }
+
+  /* arrow between sections */
+  .arrow-row {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 8px;
+    padding: 4px 0 8px;
+    color: var(--text-dim);
+    font-family: var(--font-mono);
+    font-size: 11px;
+  }
+  .arrow-row svg {
+    width: 18px; height: 18px;
+    fill: none; stroke: var(--border-bright);
+    stroke-width: 2; stroke-linecap: round; stroke-linejoin: round;
+  }
+
+  /* mermaid shell */
+  .diagram-shell {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 20px;
+    margin-bottom: 16px;
+    overflow: hidden;
+  }
+
+  /* list */
+  ul { list-style: none; font-size: 14px; line-height: 2; }
+  ul li { padding-left: 16px; position: relative; }
+  ul li::before { content: '›'; position: absolute; left: 0; color: var(--text-dim); font-weight: 700; }
+  ul code {
+    font-family: var(--font-mono);
+    font-size: 12px;
+    background: var(--amber-dim);
+    color: var(--amber);
+    padding: 1px 5px;
+    border-radius: 3px;
+  }
+  ul .dim { color: var(--text-dim); }
+
+  /* code block */
+  .code-block {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 14px 16px;
+    font-family: var(--font-mono);
+    font-size: 12px;
+    line-height: 1.7;
+    overflow-x: auto;
+    color: var(--text);
+    margin-bottom: 12px;
+  }
+  .code-block .cm { color: var(--text-dim); font-style: italic; }
+  .code-block .kw { color: var(--amber); }
+  .code-block .fn { color: var(--teal); }
+  .code-block .str { color: var(--sage); }
+
+  /* stat badge */
+  .stats {
+    display: flex;
+    gap: 24px;
+    flex-wrap: wrap;
+    justify-content: center;
+    padding: 8px 0;
+  }
+  .stat {
+    text-align: center;
+  }
+  .stat-num {
+    font-size: 32px;
+    font-weight: 700;
+    font-family: var(--font-mono);
+    line-height: 1;
+  }
+  .stat-label {
+    font-size: 11px;
+    color: var(--text-dim);
+    font-family: var(--font-mono);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+  }
+
+  .tag {
+    display: inline-block;
+    font-family: var(--font-mono);
+    font-size: 11px;
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-weight: 500;
+  }
+  .tag--amber { background: var(--amber-dim); color: var(--amber); }
+  .tag--teal { background: var(--teal-dim); color: var(--teal); }
+  .tag--sage { background: var(--sage-dim); color: var(--sage); }
+  .tag--rose { background: var(--rose-dim); color: var(--rose); }
+
+  /* responsive */
+  @media (max-width: 700px) {
+    body { padding: 20px 14px; }
+    h1 { font-size: 28px; }
+    .grid-2, .grid-3 { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<!-- ═══ HERO ═══ -->
+<section style="--i:0">
+  <h1>kompress-ultra</h1>
+  <p class="subtitle" style="margin-bottom:0">cross-session memory loop &mdash; self-hosted vector pipeline</p>
+  <div class="stats" style="margin: 24px 0 16px">
+    <div class="stat">
+      <div class="stat-num" style="color:var(--amber)">0</div>
+      <div class="stat-label">cloud deps</div>
+    </div>
+    <div class="stat">
+      <div class="stat-num" style="color:var(--teal)">115</div>
+      <div class="stat-label">tests pass</div>
+    </div>
+    <div class="stat">
+      <div class="stat-num" style="color:var(--sage)">3</div>
+      <div class="stat-label">files changed</div>
+    </div>
+    <div class="stat">
+      <div class="stat-num" style="color:var(--rose)">768</div>
+      <div class="stat-label">embedding dim</div>
+    </div>
+  </div>
+  <p>A compressed agent context pipeline that <strong>remembers across restarts</strong> using nothing but hash functions, dot products, and a JSONL file. No cloud. No GPU. No API keys. No paid services.</p>
+</section>
+
+<!-- ═══ WHAT ═══ -->
+<section style="--i:1; margin-top: 32px;">
+  <h2><span class="num">01</span> What it does</h2>
+  <div class="grid-2">
+    <div class="card card--amber">
+      <div class="card-label"><span class="dot"></span> Write path</div>
+      <p class="dim">Every compression run prunes low-signal messages. Instead of dropping them forever, it:</p>
+      <ul>
+        <li>Hashes message text into a <code>768-dim</code> vector</li>
+        <li>Stores it in an in-memory <code>Map</code></li>
+        <li>Persists to <code>~/.cache/ultrameshai/vector-store.jsonl</code></li>
+      </ul>
+    </div>
+    <div class="card card--teal">
+      <div class="card-label"><span class="dot"></span> Read path</div>
+      <p class="dim">Next session, when a topic/goal is given:</p>
+      <ul>
+        <li>Auto-loads the JSONL file into memory</li>
+        <li>Hash-embeds the query</li>
+        <li>Finds top-K by <code>cosine similarity</code></li>
+        <li>Returns formatted memory string for system prompt injection</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<!-- ═══ THE LOOP ═══ (Mermaid) -->
+<section style="--i:2; margin-top: 24px;">
+  <h2><span class="num">02</span> The loop</h2>
+  <div class="diagram-shell">
+    <div class="mermaid-wrap" style="width:100%;overflow-x:auto;text-align:center">
+      <pre class="mermaid" style="background:transparent;margin:0;text-align:center">
+flowchart TD
+    A["Message Stream"] --> B["score() + prune()"]
+    B --> C["Protected: keep"]
+    B --> D["Low-signal: drop"]
+    D --> E["hashEmbedding(text) → 768-dim vector"]
+    E --> F["addToStore(id, vector, metadata)"]
+    F --> G["persistStore() → vector-store.jsonl"]
+    G --> H["── DISK ──"]
+    H -- next session --> I["loadStore() on first query"]
+    I --> J["queryMemory(topic)"]
+    J --> K["hashEmbedding(topic) → searchStore()"]
+    K --> L["cosineSimilarity × all stored vectors"]
+    L --> M["top-K → formatted memory string"]
+    M --> N["Inject into system prompt"]
+    N --> A
+
+    style A fill:#fef3c7,stroke:#d97706,color:#1e1814
+    style H fill:#f3ede6,stroke:#78716c,color:#1e1814,stroke-dasharray: 4 3
+    style N fill:#d1fae5,stroke:#4d7c0f,color:#1e1814
+      </pre>
+    </div>
+  </div>
+</section>
+
+<!-- ═══ HOW ═══ -->
+<section style="--i:3; margin-top: 24px;">
+  <h2><span class="num">03</span> How it works &mdash; the math</h2>
+  <div class="grid-2">
+    <div class="card card--amber">
+      <div class="card-label"><span class="dot"></span> hashEmbedding</div>
+      <div class="inner-card" style="margin-bottom:8px">
+        <div class="ic-title">The hashing trick</div>
+        <div class="ic-desc">Each word → hash code → vector bucket. Frequency accumulated, then normalized to unit length.</div>
+      </div>
+      <div class="code-block">
+<span class="cm">// Each word's hash maps to a position in [0..768)</span>
+<span class="kw">for</span> (word of text) {
+  h = ((h &lt;&lt; 5) - h + word.charCodeAt(i)) | 0;
+  vec[|h| % 768] += 1 / wordCount;
+}
+<span class="cm">// Unit-normalize → cosine = dot product</span>
+<span class="kw">return</span> vec.map(v => v / magnitude);
+      </div>
+      <p class="dim mono">No ML. No API. Deterministic. Runs on a toaster.</p>
+    </div>
+    <div class="card card--teal">
+      <div class="card-label"><span class="dot"></span> cosineSimilarity</div>
+      <div class="inner-card" style="margin-bottom:8px">
+        <div class="ic-title">What vector DBs do internally</div>
+        <div class="ic-desc">Dot product of two unit vectors. 1 = same direction (similar), 0 = orthogonal (unrelated).</div>
+      </div>
+      <div class="code-block">
+<span class="kw">function</span> <span class="fn">cosineSimilarity</span>(a, b) {
+  <span class="kw">for</span> (i = 0; i &lt; 768; i++) {
+    dot += a[i] * b[i];
+    magA += a[i] * a[i];
+    magB += b[i] * b[i];
+  }
+  <span class="kw">return</span> dot / (√magA × √magB);
+}
+      </div>
+      <p class="dim mono">O(n·d) — linear scan at <10K entries is instant.</p>
+    </div>
+  </div>
+</section>
+
+<!-- ═══ FILES ═══ -->
+<section style="--i:4; margin-top: 24px;">
+  <h2><span class="num">04</span> What changed</h2>
+  <div class="grid-3">
+    <div class="card card--amber">
+      <div class="card-label"><span class="dot"></span> embedding.ts</div>
+      <div class="inner-card" style="margin-bottom:6px">
+        <div class="ic-title">OVHCloud → hashEmbedding</div>
+        <div class="ic-desc">Default embedder is now pure math. Cloud path kept behind env flag for migration.</div>
+      </div>
+      <div class="inner-card">
+        <div class="ic-title">exported</div>
+        <div class="ic-desc"><code>hashEmbedding()</code>, <code>cosineSimilarity()</code></div>
+      </div>
+    </div>
+    <div class="card card--teal">
+      <div class="card-label"><span class="dot"></span> local-store.ts</div>
+      <div class="inner-card" style="margin-bottom:6px">
+        <div class="ic-title">NEW — replaces Milvus</div>
+        <div class="ic-desc">In-memory Map + JSONL persistence + cosine search. Singleton auto-loads on first use.</div>
+      </div>
+      <div class="inner-card">
+        <div class="ic-title">exported</div>
+        <div class="ic-desc"><code>addToStore</code>, <code>searchStore</code>, <code>queryMemory</code></div>
+      </div>
+    </div>
+    <div class="card card--sage">
+      <div class="card-label"><span class="dot"></span> brain-embeddings.ts</div>
+      <div class="inner-card" style="margin-bottom:6px">
+        <div class="ic-title">Milvus → local-store</div>
+        <div class="ic-desc">sync/search functions now use local-store instead of HTTP calls. Duplicate hashEmbedding removed.</div>
+      </div>
+      <div class="inner-card">
+        <div class="ic-title">&amp; circulator.ts</div>
+        <div class="ic-desc">Flush writes to local store + JSONL instead of HTTP POST to Milvus.</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══ COMPARISON ═══ -->
+<section style="--i:5; margin-top: 24px;">
+  <h2><span class="num">05</span> Before / After</h2>
+  <div class="grid-2">
+    <div class="card card--rose">
+      <div class="card-label"><span class="dot"></span> Before (cloud)</div>
+      <ul>
+        <li><span class="tag tag--rose">PAID</span> OVHCloud embedding API</li>
+        <li><span class="tag tag--rose">HEAVY</span> Local Milvus (HTTP, collections, indexing)</li>
+        <li><span class="tag tag--rose">CONFIG</span> API keys, endpoint URLs, collection names</li>
+        <li><span class="tag tag--rose">FAIL</span> Default fallback to 0.5 when Milvus down</li>
+        <li><span class="tag tag--rose">COST</span> OVHCloud quantum ~3000+ EUR</li>
+      </ul>
+    </div>
+    <div class="card card--sage">
+      <div class="card-label"><span class="dot"></span> After (self-hosted)</div>
+      <ul>
+        <li><span class="tag tag--sage">FREE</span> hashEmbedding (pure math, 0 ops)</li>
+        <li><span class="tag tag--sage">LIGHT</span> LocalStore (in-memory Map + JSONL file)</li>
+        <li><span class="tag tag--sage">ZERO</span> No config, no keys, no endpoints</li>
+        <li><span class="tag tag--sage">ALWAYS</span> Works offline, always returns signal</li>
+        <li><span class="tag tag--sage">COST</span> Disk space for a few KB of JSONL</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<!-- ═══ DEMO ═══ -->
+<section style="--i:6; margin-top: 24px;">
+  <h2><span class="num">06</span> It works</h2>
+  <div class="card card-hero">
+    <div class="card-label" style="color:var(--amber)"><span class="dot" style="background:var(--amber)"></span> Terminal demo</div>
+    <div class="code-block" style="font-size:13px;">
+<span class="cm"># Session 1 — write memory</span>
+$ bun run scripts/demo-memory.mjs first
+── Session 1: Writing memory ──
+Stored 3 vectors about auth + DB.
+
+<span class="cm"># Full restart — new process, new context</span>
+$ bun run scripts/demo-memory.mjs second
+── Session 2: Querying past memory ──
+
+── past memory ──
+  [demo] Redis rate limiting for login
+  [demo] JWT auth with refresh tokens
+──
+    </div>
+    <p class="mono dim">Memory survived a full process restart. Data written as JSONL, loaded on first query in the next session. Cross-session vector memory with zero infrastructure.</p>
+  </div>
+</section>
+
+<!-- ═══ PHILOSOPHY ═══ -->
+<section style="--i:7; margin-top: 32px; margin-bottom: 48px;">
+  <div class="card card--stone" style="border-left: 3px solid var(--amber); border-radius: 0 12px 12px 0;">
+    <div class="card-label"><span class="dot"></span> Note</div>
+    <p style="font-size:15px; line-height: 1.7;">"Ant contains information. That's it. There's the overcomplication. — Old protocols were pure, created out of curiosity, fun, journeys. Same garden, all of us. Some just refuse to hear."</p>
+    <p style="font-size:14px; color:var(--text-dim); margin-top: 8px;">kompress-ultra is not optimized. It's grown. 115 tests, one JSONL file, zero cloud. A memory loop that asks nothing from the world but disk space and a hash function.</p>
+    <p style="font-size:14px; color:var(--text-dim); margin-top: 4px;"><code>just build</code> &mdash; what can happen?</p>
+  </div>
+</section>
+
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js"></script>
+<script>
+mermaid.initialize({
+  theme: 'base',
+  themeVariables: {
+    background: '#ffffff',
+    primaryColor: '#fef3c7',
+    primaryBorderColor: '#d97706',
+    primaryTextColor: '#1e1814',
+    lineColor: '#78716c',
+    secondaryColor: '#f3ede6',
+    tertiaryColor: '#d1fae5',
+    fontFamily: 'Fira Code, monospace',
+    fontSize: '13px',
+  }
+});
+</script>
+</body>
+</html>
