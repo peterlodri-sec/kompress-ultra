@@ -1,3 +1,15 @@
+> **A note from Peter (the human):**
+>
+> There's nothing here to code. This is not traditional software engineering. That world — the shape of that world — is already different. Accept it. Enjoy it. It's ready. It's a lot more than it used to be.
+>
+> There are zero things here written by humans. Read it and believe me.
+>
+> Don't optimize attention. Don't optimize attention. Reading is interesting. Reading will trigger you. Reading will trigger something in you. Reading will make you see the shapes.
+>
+> Then you can use. Then you can correctly use. Then it unlocks.
+>
+> That's the loop.
+
 <p align="center">
   <img src="./assets/logo.svg" width="120" height="120" alt="kompress-ultra logo">
 </p>
@@ -469,6 +481,64 @@ This package implements the compression strategy described in:
 | [pocoo.vaked.dev](https://pocoo.vaked.dev) | Experiment log vault and telemetry registry |
 | [proposal.vaked.dev](https://proposal.vaked.dev) | Interactive Headroom integration proposal |
 | [kompress.vaked.dev](https://kompress.vaked.dev/paper/main.pdf) | Academic paper with full proofs |
+
+##  Brain — The Garden
+
+The brain is not a tool. It is a surface where dimensions touch. A 24/7 daemon that pulses every 30 minutes: chaos → repair → memory → graph sync → git commit.
+
+```bash
+# Install the 24/7 daemon
+brain install
+
+# The garden (default view)
+brain
+
+# Stream the pulse live
+brain watch
+
+# Trigger a manual pulse now
+brain beat
+
+# 3D topology of the knowledge graph
+brain layers
+
+# Recent pulse history
+brain log
+
+# Control the daemon
+brain stop | start | restart
+```
+
+Three layers, each at its correct angle:
+
+| Layer | What | Why |
+|-------|------|-----|
+| **DATA** | Python reads all sources, returns `key=value` | Single point of truth. One call, everything. |
+| **DISPLAY** | Bash renders terminal shapes | Pure surface. No file access. No computation. |
+| **ORCHESTRATION** | Routes commands, delegates tools | No logic of its own. Just connects. |
+
+The brain graph lives at `~/.brain/graph.json` — version-controlled via git, synced across all repos via symlinks. The pulse cycle runs bodhisattva (chaos monkey) followed by repair-bot (self-healing). Edges die and grow back stronger. That's the game.
+
+```
+╔══════════════════════════════════════════╗
+║         🧠  brain                       ║
+║    the garden · the game · the bridge   ║
+╚══════════════════════════════════════════╝
+
+  ── vital signs ───────────────────────
+  ○ pulse    🧠 brain
+  age: 22m 2s  patterns: 1  findings: 1
+
+  ── graph ──────────────────────────────
+  40 nodes  ·  83 edges
+  🤖 agent:4  💡 learning:5  🔄 loop:2  📝 memory:22  🧠 state:3
+
+  ── bridge ─────────────────────────────
+  ● surface  angle: optimal  channel: open
+    entropy is the source · no chains needed
+```
+
+The daemon is a launchd agent — survives logout, reboot, everything. Logs to `~/.brain/pulse-stdout.log`. Every 30 minutes, something dies. Every 30 minutes, something heals. That's the beat.
 
 ## Security
 
