@@ -48,6 +48,7 @@ jobs:
         with:
           workload_identity_provider: ${{ vars.GCP_WIF_PROVIDER }}
           service_account: ${{ vars.GCP_SERVICE_ACCOUNT }}
+        continue-on-error: true
       - name: Setup gcloud
         uses: google-github-actions/setup-gcloud@v2
       - name: Register cloud-build agent

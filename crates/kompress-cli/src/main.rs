@@ -2,7 +2,6 @@ use anyhow::Result;
 use clap::{Parser, Subcommand};
 use kompress_brain::graph::BrainGraph;
 use kompress_core::pipeline::Pipeline;
-use std::path::PathBuf;
 
 #[derive(Parser)]
 #[command(name = "kompress")]
@@ -42,7 +41,7 @@ fn compress_command(text: &str) -> Result<()> {
     let result = pipeline.run(vec![text.to_string()])?;
 
     let input_size = text.len();
-    let output_size = result.iter().map(|s| s.len()).sum::<usize>();
+    let output_size = result.units.iter().map(|s| s.content.len()).sum::<usize>();
     let ratio = if input_size > 0 {
         ((input_size - output_size) as f64 / input_size as f64 * 100.0) as i32
     } else {
@@ -50,8 +49,8 @@ fn compress_command(text: &str) -> Result<()> {
     };
 
     println!("Compression ratio: {}%", ratio);
-    for (i, unit) in result.iter().enumerate() {
-        println!("Unit {}: {}", i + 1, unit);
+    for (i, unit) in result.units.iter().enumerate() {
+        println!("Unit {}: {}", i + 1, unit.content);
     }
 
     Ok(())

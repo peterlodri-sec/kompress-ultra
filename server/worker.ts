@@ -18,17 +18,6 @@
  */
 
 import { createMcpHandler } from "agents/mcp";
-import {
-  scoreMessageSync,
-  isProtected,
-  compressMessage,
-  CompressionLevel,
-  classifyMessage,
-  enqueueCirculator,
-  estimateTokens,
-  getBudget,
-  totalTokens,
-} from "../src/index.js";
 import type { Message, AgentType } from "../src/types.js";
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { buildMcpServer } from "./shared-mcp.js";

@@ -24,17 +24,6 @@
 import { Hono } from "hono";
 import { cors } from "hono/cors";
 import { createMcpHandler } from "agents/mcp";
-import {
-  scoreMessageSync,
-  isProtected,
-  compressMessage,
-  CompressionLevel,
-  classifyMessage,
-  enqueueCirculator,
-  estimateTokens,
-  getBudget,
-  totalTokens,
-} from "../src/index.js";
 import type { Message, AgentType } from "../src/types.js";
 import { buildMcpServer } from "./shared-mcp.js";
 import {
