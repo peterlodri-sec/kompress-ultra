@@ -3,6 +3,7 @@ resolver = "2"
 members = [
     "crates/kompress-core",
     "crates/kompress-brain",
+    "crates/kompress-cli",
 ]
 
 [workspace.package]

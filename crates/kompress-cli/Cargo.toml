@@ -1,0 +1,18 @@
+[package]
+name = "kompress-cli"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+authors.workspace = true
+
+[[bin]]
+name = "kompress"
+path = "src/main.rs"
+
+[dependencies]
+kompress-core = { path = "../kompress-core" }
+kompress-brain = { path = "../kompress-brain" }
+serde_json = "1"
+anyhow = "1"
+clap = { version = "4", features = ["derive"] }
+dirs = "5"
