@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>GEO-MAZE · live signal</title>
+<title>GEO-MAZE · live signal · LODRI autonomous</title>
 <style>
 * { margin:0; padding:0; box-sizing:border-box; }
 body { background:#020108; color:#c0c0e0; font-family:'JetBrains Mono','Fira Code',monospace; overflow:hidden; }
@@ -55,7 +55,8 @@ canvas { display:block; }
 
 <div id="status-bar">
   <span id="ts-val">—</span>
-  <span>RALPH = WASD · LODRI = ↑↓←→ · maze morphs with geo signal</span>
+  <span>RALPH = WASD · <span style="color:#00e660">LODRI = autonomous</span> · maze morphs with geo signal</span>
+  <span id="lodri-status" style="color:#00e660">LODRI pathfinding…</span>
   <span id="msg-val" style="color:#555577">loading geo feed…</span>
 </div>
 
@@ -154,16 +155,12 @@ function checkWin(p) {
 }
 
 window.addEventListener('keydown', e => {
-  if(['w','a','s','d','ArrowUp','ArrowDown','ArrowLeft','ArrowRight'].includes(e.key)) e.preventDefault();
+  if(['w','a','s','d'].includes(e.key.toLowerCase())) e.preventDefault();
   switch(e.key) {
     case 'w': case 'W': move(RALPH,-1,0); break;
     case 's': case 'S': move(RALPH,1,0);  break;
     case 'a': case 'A': move(RALPH,0,-1); break;
     case 'd': case 'D': move(RALPH,0,1);  break;
-    case 'ArrowUp':    move(LODRI,-1,0);  break;
-    case 'ArrowDown':  move(LODRI,1,0);   break;
-    case 'ArrowLeft':  move(LODRI,0,-1);  break;
-    case 'ArrowRight': move(LODRI,0,1);   break;
   }
 });
 
@@ -270,7 +267,60 @@ function draw() {
     ctx.lineWidth=1; ctx.setLineDash([3,6]); ctx.stroke(); ctx.setLineDash([]);
   }
 
+  // Lodri autonomous move
+  lodriMoveTimer++;
+  if(lodriMoveTimer >= LODRI_SPEED) {
+    lodriMoveTimer = 0;
+    if(lodriPath.length === 0 && !LODRI.won) lodriThink();
+    lodriStep();
+  }
+
   requestAnimationFrame(draw);
+}
+
+// ── Lodri autonomous pathfinder (BFS) ────────────────────────────────────────
+let lodriPath = [];
+let lodriMoveTimer = 0;
+const LODRI_SPEED = 18; // frames between moves (lower = faster)
+
+function bfs(startR, startC, goalR, goalC) {
+  const visited = Array.from({length:ROWS}, () => Array(COLS).fill(false));
+  const prev    = Array.from({length:ROWS}, () => Array(COLS).fill(null));
+  const queue   = [[startR, startC]];
+  visited[startR][startC] = true;
+  const DIRS = [[-1,0,'N'],[1,0,'S'],[0,-1,'W'],[0,1,'E']];
+  while(queue.length) {
+    const [r,c] = queue.shift();
+    if(r===goalR && c===goalC) {
+      const path = [];
+      let cur = [r,c];
+      while(cur) { path.unshift(cur); cur = prev[cur[0]][cur[1]]; }
+      return path.slice(1); // exclude start
+    }
+    for(const [dr,dc,wall] of DIRS) {
+      const nr=r+dr, nc=c+dc;
+      if(nr>=0&&nr<ROWS&&nc>=0&&nc<COLS&&!visited[nr][nc]&&!maze[r][c].walls[wall]) {
+        visited[nr][nc]=true; prev[nr][nc]=[r,c]; queue.push([nr,nc]);
+      }
+    }
+  }
+  return [];
+}
+
+function lodriThink() {
+  if(LODRI.won) return;
+  lodriPath = bfs(LODRI.r, LODRI.c, ROWS-2, COLS-2);
+  const statusEl = document.getElementById('lodri-status');
+  if(statusEl) statusEl.textContent = lodriPath.length
+    ? `LODRI → ${lodriPath.length} steps to COSMOS`
+    : 'LODRI at COSMOS';
+}
+
+function lodriStep() {
+  if(LODRI.won || lodriPath.length === 0) return;
+  const [nr,nc] = lodriPath.shift();
+  LODRI.r = nr; LODRI.c = nc; LODRI.steps++;
+  checkWin(LODRI);
 }
 
 // ── Geo feed ──────────────────────────────────────────────────────────────────
@@ -295,6 +345,8 @@ async function fetchGeo() {
       RALPH.r=1; RALPH.c=1; RALPH.steps=0; RALPH.won=false;
       LODRI.r=1; LODRI.c=3; LODRI.steps=0; LODRI.won=false;
       genMaze(seed, sig);
+      lodriPath = []; lodriMoveTimer = 0;
+      lodriThink();
       document.getElementById('seed-val').textContent = seed;
       document.getElementById('msg-val').textContent = 'maze regenerated — tick ' + tick;
       document.getElementById('msg-val').style.color = '#555577';
@@ -318,7 +370,7 @@ async function fetchGeo() {
 
   } catch(e) {
     document.getElementById('msg-val').textContent = 'geo feed offline — using static seed';
-    if(!lastSeed) { genMaze(42, 0.1); lastSeed = 42; }
+    if(!lastSeed) { genMaze(42, 0.1); lastSeed = 42; lodriThink(); }
   }
 }
 
