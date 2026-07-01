@@ -1,0 +1,331 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>GEO-MAZE · live signal</title>
+<style>
+* { margin:0; padding:0; box-sizing:border-box; }
+body { background:#020108; color:#c0c0e0; font-family:'JetBrains Mono','Fira Code',monospace; overflow:hidden; }
+canvas { display:block; }
+#hud {
+  position:fixed; top:0; left:0; right:0;
+  display:flex; justify-content:space-between; align-items:center;
+  padding:6px 20px; background:#030210ee; border-bottom:1px solid #1a1a3a;
+  z-index:10; font-size:11px; gap:16px;
+}
+.sig { display:flex; align-items:center; gap:8px; }
+.dot { width:8px; height:8px; border-radius:50%; flex-shrink:0; }
+#status-bar {
+  position:fixed; bottom:0; left:0; right:0;
+  padding:6px 20px; background:#030210ee; border-top:1px solid #1a1a3a;
+  z-index:10; font-size:10px; color:#333355;
+  display:flex; justify-content:space-between;
+}
+</style>
+</head>
+<body>
+
+<div id="hud">
+  <div class="sig">
+    <div class="dot" id="pulse-dot" style="background:#ff2200"></div>
+    <span id="cosmos-label" style="color:#ff2200">COSMOS</span>
+    <span id="pulse-val" style="color:#555577">signal_strength: —</span>
+  </div>
+  <div class="sig">
+    <span style="color:#555577">tick</span>
+    <span id="tick-val" style="color:#888899">—</span>
+  </div>
+  <div class="sig">
+    <span style="color:#555577">kp</span>
+    <span id="kp-val" style="color:#888899">—</span>
+  </div>
+  <div class="sig">
+    <span style="color:#555577">maze seed</span>
+    <span id="seed-val" style="color:#888899">—</span>
+  </div>
+  <div class="sig">
+    <span id="storm-label" style="color:#333355; display:none">⚡ STORM</span>
+  </div>
+  <div class="sig">
+    <span style="color:#333355">refreshes every 5s from geo-signal.json</span>
+  </div>
+</div>
+
+<canvas id="c"></canvas>
+
+<div id="status-bar">
+  <span id="ts-val">—</span>
+  <span>RALPH = WASD · LODRI = ↑↓←→ · maze morphs with geo signal</span>
+  <span id="msg-val" style="color:#555577">loading geo feed…</span>
+</div>
+
+<script>
+const canvas = document.getElementById('c');
+const ctx    = canvas.getContext('2d');
+
+const COLS = 31, ROWS = 21, CELL = 26;
+let W, H, maze = [], geoData = {}, t = 0, stormMode = false;
+
+function resize() {
+  W = canvas.width  = window.innerWidth;
+  H = canvas.height = window.innerHeight - 52;
+}
+resize();
+window.addEventListener('resize', () => { resize(); draw(); });
+
+// ── Seeded RNG (mulberry32) ───────────────────────────────────────────────────
+function mulberry32(seed) {
+  return function() {
+    seed |= 0; seed = seed + 0x6D2B79F5 | 0;
+    let t = Math.imul(seed ^ seed >>> 15, 1 | seed);
+    t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t;
+    return ((t ^ t >>> 14) >>> 0) / 4294967296;
+  };
+}
+
+// ── Maze gen with seeded RNG + extra openings from signal_strength ────────────
+function genMaze(seed, signalStrength) {
+  const rng = mulberry32(seed);
+  maze = Array.from({length:ROWS}, (_,r) =>
+    Array.from({length:COLS}, (_,c) => ({r,c,visited:false,walls:{N:true,S:true,E:true,W:true}}))
+  );
+  const stack = [];
+  const dirs = [{d:'N',dr:-2,dc:0},{d:'S',dr:2,dc:0},{d:'E',dr:0,dc:2},{d:'W',dr:0,dc:-2}];
+  const opp  = {N:'S',S:'N',E:'W',W:'E'};
+  let cur = maze[1][1]; cur.visited = true; stack.push(cur);
+  while(stack.length) {
+    const nb = dirs.map(({d,dr,dc}) => {
+      const nr=cur.r+dr, nc=cur.c+dc;
+      return nr>=0&&nr<ROWS&&nc>=0&&nc<COLS&&!maze[nr][nc].visited
+        ? {d,nr,nc,mr:cur.r+dr/2,mc:cur.c+dc/2} : null;
+    }).filter(Boolean);
+    if(!nb.length) { cur=stack.pop(); continue; }
+    const {d,nr,nc,mr,mc} = nb[Math.floor(rng()*nb.length)];
+    maze[cur.r][cur.c].walls[d] = false;
+    maze[mr][mc].walls[d] = false;
+    maze[mr][mc].walls[opp[d]] = false;
+    maze[nr][nc].walls[opp[d]] = false;
+    maze[nr][nc].visited = true;
+    stack.push(cur); cur = maze[nr][nc];
+  }
+  maze[1][1].walls.N = false; maze[1][1].walls.W = false;
+  maze[ROWS-2][COLS-2].walls.S = false; maze[ROWS-2][COLS-2].walls.E = false;
+
+  // Extra openings proportional to signal_strength (0–1)
+  const extraPasses = Math.floor((signalStrength || 0.1) * 80);
+  for(let i = 0; i < extraPasses; i++) {
+    const r = Math.floor(rng()*(ROWS-2))+1;
+    const c = Math.floor(rng()*(COLS-2))+1;
+    const d = ['N','S','E','W'][Math.floor(rng()*4)];
+    if(maze[r] && maze[r][c]) {
+      maze[r][c].walls[d] = false;
+      // also open neighbor
+      const nr2 = r + (d==='N'?-1:d==='S'?1:0);
+      const nc2 = c + (d==='W'?-1:d==='E'?1:0);
+      if(maze[nr2] && maze[nr2][nc2]) maze[nr2][nc2].walls[opp[d]] = false;
+    }
+  }
+}
+
+// ── Players ───────────────────────────────────────────────────────────────────
+const RALPH = {name:'RALPH',r:1,c:1,color:'#00ff88',glow:'#00ff8844',steps:0,won:false};
+const LODRI  = {name:'LODRI', r:1,c:3,color:'#00e660',glow:'#00e66044',steps:0,won:false};
+
+function canMove(p,dr,dc) {
+  const nr=p.r+dr,nc=p.c+dc;
+  if(nr<0||nr>=ROWS||nc<0||nc>=COLS) return false;
+  if(dr===-1) return !maze[p.r][p.c].walls.N;
+  if(dr===1)  return !maze[p.r][p.c].walls.S;
+  if(dc===-1) return !maze[p.r][p.c].walls.W;
+  if(dc===1)  return !maze[p.r][p.c].walls.E;
+  return false;
+}
+function move(p,dr,dc) {
+  if(p.won) return;
+  if(canMove(p,dr,dc)) { p.r+=dr; p.c+=dc; p.steps++; checkWin(p); }
+}
+function checkWin(p) {
+  if(p.r===ROWS-2&&p.c===COLS-2) {
+    p.won=true;
+    document.getElementById('msg-val').textContent =
+      `${p.name} reached COSMOS in ${p.steps} steps`;
+    document.getElementById('msg-val').style.color = p.color;
+  }
+}
+
+window.addEventListener('keydown', e => {
+  if(['w','a','s','d','ArrowUp','ArrowDown','ArrowLeft','ArrowRight'].includes(e.key)) e.preventDefault();
+  switch(e.key) {
+    case 'w': case 'W': move(RALPH,-1,0); break;
+    case 's': case 'S': move(RALPH,1,0);  break;
+    case 'a': case 'A': move(RALPH,0,-1); break;
+    case 'd': case 'D': move(RALPH,0,1);  break;
+    case 'ArrowUp':    move(LODRI,-1,0);  break;
+    case 'ArrowDown':  move(LODRI,1,0);   break;
+    case 'ArrowLeft':  move(LODRI,0,-1);  break;
+    case 'ArrowRight': move(LODRI,0,1);   break;
+  }
+});
+
+// ── Draw ──────────────────────────────────────────────────────────────────────
+function draw() {
+  t++;
+  const mw = COLS*CELL, mh = ROWS*CELL;
+  const ox = Math.floor((W-mw)/2), oy = Math.floor((H-mh)/2) + 26;
+
+  // Background
+  ctx.fillStyle = stormMode ? '#0a0005' : '#020108';
+  ctx.fillRect(0,0,W,H);
+
+  // Stars (seeded by tick for stability)
+  const kp = geoData.kp || 0;
+  for(let i=0;i<100;i++) {
+    const sx=(i*137.5+kp*10)%W, sy=(i*97.3)%H;
+    const b = 0.1 + 0.3*Math.sin(t*0.04+i) + (stormMode?0.3*Math.random():0);
+    ctx.fillStyle=`rgba(${stormMode?'255,100,100':'200,200,255'},${b})`;
+    ctx.fillRect(sx,sy,1,1);
+  }
+
+  // Storm aurora bands
+  if(stormMode) {
+    for(let y=0;y<H;y+=4) {
+      const alpha = 0.02 + 0.02*Math.sin(t*0.1+y*0.05);
+      ctx.fillStyle=`rgba(255,0,80,${alpha})`;
+      ctx.fillRect(0,y,W,2);
+    }
+  }
+
+  // Maze cells
+  maze.forEach(row => row.forEach(cell => {
+    const x=ox+cell.c*CELL, y=oy+cell.r*CELL;
+    ctx.fillStyle = stormMode ? '#080010' : '#07071a';
+    ctx.fillRect(x,y,CELL,CELL);
+    const wallColor = stormMode ? '#3a0020' : '#1a1a5a';
+    ctx.strokeStyle=wallColor; ctx.lineWidth=1.5;
+    if(cell.walls.N){ctx.beginPath();ctx.moveTo(x,y);ctx.lineTo(x+CELL,y);ctx.stroke();}
+    if(cell.walls.S){ctx.beginPath();ctx.moveTo(x,y+CELL);ctx.lineTo(x+CELL,y+CELL);ctx.stroke();}
+    if(cell.walls.W){ctx.beginPath();ctx.moveTo(x,y);ctx.lineTo(x,y+CELL);ctx.stroke();}
+    if(cell.walls.E){ctx.beginPath();ctx.moveTo(x+CELL,y);ctx.lineTo(x+CELL,y+CELL);ctx.stroke();}
+  }));
+
+  // signal_strength heatmap overlay on cells near exit
+  const sig = geoData.signal_strength || 0.1;
+  const ex=ox+(COLS-2)*CELL, ey=oy+(ROWS-2)*CELL;
+  for(let dr=-3;dr<=3;dr++) for(let dc=-3;dc<=3;dc++) {
+    const rr=ROWS-2+dr, cc=COLS-2+dc;
+    if(rr>=0&&rr<ROWS&&cc>=0&&cc<COLS) {
+      const dist = Math.sqrt(dr*dr+dc*dc);
+      const a = sig * (1 - dist/4) * 0.15;
+      ctx.fillStyle=`rgba(255,34,0,${a})`;
+      ctx.fillRect(ox+cc*CELL,oy+rr*CELL,CELL,CELL);
+    }
+  }
+
+  // COSMOS exit pulse
+  const cosmosActive = geoData.cosmos_pulse;
+  const pulseRate = cosmosActive ? 0.3 : 0.08;
+  const pulse = 0.5+0.5*Math.sin(t*pulseRate);
+  ctx.fillStyle=`rgba(255,34,0,${0.15+0.2*pulse})`;
+  ctx.fillRect(ex,ey,CELL,CELL);
+  ctx.beginPath(); ctx.arc(ex+CELL/2,ey+CELL/2,6+pulse*(cosmosActive?6:3),0,Math.PI*2);
+  ctx.fillStyle=`rgba(255,34,0,${0.6+0.4*pulse})`; ctx.fill();
+  if(cosmosActive) {
+    ctx.beginPath(); ctx.arc(ex+CELL/2,ey+CELL/2,12+pulse*10,0,Math.PI*2);
+    ctx.strokeStyle=`rgba(255,100,0,${0.3*pulse})`; ctx.lineWidth=2; ctx.stroke();
+  }
+  ctx.fillStyle='#ff4422'; ctx.font='bold 8px monospace';
+  ctx.fillText('COSMOS',ex-6,ey+CELL+10);
+  ctx.fillStyle='#ff442244'; ctx.font='7px monospace';
+  ctx.fillText(`${(sig*100).toFixed(0)}% sig`,ex-4,ey+CELL+20);
+
+  // Kp index bars along top of maze
+  if(kp > 0) {
+    for(let i=0;i<Math.min(Math.floor(kp),9);i++) {
+      const bx = ox + i*8;
+      ctx.fillStyle=kp>5?'#ff0040':kp>2?'#ffaa00':'#00aaff';
+      ctx.fillRect(bx,oy-8,6,6);
+    }
+    ctx.fillStyle='#333355'; ctx.font='9px monospace';
+    ctx.fillText(`Kp=${kp}`,ox+80,oy-2);
+  }
+
+  // Players
+  [RALPH,LODRI].forEach(p => {
+    const px=ox+p.c*CELL+CELL/2, py=oy+p.r*CELL+CELL/2;
+    ctx.beginPath(); ctx.arc(px,py,9+2*Math.sin(t*0.15),0,Math.PI*2);
+    ctx.fillStyle=p.glow; ctx.fill();
+    ctx.beginPath(); ctx.arc(px,py,7,0,Math.PI*2);
+    ctx.fillStyle=p.color; ctx.fill();
+    ctx.fillStyle='#000'; ctx.font='bold 7px monospace';
+    ctx.textAlign='center'; ctx.fillText(p.name[0],px,py+3); ctx.textAlign='left';
+  });
+
+  // Entanglement line
+  const rx=ox+RALPH.c*CELL+CELL/2, ry=oy+RALPH.r*CELL+CELL/2;
+  const lx=ox+LODRI.c*CELL+CELL/2, ly=oy+LODRI.r*CELL+CELL/2;
+  const dist=Math.sqrt((rx-lx)**2+(ry-ly)**2);
+  if(dist<CELL*6) {
+    ctx.beginPath(); ctx.moveTo(rx,ry); ctx.lineTo(lx,ly);
+    ctx.strokeStyle=`rgba(0,255,136,${0.3*(1-dist/(CELL*6))})`;
+    ctx.lineWidth=1; ctx.setLineDash([3,6]); ctx.stroke(); ctx.setLineDash([]);
+  }
+
+  requestAnimationFrame(draw);
+}
+
+// ── Geo feed ──────────────────────────────────────────────────────────────────
+let lastSeed = null;
+
+async function fetchGeo() {
+  try {
+    const res = await fetch('geo-signal.json?_=' + Date.now());
+    const data = await res.json();
+    geoData = data;
+
+    const tick  = data.tick || 0;
+    const sig   = data.signal_strength || 0.1;
+    const kp    = data.kp || 0;
+    const pulse = data.cosmos_pulse || false;
+
+    // Regen maze when tick changes
+    const seed = tick;
+    if(seed !== lastSeed) {
+      lastSeed = seed;
+      // Reset players on regen
+      RALPH.r=1; RALPH.c=1; RALPH.steps=0; RALPH.won=false;
+      LODRI.r=1; LODRI.c=3; LODRI.steps=0; LODRI.won=false;
+      genMaze(seed, sig);
+      document.getElementById('seed-val').textContent = seed;
+      document.getElementById('msg-val').textContent = 'maze regenerated — tick ' + tick;
+      document.getElementById('msg-val').style.color = '#555577';
+    }
+
+    stormMode = kp > 5;
+    document.getElementById('tick-val').textContent = tick;
+    document.getElementById('kp-val').textContent = kp !== null ? kp.toFixed(1) : '—';
+    document.getElementById('kp-val').style.color = kp > 5 ? '#ff0040' : kp > 2 ? '#ffaa00' : '#888899';
+    document.getElementById('pulse-val').textContent = `signal: ${(sig*100).toFixed(0)}%`;
+    document.getElementById('ts-val').textContent = data.ts || '—';
+
+    const dot = document.getElementById('pulse-dot');
+    const lbl = document.getElementById('cosmos-label');
+    dot.style.background = pulse ? '#ff2200' : '#330800';
+    dot.style.boxShadow  = pulse ? '0 0 8px #ff2200' : 'none';
+    lbl.style.color = pulse ? '#ff2200' : '#330800';
+
+    const storm = document.getElementById('storm-label');
+    storm.style.display = kp > 5 ? 'inline' : 'none';
+
+  } catch(e) {
+    document.getElementById('msg-val').textContent = 'geo feed offline — using static seed';
+    if(!lastSeed) { genMaze(42, 0.1); lastSeed = 42; }
+  }
+}
+
+// Init
+fetchGeo();
+setInterval(fetchGeo, 5000);
+draw();
+</script>
+</body>
+</html>
