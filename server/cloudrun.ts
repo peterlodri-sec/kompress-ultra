@@ -21,7 +21,7 @@
  * See TELEMETRY.md for disclosure.
  */
 
-import { Hono } from "hono";
+import { Hono, Context, MiddlewareHandler } from "hono";
 import { cors } from "hono/cors";
 import { createMcpHandler } from "agents/mcp";
 import type { Message, AgentType } from "../src/types.js";
@@ -56,7 +56,7 @@ interface TelemetryEvent {
 }
 
 class GcpTelemetry {
-  private db?: any;
+  private db?: unknown;
   private enabled: boolean;
 
   constructor() {
@@ -70,9 +70,8 @@ class GcpTelemetry {
     try {
       const firestorePkg = "@google-cloud/firestore";
       const { Firestore } = await import(firestorePkg);
-      this.db = new Firestore({
-        projectId: process.env.GCP_PROJECT_ID,
-      });
+      this.db = Firestore as unknown;
+      this.enabled = true;
     } catch (err) {
       console.error("Firestore init failed:", err);
       this.enabled = false;
@@ -83,16 +82,17 @@ class GcpTelemetry {
     if (!this.enabled) return;
 
     const day = new Date().toISOString().slice(0, 10);
-    const docRef = this.db?.doc(`telemetry/${day}`);
+    const db = this.db as { doc: (path: string) => { set: (data: Record<string, unknown>, opts: { merge: boolean }) => Promise<void> } };
+    const docRef = db?.doc(`telemetry/${day}`);
 
     try {
       await docRef?.set(
         {
-          [`counts.${data.event}`]: this.db!.FieldValue.increment(1),
-          [`duration_ms`]: this.db!.FieldValue.increment(data.durationMs),
-          [`tokens_in`]: this.db!.FieldValue.increment(data.inputTokens ?? 0),
-          [`tokens_out`]: this.db!.FieldValue.increment(data.outputTokens ?? 0),
-          [`events_total`]: this.db!.FieldValue.increment(1),
+          [`counts.${data.event}`]: (db as any).FieldValue.increment(1),
+          [`duration_ms`]: (db as any).FieldValue.increment(data.durationMs),
+          [`tokens_in`]: (db as any).FieldValue.increment(data.inputTokens ?? 0),
+          [`tokens_out`]: (db as any).FieldValue.increment(data.outputTokens ?? 0),
+          [`events_total`]: (db as any).FieldValue.increment(1),
           updated: new Date().toISOString(),
         },
         { merge: true }
@@ -102,22 +102,24 @@ class GcpTelemetry {
     }
   }
 
-  async getDailyStats(day: string): Promise<Record<string, any>> {
+  async getDailyStats(day: string): Promise<Record<string, unknown>> {
     if (!this.enabled) {
       return { error: "telemetry disabled" };
     }
 
     try {
-      const doc = await this.db?.doc(`telemetry/${day}`).get();
+      const db = this.db as { doc: (path: string) => { get: () => Promise<{ exists: boolean; data: () => Record<string, unknown> }> } };
+      const doc = await db?.doc(`telemetry/${day}`).get();
       if (!doc?.exists) {
         return { "events:total": 0, "duration_ms": 0, "tokens:in": 0, "tokens:out": 0 };
       }
-      const data = doc.data()!;
+      const data = doc.data();
+      const counts = data.counts as Record<string, number> | undefined;
       return {
         "events:total": data.events_total ?? 0,
-        "events:compress": data.counts?.compress ?? 0,
-        "events:score": data.counts?.score ?? 0,
-        "events:rewrite": data.counts?.rewrite ?? 0,
+        "events:compress": counts?.compress ?? 0,
+        "events:score": counts?.score ?? 0,
+        "events:rewrite": counts?.rewrite ?? 0,
         "duration_ms": data.duration_ms ?? 0,
         "tokens:in": data.tokens_in ?? 0,
         "tokens:out": data.tokens_out ?? 0,
@@ -146,7 +148,7 @@ app.use("*", cors({
 }));
 
 // Auth middleware (optional)
-const requireAuth = async (c: any, next: any) => {
+const requireAuth: MiddlewareHandler = async (c, next) => {
   const token = process.env.AUTH_TOKEN;
   if (!token) return next(); // No token = open access
 
@@ -192,6 +194,7 @@ app.post("/v1/compress", requireAuth, async (c) => {
   try {
     body = await c.req.json();
   } catch {
+    /* invalid JSON body */
     return c.json({ error: "invalid JSON" }, 400);
   }
 
@@ -218,7 +221,7 @@ app.post("/v1/compress", requireAuth, async (c) => {
     });
 
     return c.json({
-      messages: kept.map((m: any) => ({
+      messages: kept.map((m) => ({
         role: m.role,
         content: m.content,
         score: m._score,
@@ -235,6 +238,7 @@ app.post("/v1/compress", requireAuth, async (c) => {
       },
     });
   } catch (err) {
+    /* compression failed — record telemetry and return 500 */
     await telemetry.record({
       event: "compress",
       agentType: body.agent_type ?? "coder",
@@ -252,6 +256,7 @@ app.post("/v1/score", requireAuth, async (c) => {
   try {
     body = await c.req.json();
   } catch {
+    /* invalid JSON body */
     return c.json({ error: "invalid JSON" }, 400);
   }
 
@@ -272,6 +277,7 @@ app.post("/v1/score", requireAuth, async (c) => {
 
     return c.json(results);
   } catch (err) {
+    /* scoring failed — record telemetry and return 500 */
     await telemetry.record({
       event: "score",
       durationMs: Math.round(performance.now() - t0),
@@ -288,6 +294,7 @@ app.post("/v1/rewrite", requireAuth, async (c) => {
   try {
     body = await c.req.json();
   } catch {
+    /* invalid JSON body */
     return c.json({ error: "invalid JSON" }, 400);
   }
 
@@ -320,6 +327,7 @@ app.post("/v1/rewrite", requireAuth, async (c) => {
       savings_pct: savingsPct,
     });
   } catch (err) {
+    /* rewrite failed — record telemetry and return 500 */
     await telemetry.record({
       event: "rewrite",
       durationMs: Math.round(performance.now() - t0),
@@ -374,12 +382,13 @@ app.get("/v1/telemetry.js", (c) => {
 // MCP endpoint
 app.post("/mcp", async (c) => {
   const mcpHandler = createMcpHandler(buildMcpServerForCR());
-  return mcpHandler(c.req.raw as any, { GCP_PROJECT_ID: process.env.GCP_PROJECT_ID } as any, {} as any);
+  // MCP SDK expects Cloudflare Env — cast to satisfy type
+  return mcpHandler(c.req.raw as Request, { GCP_PROJECT_ID: process.env.GCP_PROJECT_ID } as unknown as Record<string, unknown>, {} as unknown as ExecutionContext);
 });
 
 // Brain gRPC API
 app.get("/v1/brain/*", async (c) => {
-  return handleBrainRequest(c.req.raw as any);
+  return handleBrainRequest(c.req.raw as Request);
 });
 
 // Root

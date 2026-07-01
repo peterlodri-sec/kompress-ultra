@@ -29,6 +29,6 @@ impl crate::mygraph::MyNode {
     pub fn is_imaginary(&self) -> bool {
         self.node_type
             .as_deref()
-            .map_or(false, |t| is_imaginary(t))
+            .is_some_and(is_imaginary)
     }
 }

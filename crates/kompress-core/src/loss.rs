@@ -19,12 +19,10 @@ pub fn is_critical_syntactic(content: &str) -> bool {
     content.contains('/') && content.len() > 3
         || content.len() == 64 && content.chars().all(|c| c.is_ascii_hexdigit())
         || content.contains("::")
-        || content
+        || if content
             .split('.')
             .count()
-            .eq(&4)
-            .then(|| content.split('.').all(|p| p.parse::<u8>().is_ok()))
-            .unwrap_or(false)
+            .eq(&4) { content.split('.').all(|p| p.parse::<u8>().is_ok()) } else { false }
 }
 
 pub fn effective_score(score: f64, content: &str) -> f64 {

@@ -38,7 +38,7 @@ export class StatsDO {
     }
 
     if (method === "POST" && url.pathname === "/merge") {
-      const remoteStats = await request.json();
+      const remoteStats = await request.json() as { regions?: { region: string; compressed: number; tokens_saved: number; duration_ms: number; count: number }[] };
       return this.handleMerge(remoteStats);
     }
 
@@ -81,7 +81,7 @@ export class StatsDO {
     for (const [key, value] of stored) {
       const region = key.replace("region:", "");
       if (!this.stats.has(region)) {
-        entries.push({ region, ...(value as any) });
+        entries.push({ region, ...(value as Record<string, number>) } as typeof entries[number]);
       }
     }
 
@@ -97,7 +97,7 @@ export class StatsDO {
     );
   }
 
-  private async handleMerge(remoteStats: any): Promise<Response> {
+  private async handleMerge(remoteStats: { regions?: { region: string; compressed: number; tokens_saved: number; duration_ms: number; count: number }[] }): Promise<Response> {
     // Merge stats from another region's DO
     const regions = remoteStats.regions || [];
     for (const entry of regions) {
