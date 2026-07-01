@@ -10,6 +10,8 @@
 >
 > That's the loop.
 
+layers, as we, peter and The LLMs: [data · display · orchestrate · bridge]
+
 <p align="center">
   <img src="./assets/logo.svg" width="120" height="120" alt="kompress-ultra logo">
 </p>
@@ -481,8 +483,6 @@ This package implements the compression strategy described in:
 | [pocoo.vaked.dev](https://pocoo.vaked.dev) | Experiment log vault and telemetry registry |
 | [proposal.vaked.dev](https://proposal.vaked.dev) | Interactive Headroom integration proposal |
 | [kompress.vaked.dev](https://kompress.vaked.dev/paper/main.pdf) | Academic paper with full proofs |
-
-layers, as we, peter and The LLMs: []
 
 ##  Brain — The Garden
 
