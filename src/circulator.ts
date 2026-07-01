@@ -1,4 +1,5 @@
-import { embedText } from "./embedding.js";
+import { hashEmbedding } from "./hash.js";
+import { addToStore, persistStore } from "./local-store.js";
 
 export interface CirculatorEntry {
   session_id: string;
@@ -24,19 +25,16 @@ export interface CirculatorInput {
 export interface CirculatorOptions {
   cap?: number;
   batchSize?: number;
-  milvusUrl?: string;
 }
 
 export class Circulator {
   private queue: CirculatorEntry[] = [];
   private readonly cap: number;
   private readonly batchSize: number;
-  private readonly milvusUrl: string;
 
   constructor(options: CirculatorOptions = {}) {
     this.cap = options.cap ?? 100;
     this.batchSize = options.batchSize ?? 10;
-    this.milvusUrl = options.milvusUrl ?? process.env.KOMPRESS_MILVUS_URL ?? "http://localhost:19530";
   }
 
   enqueue(input: CirculatorInput): void {
@@ -62,34 +60,21 @@ export class Circulator {
   async flushAsync(): Promise<void> {
     if (this.queue.length === 0) return;
     const entries = this.queue.splice(0);
-    try {
-      const texts = entries.map((e) => e.residual).join("\n---\n");
-      const embedding = await embedText(texts);
-      if (!embedding) {
-        spillOverflow(entries);
-        return;
-      }
-      fetch(`${this.milvusUrl}/v1/insert`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          collection_name: "pruned_context",
-          fields: {
-            finding_id: `kompress-circ-${Date.now()}`,
-            agent_id: "kompress",
-            topic: "pruned-context",
-            summary: texts.slice(0, 4096),
-            embedding,
-            tags: entries.map((e) => e.classification),
-            created_at: Date.now(),
-            embedding_model: "bge-m3",
-          },
-        }),
-        signal: AbortSignal.timeout(1000),
-      }).catch(() => spillOverflow(entries));
-    } catch {
-      spillOverflow(entries);
+    // Store each entry as vector in local store for similarity search
+    for (const entry of entries) {
+      const vec = hashEmbedding(entry.residual);
+      await addToStore(`circ-${entry.content_hash}-${entry.timestamp_ms}`, vec, {
+        classification: entry.classification,
+        session_id: entry.session_id,
+        agent_type: entry.agent_type,
+        content_hash: entry.content_hash,
+        topic_key: entry.topic_key ?? "",
+        ts: entry.timestamp_ms,
+      });
     }
+    await persistStore();
+    // Also write raw JSONL for debugging / manual inspection
+    spillOverflow(entries);
   }
 }
 
@@ -131,21 +116,29 @@ function spillOverflow(entries: CirculatorEntry[]): void {
   }
 }
 
-// Default singleton for backward compatibility
+/**
+ * Default singleton for backward compatibility.
+ * @deprecated Use `createCirculator()` + class API for isolated instances.
+ * Singletons share state across modules and tests. Prefer new Circulator().
+ */
 const defaultCirculator = new Circulator();
 
+/** @deprecated Use `circulator.enqueue()` on a class instance. */
 export function enqueueCirculator(input: CirculatorInput): void {
   defaultCirculator.enqueue(input);
 }
 
+/** @deprecated Use `circulator.getQueueLength()` on a class instance. */
 export function getCirculatorQueueLength(): number {
   return defaultCirculator.getQueueLength();
 }
 
+/** @deprecated Use `circulator.drain()` on a class instance. */
 export function drainCirculatorQueue(): CirculatorEntry[] {
   return defaultCirculator.drain();
 }
 
+/** @deprecated Use `circulator.flushAsync()` on a class instance. */
 export function flushCirculatorAsync(): Promise<void> {
   return defaultCirculator.flushAsync();
 }

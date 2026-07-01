@@ -45,21 +45,29 @@ export class CircuitBreaker {
   }
 }
 
-// Default singleton for backward compatibility
+/**
+ * Default singleton for backward compatibility.
+ * @deprecated Use `createCircuitBreaker()` + class API for isolated instances.
+ * Singletons share state across modules and tests. Prefer new CircuitBreaker().
+ */
 const defaultBreaker = new CircuitBreaker();
 
+/** @deprecated Use `breaker.isOpen()` on a class instance. */
 export function isCircuitOpen(): boolean {
   return defaultBreaker.isOpen();
 }
 
+/** @deprecated Use `breaker.recordSuccess()` on a class instance. */
 export function recordSuccess(): void {
   defaultBreaker.recordSuccess();
 }
 
+/** @deprecated Use `breaker.recordFailure()` on a class instance. */
 export function recordFailure(): void {
   defaultBreaker.recordFailure();
 }
 
+/** @deprecated Use `breaker.getState()` on a class instance. */
 export function getCircuitState(): { failures: number; openUntil: number } {
   return defaultBreaker.getState();
 }

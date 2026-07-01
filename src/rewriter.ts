@@ -21,6 +21,13 @@ export function compressMessage(content: string, level: CompressionLevel): strin
     return `__CODE_BLOCK_${codeBlocks.length - 1}__`;
   });
 
+  // Protect URLs
+  const urls: string[] = [];
+  result = result.replace(/https?:\/\/[^\s]+/g, (match) => {
+    urls.push(match);
+    return `__URL_${urls.length - 1}__`;
+  });
+
   // Protect error messages
   const errors: string[] = [];
   result = result.replace(/Error:[^\n]*/g, (match) => {
@@ -61,6 +68,7 @@ export function compressMessage(content: string, level: CompressionLevel): strin
   // Restore protected content
   result = result.replace(/__CODE_BLOCK_(\d+)__/g, (_, i) => codeBlocks[parseInt(i)]);
   result = result.replace(/__ERROR_(\d+)__/g, (_, i) => errors[parseInt(i)]);
+  result = result.replace(/__URL_(\d+)__/g, (_, i) => urls[parseInt(i)]);
 
   return result.replace(/\s{2,}/g, ' ').trim();
 }

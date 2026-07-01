@@ -12,7 +12,7 @@
  * Non-destructive: all repairs are advisory and logged.
  */
 
-import type { Node, Edge } from "../src/types.js";
+import type { Node, Edge } from "./types.js";
 
 export interface HealingReport {
   timestamp: string;

@@ -63,5 +63,21 @@ describe("rewriter", () => {
       expect(ultra).toContain("`cargo build`");
       expect(ultra).toContain("```rust\nfn main() {}\n```");
     });
+
+    it("preserves URLs at Ultra level (does not split on dots)", () => {
+      const input = "Check https://www.space.com/astronomy/article for details.";
+      const lite = compressMessage(input, CompressionLevel.Lite);
+      const ultra = compressMessage(input, CompressionLevel.Ultra);
+      expect(lite).toContain("https://www.space.com/astronomy/article");
+      expect(ultra).toContain("https://www.space.com/astronomy/article");
+      expect(ultra).not.toMatch(/space\. com/);
+    });
+
+    it("preserves multiple URLs in prose", () => {
+      const input = "See https://example.com/path and also https://youtube.com/watch?v=abc for more.";
+      const ultra = compressMessage(input, CompressionLevel.Ultra);
+      expect(ultra).toContain("https://example.com/path");
+      expect(ultra).toContain("https://youtube.com/watch?v=abc");
+    });
   });
 });

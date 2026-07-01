@@ -22,25 +22,33 @@ agents, @types/*).
 
 ```
 src/
+  hash.ts           — Zero-dep hash embeddings + cosine similarity (pure math)
   types.ts          — All interfaces, validateOptions(), DEFAULT_OPTIONS
   errors.ts         — Typed error hierarchy
   scoring.ts        — Message scoring (relevance, recency, structural)
   rewriter.ts       — Compression levels (Verbatim/Lite/Ultra/BrainBacked)
   compression.ts    — Density computation, adaptive thresholds, display
-  circulator.ts     — Circulator class + singleton compat wrappers
-  embedding.ts      — Milvus/OvhCloud embeddings + similarity query
-  brain.ts          — Cross-session brain state reader
-  circuit-breaker.ts — CircuitBreaker class + singleton compat wrappers
   token-budget.ts   — Per-agent budgets, pluggable token estimator
+  circuit-breaker.ts — CircuitBreaker class + singleton compat wrappers
+  circulator.ts     — Circulator class + singleton compat wrappers
+  local-store.ts    — Self-hosted vector store (in-memory + JSONL persist)
+  embedding.ts      — Embedding pipeline (hash or cloud opt-in)
+  brain.ts          — Cross-session brain state reader
+  brain-embeddings.ts — Graph node/edge embedding + local store sync
+  edge-router.ts    — Keyword-aware graph edge routing with DIAD
+  topology-healer.ts — Brain graph self-healing (orphans, stale edges, islands)
   index.ts          — Public API re-exports
 server/
   worker.ts         — Cloudflare Worker (MCP + REST API with optional auth)
   telemetry.ts      — Zero-PII research telemetry (Worker only; src/ has none)
+  brain-grpc.ts     — Brain graph gRPC-style REST API
+  cloudrun.ts       — Google Cloud Run entry point (optional)
+  stats-do.ts       — Durable Object for aggregated stats
 test/
   scoring.test.ts, rewriter.test.ts, compression.test.ts,
   circuit-breaker.test.ts, circulator.test.ts, token-budget.test.ts,
   config.test.ts, pipeline.test.ts, errors.test.ts,
-  brain.test.ts, embedding.test.ts
+  brain.test.ts, embedding.test.ts, local-store.test.ts
 scripts/
   run-ultra.mjs     — CLI: compress file with Ultra, write output
   deploy-ovh.sh     — One-shot OVH Verdaccio deploy script
@@ -59,26 +67,28 @@ fixtures/
   agents-md-compression/ — Comparison of caveman-compress vs kompress-ultra
 ```
 
-## Architecture — The 4 Roles
+## Architecture — Core Pipeline
 
 ```
 Pruner (scoring.ts)  →  Rewriter (rewriter.ts)  →  Circulator (circulator.ts)  →  Composer (brain.ts)
+                ↕                              ↕
+           hash.ts (zero-dep)          local-store.ts (JSONL)
 ```
 
 | Role | Module | What it does |
 |------|--------|-------------|
-| **Pruner** | `scoring.ts` | Scores messages by relevance (0.4), recency/Ebbinghaus decay (0.3), structural importance (0.3). Protected messages never pruned. |
-| **Rewriter** | `rewriter.ts` | Compresses kept messages by age. 3 levels: Verbatim (recent), Lite (~40% savings), Ultra (~75% savings). |
-| **Circulator** | `circulator.ts` | Enqueues pruned content for vector memory (Milvus). Instance-isolated queue with auto-flush. |
+| **Pruner** | `scoring.ts` | Scores messages by relevance (0.4), recency/Ebbinghaus decay (0.3), structural importance (0.3). Protected messages never pruned. Relevance uses `hash.ts` cosine similarity, no external store. |
+| **Rewriter** | `rewriter.ts` | Compresses kept messages by age. 3 levels: Verbatim (recent), Lite (~40% savings), Ultra (~75% savings). Also protects URLs from splitting. |
+| **Circulator** | `circulator.ts` | Enqueues pruned content for vector memory → `local-store.ts` (in-memory + JSONL). Instance-isolated queue with auto-flush. |
 | **Composer** | `brain.ts` | Reads cross-session brain state from `~/.cache/ultrameshai/brain-state.json`. |
 
 ### Pipeline Flow
 
-1. All messages scored via `scoreMessage` (async, w/Milvus) or `scoreMessageSync` (heuristic only)
+1. All messages scored via `scoreMessage` (async, local hashing) or `scoreMessageSync` (heuristic)
 2. Protected messages (user, code fences, errors, last 5) kept unconditionally
 3. Remaining messages: keep if score ≥ threshold (default 0.65, adaptively adjusted)
 4. Kept old messages get rewritten (Lite → Ultra by age/distance from end)
-5. Dropped messages go to Circulator queue → Milvus vector store
+5. Dropped messages go to Circulator queue → `local-store.ts` (hash-embedded + JSONL persist)
 6. If over token budget, `escalateForBudget` does 2-phase: Ultra-compress old → drop unprotected
 
 ### Configuration (`validateOptions`)
@@ -115,8 +125,8 @@ Options merge with `DEFAULT_OPTIONS` from `types.ts`. Validated ranges:
 
 ### Cloudflare Worker (`server/worker.ts`)
 
-- MCP: `POST /mcp` (4 tools: compress, score, rewrite, budget, circuit)
-- REST: `POST /v1/compress`, `POST /v1/score`, `POST /v1/rewrite`, `GET /v1/budget/:type`, `GET /v1/health`, `GET /v1/stats`
+- MCP: `POST /mcp` (6 tools: compress, score, rewrite, budget, circuit, telemetry)
+- REST: `POST /v1/compress`, `POST /v1/score`, `POST /v1/rewrite`, `GET /v1/budget?type=`, `GET /v1/health`, `GET /v1/status`, `GET /v1/badge.js`, `GET /v1/telemetry.js`, `GET /v1/telemetry`, `GET /v1/stats`
 - Auth: Set `AUTH_TOKEN` via `wrangler secret put AUTH_TOKEN` for Bearer auth on mutation endpoints
 - Deployed via Wrangler (`wrangler.toml` — compatibility flags include `nodejs_compat`)
 
@@ -127,12 +137,13 @@ Options merge with `DEFAULT_OPTIONS` from `types.ts`. Validated ranges:
 **Critical**: `circuit-breaker.ts` and `circulator.ts` each expose **both** a
 class-based API (`new CircuitBreaker()`, `new Circulator()`) and module-level
 singleton functions (`isCircuitOpen()`, `enqueueCirculator()`). The singleton
-functions wrap a default instance.
+functions wrap a default instance. Same pattern in `local-store.ts` (class +
+singleton `addToStore()`/`searchStore()`).
 
 **Implication for tests and multi-tenant code**: If you test the singleton
 functions, state leaks between tests. Always drain/reset before testing
 singletons. The class-based `createCircuitBreaker()` and `createCirculator()`
-factory functions are preferred for new code.
+factory functions are preferred for new code. Singletons are marked `@deprecated`.
 
 ### Token Estimation
 
@@ -147,9 +158,10 @@ factory functions are preferred for new code.
 `compressMessage` protects content via placeholder substitution:
 1. Fenced code blocks (` ``` `) → `__CODE_BLOCK_n__`
 2. Inline code spans (\`code\`) → `__CODE_BLOCK_n__`
-3. Error messages (`Error: …`) → `__ERROR_n__`
-4. Then runs regex compression on remaining text
-5. Restores placeholders
+3. URLs (`https://…`) → `__URL_n__`
+4. Error messages (`Error: …`) → `__ERROR_n__`
+5. Then runs regex compression on remaining text
+6. Restores placeholders
 
 **Known limitation**: The regex pipeline operates on raw text without
 markdown-aware parsing. Inline code (e.g., `` `code` ``) survives the
