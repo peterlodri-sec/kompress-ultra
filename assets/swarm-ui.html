@@ -1,0 +1,374 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>HIVE SWARM — maze equilibrium</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { background: #050510; color: #e0e0ff; font-family: 'JetBrains Mono', 'Fira Code', monospace; font-size: 13px; overflow-x: hidden; }
+header { padding: 12px 20px; border-bottom: 1px solid #1a1a3a; display: flex; align-items: center; gap: 16px; }
+.logo { color: #00d4ff; font-size: 18px; font-weight: bold; letter-spacing: 2px; }
+.subtitle { color: #555577; font-size: 11px; }
+.eq-badge { margin-left: auto; padding: 4px 12px; border-radius: 4px; font-size: 11px; background: #0a1a0a; border: 1px solid #00e660; color: #00e660; }
+.eq-badge.pending { border-color: #ffaa00; color: #ffaa00; }
+.eq-badge.unstable { border-color: #ff4444; color: #ff4444; }
+
+.layout { display: grid; grid-template-columns: 1fr 420px; gap: 1px; height: calc(100vh - 49px); background: #0a0a1a; }
+.left { display: flex; flex-direction: column; gap: 1px; }
+.panel { background: #07071a; padding: 14px; }
+.panel-title { color: #555577; font-size: 10px; letter-spacing: 2px; text-transform: uppercase; margin-bottom: 12px; }
+
+/* MAZE */
+#maze-canvas { display: block; margin: 0 auto; }
+.maze-panel { flex: 1; display: flex; flex-direction: column; }
+
+/* AGENT GRID */
+.agents-panel { height: 220px; overflow-y: auto; }
+.agent-row { display: flex; align-items: center; gap: 10px; padding: 5px 0; border-bottom: 1px solid #0f0f2a; }
+.agent-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+.dot-running { background: #ffaa00; box-shadow: 0 0 6px #ffaa00; animation: pulse 1s infinite; }
+.dot-done    { background: #00e660; }
+.dot-blocked { background: #ff4444; }
+.dot-idle    { background: #333355; }
+@keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
+.agent-name { color: #b480ff; width: 140px; flex-shrink: 0; font-size: 11px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.agent-task { color: #888899; font-size: 11px; flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.agent-score { color: #00d4ff; font-size: 11px; width: 48px; text-align: right; flex-shrink: 0; }
+
+/* RIGHT PANEL */
+.right { display: flex; flex-direction: column; gap: 1px; overflow: hidden; }
+.log-panel { flex: 1; overflow-y: auto; }
+.log-line { padding: 3px 0; border-bottom: 1px solid #0a0a1a; font-size: 11px; color: #555577; }
+.log-line .ts { color: #333355; }
+.log-line .agent { color: #b480ff; }
+.log-line .msg  { color: #8888aa; }
+.log-line.highlight .msg { color: #00e660; }
+
+.eq-panel { height: 200px; }
+.eq-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 4px; margin-top: 8px; }
+.eq-cell { background: #0a0a1f; border: 1px solid #1a1a3a; padding: 6px 4px; text-align: center; border-radius: 3px; font-size: 10px; }
+.eq-cell.converged { border-color: #00e660; color: #00e660; }
+.eq-cell.active    { border-color: #ffaa00; color: #ffaa00; }
+.eq-cell.blocked   { border-color: #ff4444; color: #ff4444; }
+
+.stats-panel { height: 100px; display: flex; gap: 20px; align-items: center; padding: 14px; }
+.stat { text-align: center; }
+.stat-val { font-size: 22px; font-weight: bold; }
+.stat-lbl { font-size: 10px; color: #555577; margin-top: 2px; }
+.val-blue   { color: #00d4ff; }
+.val-green  { color: #00e660; }
+.val-purple { color: #b480ff; }
+.val-red    { color: #ff4444; }
+</style>
+</head>
+<body>
+<header>
+  <span class="logo">⬡ HIVE SWARM</span>
+  <span class="subtitle">maze equilibrium · λ=3.0 · ralph↔lodri entangled</span>
+  <span class="eq-badge pending" id="eq-status">SEARCHING EQUILIBRIUM</span>
+</header>
+<div class="layout">
+  <div class="left">
+    <div class="panel maze-panel">
+      <div class="panel-title">maze — agent paths · nash equilibrium</div>
+      <canvas id="maze-canvas"></canvas>
+    </div>
+    <div class="panel agents-panel">
+      <div class="panel-title">swarm agents</div>
+      <div id="agent-list"></div>
+    </div>
+  </div>
+  <div class="right">
+    <div class="panel stats-panel">
+      <div class="stat"><div class="stat-val val-blue" id="s-total">0</div><div class="stat-lbl">agents</div></div>
+      <div class="stat"><div class="stat-val val-green" id="s-done">0</div><div class="stat-lbl">done</div></div>
+      <div class="stat"><div class="stat-val val-purple" id="s-eq">—</div><div class="stat-lbl">eq score</div></div>
+      <div class="stat"><div class="stat-val val-red" id="s-blocked">0</div><div class="stat-lbl">blocked</div></div>
+    </div>
+    <div class="panel eq-panel">
+      <div class="panel-title">equilibrium cells</div>
+      <div class="eq-grid" id="eq-grid"></div>
+    </div>
+    <div class="panel log-panel">
+      <div class="panel-title">event log</div>
+      <div id="log"></div>
+    </div>
+  </div>
+</div>
+<script>
+// ── Maze definition (12×10) ──────────────────────────────────────────────
+const ROWS = 10, COLS = 12;
+const WALLS = new Set([
+  '1,1','1,2','1,3','2,3','3,3','3,4','3,5','2,5','2,6','4,6','4,7','4,8',
+  '5,8','6,8','6,7','6,6','7,6','7,5','8,5','8,4','8,3','9,3','9,2','9,1',
+  '5,1','5,2','5,3','6,3','6,4','0,5','0,6','0,7','1,7','2,7','3,7',
+  '7,8','7,9','8,9','9,9','9,8','9,7','9,6','10,6','10,5','10,4','10,3',
+  '11,2','11,1','10,1',
+]);
+const START = {r:0, c:0};
+const EXIT  = {r:9, c:11};
+
+// ── Agents ───────────────────────────────────────────────────────────────
+const AGENTS = [
+  { id:'rust-core',   name:'rust-core',   role:'Composer/Pruner pipeline',      color:'#00d4ff', pos:{r:0,c:0} },
+  { id:'brain-rs',    name:'brain-rs',    role:'mygraph BrainSnapshot',         color:'#b480ff', pos:{r:0,c:0} },
+  { id:'simplify',    name:'simplify',    role:'README + HIVE.md',              color:'#00e660', pos:{r:0,c:0} },
+  { id:'ci-hive',     name:'ci-hive',     role:'GitHub Actions',                color:'#ffaa00', pos:{r:0,c:0} },
+  { id:'cli',         name:'cli',         role:'kompress-cli binary',           color:'#ff88ff', pos:{r:0,c:0} },
+  { id:'loss-tests',  name:'loss-tests',  role:'λ=3.0 exhaustive tests',        color:'#88ffcc', pos:{r:0,c:0} },
+  { id:'anita-nodes', name:'anita-nodes', role:'ANITA mygraph observations',    color:'#ff4444', pos:{r:0,c:0} },
+  { id:'integ-tests', name:'integ-tests', role:'pipeline integration tests',    color:'#ffdd44', pos:{r:0,c:0} },
+  { id:'hive-md',     name:'hive-md',     role:'Antarctica signal HIVE.md',     color:'#44ddff', pos:{r:0,c:0} },
+  { id:'qbit-rs',     name:'qbit-rs',     role:'persons.rs qbit entanglement',  color:'#ff8844', pos:{r:0,c:0} },
+  { id:'brain-html',  name:'brain-html',  role:'lodri/krengel visual in graph', color:'#88ff44', pos:{r:0,c:0} },
+  { id:'tui-us',      name:'tui-us',      role:'cosmos-tui "us" + qbit panel',  color:'#cc88ff', pos:{r:0,c:0} },
+];
+
+// ── State ─────────────────────────────────────────────────────────────────
+const agentState = {};
+AGENTS.forEach((a,i) => {
+  agentState[a.id] = {
+    status: 'idle', score: 0, path: [], pos: {r:0, c:0},
+    task: a.role, startTick: 0, doneTick: null,
+  };
+});
+
+const logs = [];
+let tick = 0;
+let equilibriumScore = 0;
+
+// ── Maze BFS pathfinder ───────────────────────────────────────────────────
+function bfs(start, goal) {
+  const q = [[start, [start]]];
+  const seen = new Set([`${start.r},${start.c}`]);
+  while (q.length) {
+    const [cur, path] = q.shift();
+    if (cur.r === goal.r && cur.c === goal.c) return path;
+    for (const [dr,dc] of [[-1,0],[1,0],[0,-1],[0,1]]) {
+      const nr = cur.r+dr, nc = cur.c+dc;
+      const key = `${nr},${nc}`;
+      if (nr>=0&&nr<ROWS&&nc>=0&&nc<COLS&&!WALLS.has(key)&&!seen.has(key)) {
+        seen.add(key); q.push([{r:nr,c:nc}, [...path,{r:nr,c:nc}]]);
+      }
+    }
+  }
+  return [];
+}
+
+// ── Nash equilibrium checker ──────────────────────────────────────────────
+// Each agent has a path. Equilibrium = no agent can shorten their path
+// by switching to an unoccupied cell at each step.
+function computeEquilibrium() {
+  const activePaths = AGENTS
+    .filter(a => agentState[a.id].status === 'done' && agentState[a.id].path.length > 0)
+    .map(a => agentState[a.id].path);
+  if (activePaths.length === 0) return 0;
+  // Occupancy: cells occupied by OTHER agents
+  const converged = activePaths.filter(p => {
+    if (p.length === 0) return false;
+    // Agent is at equilibrium if they're on the shortest possible path
+    const shortestLen = bfs(START, EXIT).length;
+    return p.length <= shortestLen + 2; // within 2 steps of optimal
+  });
+  return converged.length / activePaths.length;
+}
+
+// ── Simulation ────────────────────────────────────────────────────────────
+const PHASE_TICKS = [
+  { ids: ['rust-core','brain-rs','simplify','ci-hive'], start: 0,  done: 45 },
+  { ids: ['cli','loss-tests'], start: 8,  done: 35 },
+  { ids: ['anita-nodes'], start: 15, done: 60 },
+  { ids: ['integ-tests','hive-md','qbit-rs'], start: 20, done: 55 },
+  { ids: ['brain-html','tui-us'], start: 30, done: 70 },
+];
+
+function initAgentPaths() {
+  const basePath = bfs(START, EXIT);
+  AGENTS.forEach((a, i) => {
+    // Each agent takes a slightly different path (jitter by row)
+    const jitteredStart = { r: Math.min(i % ROWS, ROWS-1), c: 0 };
+    const p = bfs(jitteredStart, EXIT);
+    agentState[a.id].path = p.length > 0 ? p : basePath;
+  });
+}
+
+function addLog(agentId, msg, highlight=false) {
+  const ts = String(tick).padStart(4,'0');
+  const a = AGENTS.find(x=>x.id===agentId);
+  logs.unshift({ts, agent: a?.name||agentId, msg, highlight});
+  if (logs.length > 80) logs.pop();
+}
+
+function update() {
+  tick++;
+
+  PHASE_TICKS.forEach(phase => {
+    phase.ids.forEach(id => {
+      const s = agentState[id];
+      if (tick === phase.start + 1) {
+        s.status = 'running'; s.startTick = tick;
+        addLog(id, `started — ${AGENTS.find(a=>a.id===id)?.role}`);
+      }
+      if (tick > phase.start && tick < phase.done && s.status === 'running') {
+        const progress = (tick - phase.start) / (phase.done - phase.start);
+        const pathIdx = Math.floor(progress * (s.path.length - 1));
+        s.pos = s.path[Math.min(pathIdx, s.path.length-1)] || START;
+        s.score = Math.round(progress * 100);
+      }
+      if (tick === phase.done && s.status === 'running') {
+        s.status = 'done'; s.pos = EXIT; s.score = 100; s.doneTick = tick;
+        addLog(id, `converged — equilibrium reached`, true);
+      }
+    });
+  });
+
+  // occasional blocked state flicker
+  if (tick % 17 === 0) {
+    const running = AGENTS.filter(a => agentState[a.id].status === 'running');
+    if (running.length > 0) {
+      const a = running[Math.floor(Math.random()*running.length)];
+      agentState[a.id].status = 'blocked';
+      addLog(a.id, `blocked — permission denied, retrying`);
+      setTimeout(() => { if(agentState[a.id].status==='blocked') agentState[a.id].status='running'; }, 1200);
+    }
+  }
+
+  equilibriumScore = computeEquilibrium();
+  render();
+  if (tick < 120) setTimeout(update, 800);
+  else { addLog('hive','ALL AGENTS CONVERGED — Nash equilibrium stable',true); finalRender(); }
+}
+
+// ── Render ────────────────────────────────────────────────────────────────
+function renderMaze() {
+  const canvas = document.getElementById('maze-canvas');
+  const panelW = canvas.parentElement.clientWidth - 28;
+  const cellSize = Math.floor(Math.min(panelW / COLS, (window.innerHeight * 0.5) / ROWS));
+  canvas.width = cellSize * COLS;
+  canvas.height = cellSize * ROWS;
+  const ctx = canvas.getContext('2d');
+  ctx.clearRect(0,0,canvas.width,canvas.height);
+
+  // grid
+  for (let r=0;r<ROWS;r++) for (let c=0;c<COLS;c++) {
+    const key=`${r},${c}`;
+    ctx.fillStyle = WALLS.has(key) ? '#12123a' : '#07071a';
+    ctx.fillRect(c*cellSize,r*cellSize,cellSize-1,cellSize-1);
+  }
+  // start / exit
+  ctx.fillStyle='#00e66044'; ctx.fillRect(START.c*cellSize,START.r*cellSize,cellSize-1,cellSize-1);
+  ctx.fillStyle='#00d4ff44'; ctx.fillRect(EXIT.c*cellSize,EXIT.r*cellSize,cellSize-1,cellSize-1);
+
+  // paths
+  AGENTS.forEach(a => {
+    const s = agentState[a.id];
+    if (s.status==='idle'||s.path.length===0) return;
+    ctx.strokeStyle = a.color+'66'; ctx.lineWidth=1.5;
+    ctx.beginPath();
+    s.path.forEach((p,i) => {
+      const x=p.c*cellSize+cellSize/2, y=p.r*cellSize+cellSize/2;
+      i===0?ctx.moveTo(x,y):ctx.lineTo(x,y);
+    });
+    ctx.stroke();
+  });
+
+  // agents
+  AGENTS.forEach(a => {
+    const s = agentState[a.id];
+    if (s.status==='idle') return;
+    const p = s.pos;
+    const x=p.c*cellSize+cellSize/2, y=p.r*cellSize+cellSize/2;
+    const r = s.status==='done' ? 5 : 4;
+    ctx.beginPath(); ctx.arc(x,y,r,0,Math.PI*2);
+    ctx.fillStyle = s.status==='blocked' ? '#ff4444' : a.color;
+    ctx.fill();
+    if (s.status==='running') {
+      ctx.beginPath(); ctx.arc(x,y,r+3,0,Math.PI*2);
+      ctx.strokeStyle=a.color+'88'; ctx.lineWidth=1; ctx.stroke();
+    }
+  });
+
+  // labels
+  ctx.font=`${Math.max(8,cellSize/4)}px monospace`;
+  ctx.fillStyle='#00e660'; ctx.fillText('START',2,10);
+  ctx.fillStyle='#00d4ff'; ctx.fillText('EXIT',(EXIT.c-0.5)*cellSize,(EXIT.r+0.8)*cellSize);
+}
+
+function renderAgents() {
+  const el = document.getElementById('agent-list');
+  el.innerHTML = AGENTS.map(a => {
+    const s = agentState[a.id];
+    const dotClass = {running:'dot-running',done:'dot-done',blocked:'dot-blocked',idle:'dot-idle'}[s.status];
+    return `<div class="agent-row">
+      <div class="agent-dot ${dotClass}" style="background:${s.status==='idle'?'#333355':a.color};box-shadow:${s.status==='running'?`0 0 6px ${a.color}`:'none'}"></div>
+      <span class="agent-name">${a.name}</span>
+      <span class="agent-task">${s.task}</span>
+      <span class="agent-score" style="color:${a.color}">${s.score}%</span>
+    </div>`;
+  }).join('');
+}
+
+function renderStats() {
+  const total = AGENTS.length;
+  const done = AGENTS.filter(a=>agentState[a.id].status==='done').length;
+  const blocked = AGENTS.filter(a=>agentState[a.id].status==='blocked').length;
+  document.getElementById('s-total').textContent = total;
+  document.getElementById('s-done').textContent = done;
+  document.getElementById('s-blocked').textContent = blocked;
+  document.getElementById('s-eq').textContent = equilibriumScore > 0 ? (equilibriumScore*100).toFixed(0)+'%' : '—';
+  const badge = document.getElementById('eq-status');
+  if (equilibriumScore >= 0.9) {
+    badge.textContent='EQUILIBRIUM STABLE'; badge.className='eq-badge';
+  } else if (equilibriumScore > 0) {
+    badge.textContent='CONVERGING…'; badge.className='eq-badge pending';
+  } else {
+    badge.textContent='SEARCHING EQUILIBRIUM'; badge.className='eq-badge unstable';
+  }
+}
+
+function renderLog() {
+  document.getElementById('log').innerHTML = logs.slice(0,40).map(l =>
+    `<div class="log-line${l.highlight?' highlight':''}">
+      <span class="ts">[${l.ts}]</span> <span class="agent">${l.agent}</span> <span class="msg">${l.msg}</span>
+    </div>`
+  ).join('');
+}
+
+function renderEqGrid() {
+  const grid = document.getElementById('eq-grid');
+  grid.innerHTML = AGENTS.map(a => {
+    const s = agentState[a.id];
+    const cls = s.status==='done'?'converged':s.status==='running'?'active':s.status==='blocked'?'blocked':'';
+    return `<div class="eq-cell ${cls}" style="border-color:${s.status!=='idle'?a.color+'88':''}">
+      <div style="color:${a.color};font-size:9px">${a.name}</div>
+      <div>${s.score}%</div>
+    </div>`;
+  }).join('');
+}
+
+function render() {
+  renderMaze();
+  renderAgents();
+  renderStats();
+  renderLog();
+  renderEqGrid();
+}
+
+function finalRender() {
+  document.getElementById('eq-status').textContent='EQUILIBRIUM STABLE';
+  document.getElementById('eq-status').className='eq-badge';
+  render();
+}
+
+// ── Boot ──────────────────────────────────────────────────────────────────
+initAgentPaths();
+addLog('hive','swarm initialized — 12 haiku agents deployed');
+addLog('hive','maze equilibrium problem: find Nash stable paths to EXIT');
+addLog('hive','λ=3.0 · ralph↔lodri entangled · cosmos on Im axis');
+render();
+setTimeout(update, 500);
+window.addEventListener('resize', render);
+</script>
+</body>
+</html>
