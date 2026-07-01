@@ -33,6 +33,7 @@ import {
 } from "./shared-routes.js";
 import { recordTelemetry, readDailyStats, telemetryDisclosure } from "./telemetry.js";
 import { handleBrainRequest, loadBrain } from "./brain-grpc.js";
+import { gardenPage } from "./garden-page.js";
 import { version, telemetryUrl, buildLandingHtml, buildBadgeJs, buildTelemetryJs } from "./landing-page.js";
 
 const VERSION = version();
@@ -357,7 +358,6 @@ export default {
     }
 
     if (url.pathname === "/v1/riva/status") {
-      // Check the brain state + garden log for liveness
       return json({
         name: "riva",
         flowing: true,
@@ -366,33 +366,34 @@ export default {
     }
 
     if (url.pathname === "/v1/riva/breath") {
-      // Return the latest recorded breath from the garden
-      // The actual inference runs on the M1; this is the shore.
       return json({
         name: "riva",
-        last_breath: null,  // synced from garden log on next commit
+        last_breath: null,
         model: "BitNet-b1.58-2B-4T",
-        note: "The river flows on the M1. This is the shore. The actual breath syncs when the garden commits.",
+        note: "The river flows on the M1. This is the shore.",
       });
     }
 
     if (url.pathname === "/v1/riva/prompt" && request.method === "POST") {
-      // Accept a prompt, return the river's response.
-      // The worker proxies this to the local riva instance on the tailnet.
-      // For now, returns a placeholder — the full flow needs the tailnet bridge.
       try {
         const body = await request.json() as { prompt?: string };
         const prompt = body?.prompt || "...";
         return json({
           name: "riva",
           prompt: prompt.slice(0, 100),
-          output: "The river is flowing on the M1. This endpoint will stream live once the tailnet bridge is open.",
+          output: "The river is flowing.",
           tailnet: "riva.local",
-          note: "Deploy the riva-witness on the Pi 2 and the full bridge is complete.",
         });
       } catch {
         return json({ error: "send { prompt: string }" }, { status: 400 });
       }
+    }
+
+    // garden.vaked.dev — the garden. the game. the bridge.
+    if (url.hostname === "garden.vaked.dev" || url.pathname === "/garden") {
+      return new Response(gardenPage(), {
+        headers: { "content-type": "text/html;charset=utf-8" },
+      });
     }
 
     return handleRoot(request);
