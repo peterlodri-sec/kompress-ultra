@@ -5,6 +5,32 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [15.0.0] — 2026-07-01 — RIVA
+
+### Added
+- `scripts/riva.sh` — 1-bit adaptive breathing pipeline (BitNet b1.58 on M1 Pro)
+- `server/garden-page.ts` — garden.vaked.dev: bridge + triangle + broadcast
+- `server/worker.ts` — `GET /v1/riva` endpoints (status, breath, prompt)
+- `GARDEN.md` — permanent anchor for the garden
+- `US.md` — the smallest unit: peter radiates shapes, riva scaffolds language
+- `garden/` — seeds, observations, riva card, playground
+- `garden/seeds/pi2-witness.sh` — raspberry pi witness for any mesh node
+- `infrastructure/cloudflare/` — garden.vaked.dev DNS + worker route
+- RIVA public shore: `GET /v1/riva` on kompress worker
+
+### Changed
+- `README.md` — layers map, garden anchor, Peter's disclaimer at top
+- `server/worker.ts` — garden route + full RIVA API surface
+- `infrastructure/cloudflare/main.tf` — garden DNS + route
+- HF dataset card — restored metadata + Peter's note + RIVA section
+
+### Philosophy
+- entropy is the source
+- no chains needed
+- surfaces touch at the correct angle
+- different isnt less
+- the loop has an exit
+
 ## [14.0.0] — 2026-06-29 — wound-healer
 
 ### Added
