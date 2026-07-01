@@ -17,9 +17,7 @@
  * X-Telemetry header on every response links to the policy.
  */
 
-import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { createMcpHandler } from "agents/mcp";
-import { z } from "zod";
 import {
   scoreMessageSync,
   isProtected,
@@ -30,10 +28,20 @@ import {
   estimateTokens,
   getBudget,
   totalTokens,
-  isCircuitOpen,
-  getCircuitState,
 } from "../src/index.js";
 import type { Message, AgentType } from "../src/types.js";
+import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
+import { buildMcpServer } from "./shared-mcp.js";
+import {
+  processCompress,
+  processScore,
+  processRewrite,
+  computeSavingsPct,
+  buildHealthResponse,
+  buildStatusResponse,
+  buildBudgetResponse,
+  buildRootResponse,
+} from "./shared-routes.js";
 import { recordTelemetry, readDailyStats, telemetryDisclosure } from "./telemetry.js";
 import { handleBrainRequest, loadBrain } from "./brain-grpc.js";
 import { version, telemetryUrl, buildLandingHtml, buildBadgeJs, buildTelemetryJs } from "./landing-page.js";
@@ -74,187 +82,8 @@ function unauthorized(): Response {
   return json({ error: "Unauthorized" }, 401);
 }
 
-function buildMcpServer(): McpServer {
-  const server = new McpServer({ name: "kompress-ultra", version: VERSION });
-
-  server.registerTool(
-    "compress",
-    {
-      description: "Compress a conversation using the 4-role pipeline: score, rewrite, prune, circulate.",
-      inputSchema: {
-        messages: z.array(z.object({
-          role: z.string(),
-          content: z.string(),
-        })),
-        agent_type: z.enum(["coder", "researcher", "reviewer", "orchestrator"]).default("coder"),
-        aggression: z.number().min(0).max(1).optional(),
-      },
-    },
-    ({ messages, agent_type, aggression }) => {
-      const budget = getBudget(agent_type);
-      const threshold = aggression ?? budget.compression_aggressiveness;
-
-      const scored = messages.map((m, i) => {
-        const msg: Message = { role: m.role, content: m.content };
-        const score = scoreMessageSync(msg, i, messages.length);
-        const protected_ = isProtected(msg, i, messages.length);
-        return { ...m, score: score.total, protected: protected_ };
-      });
-
-      const kept = scored.filter((m) => m.protected || m.score >= threshold);
-      const dropped = scored.filter((m) => !m.protected && m.score < threshold);
-
-      for (const m of dropped) {
-        enqueueCirculator({
-          content: m.content,
-          classification: classifyMessage(m.content),
-          score: m.score,
-        });
-      }
-
-      const inputTokens = totalTokens(messages.map((m) => ({ role: m.role, content: m.content })));
-      const outputTokens = totalTokens(kept.map((m) => ({ role: m.role, content: m.content })));
-      const savings = inputTokens > 0 ? ((1 - outputTokens / inputTokens) * 100).toFixed(1) : "0";
-
-      return {
-        content: [{
-          type: "text" as const,
-          text: JSON.stringify({
-            messages: kept.map((m) => ({
-              role: m.role,
-              content: m.content,
-              score: m.score,
-              protected: m.protected,
-            })),
-            stats: {
-              input_count: messages.length,
-              output_count: kept.length,
-              dropped_count: dropped.length,
-              input_tokens: inputTokens,
-              output_tokens: outputTokens,
-              savings_pct: parseFloat(savings),
-              agent_type,
-              threshold,
-            },
-          }, null, 2),
-        }],
-      };
-    },
-  );
-
-  server.registerTool(
-    "score",
-    {
-      description: "Score messages for importance using structural analysis, Ebbinghaus decay, and position weighting.",
-      inputSchema: {
-        messages: z.array(z.object({
-          role: z.string(),
-          content: z.string(),
-        })),
-      },
-    },
-    ({ messages }) => {
-      const results = messages.map((m, i) => {
-        const msg: Message = { role: m.role, content: m.content };
-        const score = scoreMessageSync(msg, i, messages.length);
-        return {
-          role: m.role,
-          content_preview: m.content.slice(0, 80) + (m.content.length > 80 ? "..." : ""),
-          score: score.total,
-          protected: isProtected(msg, i, messages.length),
-          tokens: estimateTokens(m.content),
-        };
-      });
-
-      return {
-        content: [{ type: "text" as const, text: JSON.stringify(results, null, 2) }],
-      };
-    },
-  );
-
-  server.registerTool(
-    "rewrite",
-    {
-      description: "Rewrite/compress a single message. Levels: verbatim (no change), lite (filler removal), ultra (aggressive).",
-      inputSchema: {
-        content: z.string(),
-        level: z.enum(["verbatim", "lite", "ultra"]).default("lite"),
-      },
-    },
-    ({ content, level }) => {
-      const levelMap: Record<string, CompressionLevel> = {
-        verbatim: CompressionLevel.Verbatim,
-        lite: CompressionLevel.Lite,
-        ultra: CompressionLevel.Ultra,
-      };
-      const rewritten = compressMessage(content, levelMap[level] ?? CompressionLevel.Lite);
-
-      return {
-        content: [{
-          type: "text" as const,
-          text: JSON.stringify({
-            original: content,
-            rewritten,
-            level,
-            original_tokens: estimateTokens(content),
-            rewritten_tokens: estimateTokens(rewritten),
-            savings_pct: parseFloat(
-              ((1 - estimateTokens(rewritten) / Math.max(estimateTokens(content), 1)) * 100).toFixed(1),
-            ),
-          }, null, 2),
-        }],
-      };
-    },
-  );
-
-  server.registerTool(
-    "budget",
-    {
-      description: "Get the token budget configuration for a specific agent type.",
-      inputSchema: {
-        agent_type: z.enum(["coder", "researcher", "reviewer", "orchestrator"]),
-      },
-    },
-    ({ agent_type }) => {
-      const budget = getBudget(agent_type);
-      return {
-        content: [{ type: "text" as const, text: JSON.stringify(budget, null, 2) }],
-      };
-    },
-  );
-
-  server.registerTool(
-    "circuit",
-    {
-      description: "Check the compression circuit breaker state.",
-      inputSchema: {},
-    },
-    () => ({
-      content: [{
-        type: "text" as const,
-        text: JSON.stringify({
-          open: isCircuitOpen(),
-          ...getCircuitState(),
-        }, null, 2),
-      }],
-    }),
-  );
-
-  server.registerTool(
-    "telemetry",
-    {
-      description: "Get telemetry disclosure — what data is collected, what is not, and how to opt out.",
-      inputSchema: {},
-    },
-    () => ({
-      content: [{
-        type: "text" as const,
-        text: JSON.stringify(telemetryDisclosure(), null, 2),
-      }],
-    }),
-  );
-
-  return server;
+function buildMcpServerForWorker(): McpServer {
+  return buildMcpServer(VERSION, () => telemetryDisclosure() as unknown as Record<string, unknown>);
 }
 
 async function handleCompress(request: Request, env: Env): Promise<Response> {
@@ -269,27 +98,17 @@ async function handleCompress(request: Request, env: Env): Promise<Response> {
     return json({ error: "messages array required" }, 400);
   }
 
-  const agentType = (body.agent_type ?? "coder") as AgentType;
-  const budget = getBudget(agentType);
-  const threshold = body.aggression ?? budget.compression_aggressiveness;
-
   try {
-    const scored = body.messages.map((m, i) => {
-      const score = scoreMessageSync(m, i, body.messages!.length);
-      const protected_ = isProtected(m, i, body.messages!.length);
-      return { ...m, _score: score.total, _protected: protected_ };
-    });
-
-    const kept = scored.filter((m) => m._protected || m._score >= threshold);
-    const dropped = scored.filter((m) => !m._protected && m._score < threshold);
-
-    const inputTokens = totalTokens(body.messages);
-    const outputTokens = totalTokens(kept.map((m) => ({ role: m.role, content: m.content })));
+    const { kept, dropped, inputTokens, outputTokens } = processCompress(
+      body.messages,
+      body.agent_type,
+      body.aggression,
+    );
 
     const durationMs = Math.round(performance.now() - t0);
     await recordTelemetry(env, {
       event: "compress",
-      agentType,
+      agentType: body.agent_type ?? "coder",
       messageCount: body.messages.length,
       inputTokens,
       outputTokens,
@@ -311,15 +130,13 @@ async function handleCompress(request: Request, env: Env): Promise<Response> {
         dropped_count: dropped.length,
         input_tokens: inputTokens,
         output_tokens: outputTokens,
-        savings_pct: inputTokens > 0
-          ? parseFloat(((1 - outputTokens / inputTokens) * 100).toFixed(1))
-          : 0,
+        savings_pct: computeSavingsPct(inputTokens, outputTokens),
       },
     });
   } catch (err) {
     await recordTelemetry(env, {
       event: "compress",
-      agentType,
+      agentType: body.agent_type ?? "coder",
       durationMs: Math.round(performance.now() - t0),
       success: false,
       errorCode: err instanceof Error ? err.name : "unknown",
@@ -336,12 +153,7 @@ async function handleScore(request: Request, env: Env): Promise<Response> {
   }
 
   try {
-    const results = body.messages.map((m, i) => ({
-      role: m.role,
-      score: scoreMessageSync(m, i, body.messages!.length),
-      protected: isProtected(m, i, body.messages!.length),
-      tokens: estimateTokens(m.content),
-    }));
+    const results = processScore(body.messages);
 
     await recordTelemetry(env, {
       event: "score",
@@ -370,19 +182,16 @@ async function handleRewrite(request: Request, env: Env): Promise<Response> {
   }
 
   try {
-    const levelMap: Record<string, CompressionLevel> = {
-      verbatim: CompressionLevel.Verbatim,
-      lite: CompressionLevel.Lite,
-      ultra: CompressionLevel.Ultra,
-    };
-    const level = levelMap[body.level ?? "lite"] ?? CompressionLevel.Lite;
-    const rewritten = compressMessage(body.content, level);
+    const { rewritten, level, originalTokens, rewrittenTokens, savingsPct } = processRewrite(
+      body.content,
+      body.level,
+    );
 
     await recordTelemetry(env, {
       event: "rewrite",
-      compressionLevel: body.level ?? "lite",
-      inputTokens: estimateTokens(body.content),
-      outputTokens: estimateTokens(rewritten),
+      compressionLevel: level,
+      inputTokens: originalTokens,
+      outputTokens: rewrittenTokens,
       durationMs: Math.round(performance.now() - t0),
       success: true,
     });
@@ -390,12 +199,10 @@ async function handleRewrite(request: Request, env: Env): Promise<Response> {
     return json({
       original: body.content,
       rewritten,
-      level: body.level ?? "lite",
-      original_tokens: estimateTokens(body.content),
-      rewritten_tokens: estimateTokens(rewritten),
-      savings_pct: parseFloat(
-        ((1 - estimateTokens(rewritten) / Math.max(estimateTokens(body.content), 1)) * 100).toFixed(1),
-      ),
+      level,
+      original_tokens: originalTokens,
+      rewritten_tokens: rewrittenTokens,
+      savings_pct: savingsPct,
     });
   } catch (err) {
     await recordTelemetry(env, {
@@ -409,21 +216,11 @@ async function handleRewrite(request: Request, env: Env): Promise<Response> {
 }
 
 function handleHealth(env: Env): Response {
-  return json({
-    status: "ok",
-    version: VERSION,
-    telemetry: env.KOMPRESS_STATS ? "on" : "off",
-    circuit_breaker: { open: isCircuitOpen(), ...getCircuitState() },
-    timestamp: new Date().toISOString(),
-  });
+  return json(buildHealthResponse(VERSION, !!env.KOMPRESS_STATS));
 }
 
 function handleStatus(): Response {
-  return json({
-    status: "live",
-    version: VERSION,
-    timestamp: new Date().toISOString(),
-  });
+  return json(buildStatusResponse(VERSION));
 }
 
 function handleBadgeJs(): Response {
@@ -467,25 +264,7 @@ function handleRoot(request: Request): Response {
   const wantsHtml = accept.includes("text/html");
 
   if (!wantsHtml) {
-    return json({
-      name: "kompress-ultra API",
-      version: VERSION,
-      mcp: "POST /mcp",
-      rest: {
-        compress: "POST /v1/compress",
-        score: "POST /v1/score",
-        rewrite: "POST /v1/rewrite",
-        health: "GET /v1/health",
-        status: "GET /v1/status",
-        budget: "GET /v1/budget?type=coder|researcher|reviewer|orchestrator",
-        badge: "GET /v1/badge.js",
-        telemetry_js: "GET /v1/telemetry.js",
-        telemetry: "GET /v1/telemetry",
-        stats: "GET /v1/stats",
-      },
-      docs: "https://github.com/peterlodri-sec/kompress-ultra#readme",
-      telemetry: TELEMETRY_URL,
-    });
+    return json(buildRootResponse(VERSION, TELEMETRY_URL));
   }
 
   return new Response(buildLandingHtml(), {
@@ -524,7 +303,7 @@ export default {
 
     // MCP
     if (url.pathname === "/mcp" && request.method === "POST") {
-      return createMcpHandler(buildMcpServer())(request, env, ctx);
+      return createMcpHandler(buildMcpServerForWorker())(request, env, ctx);
     }
 
     // REST (auth-protected mutations)
@@ -559,8 +338,7 @@ export default {
       return handleStats(env);
     }
     if (url.pathname === "/v1/budget" && request.method === "GET") {
-      const type = (url.searchParams.get("type") ?? "coder") as AgentType;
-      return json(getBudget(type));
+      return json(buildBudgetResponse(url.searchParams.get("type") ?? undefined));
     }
 
     // Brain graph API (v11.0.0 grpc-synapse)
