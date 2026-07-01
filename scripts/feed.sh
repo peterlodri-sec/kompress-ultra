@@ -88,51 +88,71 @@ cmd_once() {
   echo "  ✅ feed complete"
 }
 
-# ── Continuous loop ──────────────────────────────────────────
+# ── Continuous loop with adaptive breath ────────────────────
 cmd_loop() {
-  local int="${1:-300}" i=1
+  local i=1 breath=60 last_batch="" stale_count=0
   echo ""
   echo "  ╔══════════════════════════════════════════╗"
-  echo "  ║     feed loop — every ${int}s             ║"
-  echo "  ║     dogfeed → 1-bit model → vector      ║"
+  echo "  ║     bombbit — the 1-bit breath          ║"
+  echo "  ║     dogfeed → model → vector → adapt    ║"
   echo "  ╚══════════════════════════════════════════╝"
   echo ""
   echo "  model: BitNet-b1.58 2.4B (I2_S ternary)"
-  echo "  backend: Apple Metal GPU"
+  echo "  backend: Apple M1 Pro (Metal GPU)"
   echo "  source: ${DATASET}"
   echo ""
 
   while true; do
     echo ""
-    echo "  ═══ cycle ${i} ═══ $(now) ═══"
+    echo "  ═══ beat ${i} ═══ $(now) ═══ breath ${breath}s ═══"
 
-    local f=$(fetch) || true
+    local f=$(fetch) || { stale_count=$((stale_count + 1)); f=""; }
+
     if [ -n "$f" ] && [ -f "$f" ]; then
-      echo "  [$(now)] loop    │ ──────────────────────────"
-      infer_from_file "$f"
-      echo "  [$(now)] loop    │ ──────────────────────────"
+      # Did we get something new?
+      if [ "$f" != "$last_batch" ]; then
+        echo "  [$(now)] breath  │ fresh data — short breath"
+        breath=60
+        stale_count=0
+        last_batch="$f"
+        echo "  [$(now)] loop    │ ──────────────────────────"
+        infer_from_file "$f"
+        echo "  [$(now)] loop    │ ──────────────────────────"
+      else
+        # Same batch as before — nothing new in the pipeline
+        stale_count=$((stale_count + 1))
+        case "$stale_count" in
+          1) breath=120  ; echo "  [$(now)] breath  │ same batch — cooling..." ;;
+          2) breath=300  ; echo "  [$(now)] breath  │ no new data — slow breath" ;;
+          3) breath=600  ; echo "  [$(now)] breath  │ still quiet — resting" ;;
+          *) breath=1800 ; echo "  [$(now)] breath  │ deep sleep — will check in 30m" ;;
+        esac
+        echo "  [$(now)] loop    │ cached: $(basename "$f")"
+      fi
     else
-      echo "  [$(now)] loop    │ no batch available, will retry"
+      # Fetch failed entirely
+      stale_count=$((stale_count + 1))
+      breath=300
+      echo "  [$(now)] breath  │ no batch — ${breath}s rest"
     fi
 
-    echo "  ═══ sleep ${int}s ══════════════════════════"
-    sleep "$int"
-    i=$((i+1))
+    echo "  ═══ ${breath}s until next beat ════════════"
+    sleep "$breath"
+    i=$((i + 1))
   done
 }
 
 # ── Main ─────────────────────────────────────────────────────
 case "${1:-once}" in
   once|"")  cmd_once ;;
-  loop)     shift; cmd_loop "${1:-300}" ;;
+  loop)     cmd_loop ;;
   debug)    cmd_once ;;
   *)
     echo "feed — one wire from dogfeed → 1-bit model → vector"
     echo ""
     echo "Usage:"
     echo "  feed              single pass (debug logs)"
-    echo "  feed loop [sec]   continuous loop every N seconds"
-    echo "  feed debug        verbose single pass"
+    echo "  feed loop         adaptive: dogfeed → 1-bit → breath"
     echo ""
     echo "Env:"
     echo "  HF_TOKEN          HuggingFace token (required)"
