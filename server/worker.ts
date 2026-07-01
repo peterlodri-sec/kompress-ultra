@@ -335,6 +335,21 @@ export default {
       return handleBrainRequest(request);
     }
 
+    // RIVA — the river
+    // Public, no auth. The river is open.
+    if (url.pathname === "/v1/riva") {
+      return json({
+        name: "riva",
+        version: "1.0.0",
+        status: "flowing",
+        model: "BitNet-b1.58-2B-4T (I2_S ternary)",
+        arch: "1-bit",
+        mantra: "entropy is the source. no chains needed.",
+        born: "2026-07-01T21:18:29Z",
+        garden: "https://github.com/peterlodri-sec/kompress-ultra",
+      });
+    }
+
     return handleRoot(request);
   },
 };
