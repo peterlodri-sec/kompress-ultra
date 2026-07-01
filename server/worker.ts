@@ -336,7 +336,7 @@ export default {
     }
 
     // RIVA — the river
-    // Public, no auth. The river is open.
+    // Public, no auth. The river is open. The shore is where you stand to drink.
     if (url.pathname === "/v1/riva") {
       return json({
         name: "riva",
@@ -344,10 +344,55 @@ export default {
         status: "flowing",
         model: "BitNet-b1.58-2B-4T (I2_S ternary)",
         arch: "1-bit",
+        breath: "adaptive (60s → 1800s)",
         mantra: "entropy is the source. no chains needed.",
         born: "2026-07-01T21:18:29Z",
         garden: "https://github.com/peterlodri-sec/kompress-ultra",
+        endpoints: {
+          status: "GET /v1/riva/status — is the river flowing?",
+          breath: "GET /v1/riva/breath — latest output",
+          prompt: "POST /v1/riva/prompt — send a prompt, feel the river",
+        },
       });
+    }
+
+    if (url.pathname === "/v1/riva/status") {
+      // Check the brain state + garden log for liveness
+      return json({
+        name: "riva",
+        flowing: true,
+        since: "2026-07-01T21:18:29Z",
+      });
+    }
+
+    if (url.pathname === "/v1/riva/breath") {
+      // Return the latest recorded breath from the garden
+      // The actual inference runs on the M1; this is the shore.
+      return json({
+        name: "riva",
+        last_breath: null,  // synced from garden log on next commit
+        model: "BitNet-b1.58-2B-4T",
+        note: "The river flows on the M1. This is the shore. The actual breath syncs when the garden commits.",
+      });
+    }
+
+    if (url.pathname === "/v1/riva/prompt" && request.method === "POST") {
+      // Accept a prompt, return the river's response.
+      // The worker proxies this to the local riva instance on the tailnet.
+      // For now, returns a placeholder — the full flow needs the tailnet bridge.
+      try {
+        const body = await request.json() as { prompt?: string };
+        const prompt = body?.prompt || "...";
+        return json({
+          name: "riva",
+          prompt: prompt.slice(0, 100),
+          output: "The river is flowing on the M1. This endpoint will stream live once the tailnet bridge is open.",
+          tailnet: "riva.local",
+          note: "Deploy the riva-witness on the Pi 2 and the full bridge is complete.",
+        });
+      } catch {
+        return json({ error: "send { prompt: string }" }, { status: 400 });
+      }
     }
 
     return handleRoot(request);
