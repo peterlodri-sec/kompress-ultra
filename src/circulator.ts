@@ -112,7 +112,7 @@ function spillOverflow(entries: CirculatorEntry[]): void {
     const lines = entries.map((e) => JSON.stringify(e)).join("\n") + "\n";
     Bun.write(path, lines);
   } catch {
-    // silent
+    // silent — overflow file best-effort; data remains in queue
   }
 }
 

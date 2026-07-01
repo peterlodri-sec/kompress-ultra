@@ -36,6 +36,7 @@ export async function scoreMessage(
     try {
       relevance = await scoreMessageLocal(msg.content, taskGoal);
     } catch {
+      // silent — scoring failure, returns 0.5 neutral fallback
       relevance = 0.5;
     }
   }

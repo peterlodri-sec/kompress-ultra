@@ -3,7 +3,7 @@
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/version-2.0.0-0a0a14?style=for-the-badge&labelColor=141420&color=00d4ff" alt="Version">
+  <img src="https://img.shields.io/badge/version-14.0.0-0a0a14?style=for-the-badge&labelColor=141420&color=00d4ff" alt="Version">
   <img src="https://img.shields.io/badge/license-Apache%202.0-0a0a14?style=for-the-badge&labelColor=141420&color=00e660" alt="License">
   <img src="https://img.shields.io/badge/built%20with-Bun-0a0a14?style=for-the-badge&labelColor=141420&color=white&logo=bun" alt="Built with Bun">
   <img src="https://img.shields.io/badge/PRs-welcome-0a0a14?style=for-the-badge&labelColor=141420&color=b480ff" alt="PRs Welcome">
@@ -117,7 +117,7 @@ import {
 // Validate and merge config
 const options = validateOptions({ agentType: "coder", aggression: 0.7 });
 
-// Score a message for relevance (sync — no Milvus needed)
+// Score a message for relevance (sync — no external deps)
 const score = scoreMessageSync(msg, index, total);
 
 // Check if protected (user, code, error, last 5)
@@ -186,10 +186,10 @@ See [TELEMETRY.md](./TELEMETRY.md) for the complete policy.
 │  │ (score)  │    │(compress)│    │ (memory) │    │(patterns)│  │
 │  └──────────┘    └──────────┘    └──────────┘    └──────────┘  │
 │       │                                              ▲          │
-│       │         ┌──────────────┐                     │          │
-│       └────────▶│ Milvus DB    │─────────────────────┘          │
-│                 │ (vector mem) │                                 │
-│                 └──────────────┘                                 │
+│       │         ┌──────────────────┐                  │          │
+│       └────────│ local-store.ts  │──────────────────┘          │
+│                 │ (hash-embed +   │                              │
+│                 │  JSONL persist) │                              │
 │                                                                  │
 │  Output: Dense Context (compressed, safe, pattern-enriched)     │
 └─────────────────────────────────────────────────────────────────┘
@@ -201,7 +201,7 @@ See [TELEMETRY.md](./TELEMETRY.md) for the complete policy.
 |------|--------|----------|
 | **Pruner** | `scoring.ts` | Scores messages by relevance, recency (Ebbinghaus decay), and structural importance. Protected messages (user, code, error, last 5) are never pruned. |
 | **Rewriter** | `rewriter.ts` | Compresses kept messages by age: Verbatim (recent) → Lite (mid) → Ultra (old). Protects fenced blocks AND inline code spans. |
-| **Circulator** | `circulator.ts` | Enqueues pruned content to vector memory (Milvus) for future retrieval. Classifies messages by type for smart routing. Instance-isolated queue. |
+| **Circulator** | `circulator.ts` | Enqueues pruned content to local vector store for future retrieval. Classifies messages by type for smart routing. Instance-isolated queue. |
 | **Composer** | `brain.ts` | Reads brain state from cross-session learning, builds liveness indicators for context injection. |
 
 ### v2.0 Improvements
@@ -229,7 +229,7 @@ Critical tokens are **never** pruned:
 
 ### Circuit Breaker
 
-If Milvus/embedding services fail N times consecutively (default 3), the circuit opens for a configurable cooldown (default 60s). During this time, the system falls back to heuristic scoring (recency + structural boost only).
+If embedding services fail N times consecutively (default 3), the circuit opens for a configurable cooldown (default 60s). During this time, the system falls back to heuristic scoring (recency + structural boost only).
 
 ### Token Budgets
 
@@ -264,8 +264,7 @@ Source: [Paper Table 10, p.16](https://kompress.vaked.dev/paper/main.pdf#page=16
 interface KompressUltraOptions {
   relevanceThreshold?: number;    // 0-1, default 0.65
   maxMessagesKept?: number;       // default 35
-  milvusUrl?: string;             // default "http://localhost:19530"
-  mempalaceDb?: string;           // default "mempalace.db"
+  // milvusUrl: removed — Milvus replaced by local-store.ts
   pollIntervalMs?: number;        // default 60000
   adaptiveThreshold?: boolean;    // default true
   droppedMessageDigest?: boolean; // default true
@@ -290,12 +289,22 @@ kompress-ultra/
 │   ├── rewriter.ts           # CompressionLevel enum, compressMessage (fenced + inline protection)
 │   ├── compression.ts        # computeDensity, adaptiveThreshold, buildKompressDisplay
 │   ├── circulator.ts         # Circulator class + singleton compat functions
-│   ├── embedding.ts          # embedText, scoreMessageMilvus, queryMilvusSimilarity
+│   ├── hash.ts               # Zero-dep hash embeddings + cosine similarity
+│   ├── embedding.ts          # embedText, scoreMessageLocal, queryLocalSimilarity
 │   ├── brain.ts              # readBrainState, buildBrainLine
+│   ├── brain-embeddings.ts   # Graph node/edge embedding + local store sync
+│   ├── edge-router.ts        # Keyword-aware graph edge routing with DIAD
+│   ├── topology-healer.ts    # Self-healing brain graph (orphans, stale edges, islands)
+│   ├── local-store.ts        # Self-hosted vector store (in-memory + JSONL)
 │   ├── token-budget.ts       # estimateTokens, setTokenEstimator, escalateForBudget
 │   └── circuit-breaker.ts    # CircuitBreaker class + singleton compat functions
 ├── server/
-│   └── worker.ts             # Cloudflare Worker (MCP + REST API with auth)
+│   ├── worker.ts             # Cloudflare Worker (MCP + REST API with auth)
+│   ├── brain-grpc.ts         # Brain graph gRPC-style REST API
+│   ├── cloudrun.ts           # Google Cloud Run entry point (optional)
+│   ├── stats-do.ts           # Durable Object for aggregated stats
+│   ├── telemetry.ts          # Zero-PII research telemetry (Worker only)
+│   └── landing-page.ts       # HTML + inline JS templates
 ├── test/
 │   ├── scoring.test.ts
 │   ├── rewriter.test.ts
@@ -304,7 +313,12 @@ kompress-ultra/
 │   ├── circulator.test.ts
 │   ├── token-budget.test.ts
 │   ├── config.test.ts
-│   └── pipeline.test.ts      # Full E2E integration test
+│   ├── pipeline.test.ts      # Full E2E integration test
+│   ├── errors.test.ts
+│   ├── brain.test.ts
+│   ├── embedding.test.ts
+│   ├── local-store.test.ts
+│   └── topology-healer.test.ts
 ├── package.json
 ├── tsconfig.json
 ├── wrangler.toml

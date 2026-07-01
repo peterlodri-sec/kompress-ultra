@@ -6,6 +6,7 @@ export async function readBrainState(): Promise<BrainState | null> {
     const content = await Bun.file(path).text();
     return JSON.parse(content) as BrainState;
   } catch {
+    // silent — file may not exist or be corrupt, returns null
     return null;
   }
 }

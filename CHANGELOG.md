@@ -11,6 +11,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `src/topology-healer.ts` — Self-healing brain graph topology. Detects: orphaned nodes (no edges), stale edges (not traversed in 7+ days), singleton islands (disconnected subgraphs), collapsed conductivity (<0.05), excessive self-loops. Generates `HealingReport` with reconnection suggestions.
 - `src/topology-healer.ts` `summarize()` — one-line health summary for logging
 - Integrated into brain-pulse cycle: `heal()` is advisory, never destructive
+- `test/topology-healer.test.ts` — 14 test cases covering all diagnosis helpers
+- `src/compression.ts` — `compactLines()` and `pctReduction()` helpers for safer display building
+
+### Changed
+- `src/brain-embeddings.ts` — `as string` → `String(x ?? "")` for type safety; extracted `searchBySource()`, `embed()`, `syncToStore()` helpers, halving code
+- `src/types.ts` — Added optional `_kompress` / `_kompressPruneEvent` fields to `Message` interface
+- `src/compression.ts` — Removed `as Message` casts; fixed division-by-zero when `tokensPruned === 0`
+- `src/local-store.ts` — Replaced `await import("./hash.js")` dynamic import with static import (circular dep already resolved)
+- `src/edge-router.ts` — Extracted `matchKeyword()` helper, removed dead `matches` variable
+- `src/scoring.ts`, `src/embedding.ts`, `src/brain.ts`, `src/circulator.ts`, `src/local-store.ts` — Added JSDoc to bare `catch {}` blocks explaining silent intent
+- `server/worker.ts` — Fixed O(n²) `messages.indexOf(m)` → O(n) map index; removed redundant `as AgentType` casts (Zod-validated)
+- `server/cloudrun.ts` — Removed redundant `as AgentType` casts; fixed `@google-cloud/firestore` dynamic import to prevent TS2307 at typecheck time
+- `server/brain-grpc.ts` — `import { Node, Edge, BrainSnapshot }` → `import type`
+- `README.md` — Fixed version badge, architecture diagram (Milvus→local-store), config docs, project structure, function names — 15+ stale references
+- `AGENTS.md` — Added missing `landing-page.ts`, `topology-healer.test.ts`; fixed "flush to Milvus" → "store persist"
+
+### Removed
+- Dead `matches` variable in `edge-router.ts:keywordScore` (incremented but never read)
 
 ## [13.0.0] — 2026-06-29 — conductive-reason
 

@@ -30,122 +30,167 @@ interface TopologyState {
   edges: Edge[];
 }
 
-export function heal(topology: TopologyState): HealingReport {
-  const report: HealingReport = {
-    timestamp: new Date().toISOString(),
-    orphansFound: 0,
-    staleEdgesPruned: 0,
-    islandsDetected: 0,
-    collapsedEdgesReset: 0,
-    selfLoopsRemoved: 0,
-    edgesReconnected: 0,
-    details: [],
-  };
+interface OrphanResult {
+  connectedNodes: Set<string>;
+  details: string[];
+}
 
-  const { nodes, edges } = topology;
-  const nodeIds = new Set(nodes.map((n) => n.id));
-  const now = Date.now();
-
-  // ── 1. Detect orphans (nodes with no edges) ─────────────────────────
+/** Nodes with no incoming/outgoing edges that aren't dormant. */
+function diagnoseOrphans(nodes: Node[], edges: Edge[]): OrphanResult {
   const connectedNodes = new Set<string>();
   for (const edge of edges) {
     connectedNodes.add(edge.source);
     connectedNodes.add(edge.target);
   }
+  const details: string[] = [];
   for (const node of nodes) {
     if (!connectedNodes.has(node.id) && node.state !== "dormant") {
-      report.orphansFound++;
-      report.details.push(`orphan: ${node.id} (${node.label}) — no edges`);
+      details.push(`orphan: ${node.id} (${node.label}) — no edges`);
     }
   }
+  return { connectedNodes, details };
+}
 
-  // ── 2. Detect stale edges (not traversed in 7+ days) ───────────────
+/** Edges whose last traversal is older than 7 days. */
+function diagnoseStaleEdges(edges: Edge[], now: number): string[] {
   const staleThreshold = 7 * 24 * 60 * 60 * 1000;
+  const details: string[] = [];
   for (const edge of edges) {
-    if (edge.lastTraversedMs > 0 && (now - edge.lastTraversedMs) > staleThreshold) {
-      report.staleEdgesPruned++;
-      report.details.push(`stale: ${edge.id} — last traversed ${new Date(edge.lastTraversedMs).toISOString()}`);
+    if (edge.lastTraversedMs > 0 && now - edge.lastTraversedMs > staleThreshold) {
+      details.push(
+        `stale: ${edge.id} — last traversed ${new Date(edge.lastTraversedMs).toISOString()}`,
+      );
     }
   }
+  return details;
+}
 
-  // ── 3. Detect islands (disconnected subgraphs via BFS) ──────────────
+/** Singleton nodes (BFS-disconnected subgraph of size 1) that aren't dormant. */
+function diagnoseIslands(nodes: Node[], edges: Edge[]): string[] {
   const adjacency = new Map<string, string[]>();
-  for (const node of nodes) {
-    adjacency.set(node.id, []);
-  }
+  for (const node of nodes) adjacency.set(node.id, []);
   for (const edge of edges) {
     adjacency.get(edge.source)?.push(edge.target);
     adjacency.get(edge.target)?.push(edge.source);
   }
 
   const visited = new Set<string>();
-  const islands: string[][] = [];
+  const details: string[] = [];
   for (const node of nodes) {
-    if (!visited.has(node.id)) {
-      const island: string[] = [];
-      const queue = [node.id];
-      while (queue.length > 0) {
-        const current = queue.shift()!;
-        if (visited.has(current)) continue;
-        visited.add(current);
-        island.push(current);
-        for (const neighbor of adjacency.get(current) ?? []) {
-          if (!visited.has(neighbor)) queue.push(neighbor);
-        }
+    if (visited.has(node.id)) continue;
+    // BFS from this node to find its connected component
+    const island: string[] = [];
+    const queue = [node.id];
+    while (queue.length > 0) {
+      const current = queue.shift()!;
+      if (visited.has(current)) continue;
+      visited.add(current);
+      island.push(current);
+      for (const neighbor of adjacency.get(current) ?? []) {
+        if (!visited.has(neighbor)) queue.push(neighbor);
       }
-      if (island.length > 0) islands.push(island);
     }
-  }
-
-  // Islands of size 1 that aren't supposed to be standalone
-  for (const island of islands) {
+    // Singleton islands that aren't supposed to be standalone
     if (island.length === 1) {
-      const node = nodes.find((n) => n.id === island[0]);
-      if (node && node.state !== "dormant") {
-        report.islandsDetected++;
-        report.details.push(`island: ${node.id} (${node.label}) — singleton island`);
+      const n = nodes.find((n) => n.id === island[0]);
+      if (n && n.state !== "dormant") {
+        details.push(`island: ${n.id} (${n.label}) — singleton island`);
       }
     }
   }
+  return details;
+}
 
-  // ── 4. Detect collapsed conductivity ────────────────────────────────
+/** Edges with near-zero conductivity but significant weight. */
+function diagnoseCollapsedEdges(edges: Edge[]): string[] {
+  const details: string[] = [];
   for (const edge of edges) {
     if (edge.conductivity < 0.05 && edge.weight > 0.1) {
-      report.collapsedEdgesReset++;
-      report.details.push(`collapsed: ${edge.id} — conductivity ${edge.conductivity.toFixed(3)}`);
+      details.push(`collapsed: ${edge.id} — conductivity ${edge.conductivity.toFixed(3)}`);
     }
   }
+  return details;
+}
 
-  // ── 5. Detect self-loops ────────────────────────────────────────────
+/** Self-loop edges (source === target). */
+function diagnoseSelfLoops(edges: Edge[]): string[] {
+  const details: string[] = [];
   for (const edge of edges) {
     if (edge.source === edge.target) {
-      report.selfLoopsRemoved++;
-      report.details.push(`self-loop: ${edge.id} — ${edge.source} → itself`);
+      details.push(`self-loop: ${edge.id} — ${edge.source} → itself`);
     }
   }
+  return details;
+}
 
-  // ── 6. Suggest reconnections for orphans ────────────────────────────
-  // Find nodes that are topologically close but not connected
-  // (simple heuristic: same layer, compatible types)
+/**
+ * Suggest edges between topologically close nodes where one side is orphaned.
+ * Heuristic: same layer + same type, not already connected.
+ */
+function suggestReconnections(
+  nodes: Node[],
+  edges: Edge[],
+  connectedNodes: Set<string>,
+): string[] {
+  const details: string[] = [];
   for (let i = 0; i < nodes.length; i++) {
     const a = nodes[i];
     if (!connectedNodes.has(a.id) && a.state !== "dormant") continue;
     for (let j = i + 1; j < nodes.length; j++) {
       const b = nodes[j];
-      if (a.layer === b.layer && a.type === b.type) {
-        const alreadyConnected = edges.some(
-          (e) => (e.source === a.id && e.target === b.id) || (e.source === b.id && e.target === a.id),
-        );
-        if (!alreadyConnected && connectedNodes.has(a.id) !== connectedNodes.has(b.id)) {
-          report.edgesReconnected++;
-          report.details.push(`reconnect: ${a.id} ↔ ${b.id} — same layer/type, one orphan`);
-          break; // one suggestion per node
-        }
+      if (a.layer !== b.layer || a.type !== b.type) continue;
+      const alreadyConnected = edges.some(
+        (e) =>
+          (e.source === a.id && e.target === b.id) || (e.source === b.id && e.target === a.id),
+      );
+      if (!alreadyConnected && connectedNodes.has(a.id) !== connectedNodes.has(b.id)) {
+        details.push(`reconnect: ${a.id} ↔ ${b.id} — same layer/type, one orphan`);
+        break;
       }
     }
   }
+  return details;
+}
 
-  return report;
+export function heal(topology: TopologyState): HealingReport {
+  const { nodes, edges } = topology;
+  const now = Date.now();
+  const allDetails: string[] = [];
+
+  // 1. Detect orphans
+  const orphans = diagnoseOrphans(nodes, edges);
+  allDetails.push(...orphans.details);
+
+  // 2. Detect stale edges
+  const staleDetails = diagnoseStaleEdges(edges, now);
+  allDetails.push(...staleDetails);
+
+  // 3. Detect islands (disconnected subgraphs)
+  const islandDetails = diagnoseIslands(nodes, edges);
+  allDetails.push(...islandDetails);
+
+  // 4. Detect collapsed conductivity
+  const collapseDetails = diagnoseCollapsedEdges(edges);
+  allDetails.push(...collapseDetails);
+
+  // 5. Detect self-loops
+  const loopDetails = diagnoseSelfLoops(edges);
+  allDetails.push(...loopDetails);
+
+  // 6. Suggest reconnections for orphans
+  const reconnectDetails = suggestReconnections(nodes, edges, orphans.connectedNodes);
+  allDetails.push(...reconnectDetails);
+
+  return {
+    timestamp: new Date().toISOString(),
+    orphansFound: orphans.details.length,
+    staleEdgesPruned: staleDetails.length,
+    islandsDetected: islandDetails.length,
+    collapsedEdgesReset: collapseDetails.length,
+    selfLoopsRemoved: loopDetails.length,
+    edgesReconnected: reconnectDetails.length,
+    details: allDetails,
+  };
 }
 
 /**

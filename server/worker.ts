@@ -91,13 +91,13 @@ function buildMcpServer(): McpServer {
       },
     },
     ({ messages, agent_type, aggression }) => {
-      const budget = getBudget(agent_type as AgentType);
+      const budget = getBudget(agent_type);
       const threshold = aggression ?? budget.compression_aggressiveness;
 
-      const scored = messages.map((m) => {
+      const scored = messages.map((m, i) => {
         const msg: Message = { role: m.role, content: m.content };
-        const score = scoreMessageSync(msg, messages.indexOf(m), messages.length);
-        const protected_ = isProtected(msg, messages.indexOf(m), messages.length);
+        const score = scoreMessageSync(msg, i, messages.length);
+        const protected_ = isProtected(msg, i, messages.length);
         return { ...m, score: score.total, protected: protected_ };
       });
 
@@ -154,15 +154,14 @@ function buildMcpServer(): McpServer {
       },
     },
     ({ messages }) => {
-      const results = messages.map((m) => {
+      const results = messages.map((m, i) => {
         const msg: Message = { role: m.role, content: m.content };
-        const idx = messages.indexOf(m);
-        const score = scoreMessageSync(msg, idx, messages.length);
+        const score = scoreMessageSync(msg, i, messages.length);
         return {
           role: m.role,
           content_preview: m.content.slice(0, 80) + (m.content.length > 80 ? "..." : ""),
           score: score.total,
-          protected: isProtected(msg, idx, messages.length),
+          protected: isProtected(msg, i, messages.length),
           tokens: estimateTokens(m.content),
         };
       });
@@ -217,7 +216,7 @@ function buildMcpServer(): McpServer {
       },
     },
     ({ agent_type }) => {
-      const budget = getBudget(agent_type as AgentType);
+      const budget = getBudget(agent_type);
       return {
         content: [{ type: "text" as const, text: JSON.stringify(budget, null, 2) }],
       };

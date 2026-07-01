@@ -62,6 +62,8 @@ export interface Message {
   role: string;
   content: string;
   type?: string;
+  _kompress?: boolean;
+  _kompressPruneEvent?: boolean;
   [key: string]: unknown;
 }
 

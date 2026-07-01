@@ -13,7 +13,7 @@
  * Service: kompress.v1.BrainService
  */
 
-import { Node, Edge, BrainSnapshot } from "../src/types.js";
+import type { Node, Edge, BrainSnapshot } from "../src/types.js";
 
 // ── In-memory brain graph (loaded from ~/.brain/graph.json at deploy) ──
 interface BrainGraph {
