@@ -482,6 +482,8 @@ This package implements the compression strategy described in:
 | [proposal.vaked.dev](https://proposal.vaked.dev) | Interactive Headroom integration proposal |
 | [kompress.vaked.dev](https://kompress.vaked.dev/paper/main.pdf) | Academic paper with full proofs |
 
+layers, as we, peter and The LLMs: []
+
 ##  Brain — The Garden
 
 The brain is not a tool. It is a surface where dimensions touch. A 24/7 daemon that pulses every 30 minutes: chaos → repair → memory → graph sync → git commit.
