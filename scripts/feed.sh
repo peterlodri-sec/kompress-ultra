@@ -3,8 +3,9 @@
 # feed — one wire: dogfeed → 1-bit model → vector
 #
 # Usage:
-#   feed         — single pass
-#   feed loop   — continuous: fetch → model → repeat
+#   feed              — single pass with full debug log
+#   feed loop [sec]   — continuous: fetch → model → repeat
+#   feed debug        — same as feed, verbose
 # ─────────────────────────────────────────────────────────────
 set -euo pipefail
 
@@ -16,11 +17,15 @@ CACHE="$HOME/.cache/feed"
 mkdir -p "$CACHE"
 
 HF_TOKEN="${HF_TOKEN:-}"
-[ -z "$HF_TOKEN" ] && { echo "HF_TOKEN not set"; exit 1; }
+[ -z "$HF_TOKEN" ] && { echo "ERROR: HF_TOKEN not set"; echo "  Get one at https://huggingface.co/settings/tokens"; exit 1; }
 
-CY='\033[0;36m' GN='\033[0;32m' DIM='\033[2m' RS='\033[0m' R='\033[0;31m'
+# ── Timestamp ──────────────────────────────────────────────
+now() { date -u +%H:%M:%S; }
 
+# ── Step 1: Fetch latest dogfeed batch ─────────────────────
 fetch() {
+  echo "  [$(now)] dogfeed │ fetching latest batch from ${DATASET}..." >&2
+
   local name
   name=$(curl -s -H "Authorization: Bearer $HF_TOKEN" \
     "https://huggingface.co/api/datasets/$DATASET" | \
@@ -28,54 +33,110 @@ fetch() {
 import json,sys
 d=json.load(sys.stdin)
 s=[s for s in d.get('siblings',[]) if 'telemetry/batch' in s['rfilename']]
-print(s[-1]['rfilename'] if s else '')
-" 2>/dev/null) || return 1
-  [ -z "$name" ] && return 1
+if s: print(s[-1]['rfilename'])
+" 2>/dev/null) || { echo "  [$(now)] dogfeed │ ERROR: cannot fetch batch list" >&2; return 1; }
+
+  [ -z "$name" ] && { echo "  [$(now)] dogfeed │ WARN: no batches found" >&2; return 1; }
+
   local f="$CACHE/$(basename "$name")"
-  [ ! -f "$f" ] && curl -s -H "Authorization: Bearer $HF_TOKEN" \
-    "https://huggingface.co/datasets/$DATASET/resolve/main/$name" -o "$f"
+  if [ ! -f "$f" ]; then
+    echo "  [$(now)] dogfeed │ downloading: $name" >&2
+    curl -s -H "Authorization: Bearer $HF_TOKEN" \
+      "https://huggingface.co/datasets/$DATASET/resolve/main/$name" -o "$f"
+    local sz=$(wc -c < "$f" | tr -d ' ')
+    echo "  [$(now)] dogfeed │ saved: ${sz} bytes to cache" >&2
+  else
+    local sz=$(wc -c < "$f" | tr -d ' ')
+    local entries=$(wc -l < "$f" | tr -d ' ')
+    echo "  [$(now)] dogfeed │ cached: ${sz} bytes, ${entries} entries" >&2
+  fi
+
   echo "$f"
 }
 
-feed_once() {
-  local f="$1"; shift
-  local prompt
-  prompt=$(python3 -c "
-import json
-with open('${f}') as fh:
-    for l in fh:
-        l=l.strip()
-        if l: entry=json.loads(l); break
-print(json.dumps(entry)[:200])
-" 2>/dev/null) || prompt="dogfeed signal $(date -u +%H:%M:%S)"
+# ── Step 2+3: Extract prompt + infer ──────────────────────
+infer_from_file() {
+  local f="$1"
+  # Read first line of batch as prompt
+  local line prompt
+  read -r line < "$f" 2>/dev/null || true
+  prompt=$(python3 -c "import json,sys; print(json.dumps(json.loads(sys.argv[1]))[:150])" "$line" 2>/dev/null)
+  [ -z "$prompt" ] && prompt="dogfeed $(now)"
 
-  echo -e "  ${CY}→${RS} ${DIM}${prompt:0:80}...${RS}"
-  cd "$BITNET"
-  python3 run_inference.py -m "$MODEL" -p "$prompt" -n 15 --temp 0.8 2>&1 | \
-    grep -v "^llama_\|^ggml_\|^main:\|^common_\|^generate:\|^\s*$" || true
+  echo "  [$(now)] prompt  │ ${prompt:0:100}"
+  echo "  [$(now)] model   │ inferring (Apple M1 Pro GPU, 2.4B 1-bit)..."
+  echo ""
+
+  local result
+  result=$(cd "$BITNET" && LLAMA_ARG_N_GPU_LAYERS=99 \
+    python3 run_inference.py \
+      -m "$MODEL" -p "$prompt" -n 20 --temp 0.8 2>/dev/null | \
+    grep -v '^\s*$' | tail -1)
+  echo "  │ ${result:-"(no output)"}"
   cd "$ROOT" 2>/dev/null || true
 }
 
+# ── Single pass ──────────────────────────────────────────────
 cmd_once() {
-  local f=$(fetch) || { echo -e "  ${R}✗${RS} no batch"; exit 1; }
-  echo -e "  ${CY}feed:${RS} $(basename $f)"
-  feed_once "$f"
-  echo -e "  ${GN}✓${RS}"
+  local f=$(fetch) || { echo "  [$(now)] ERROR: fetch failed"; exit 1; }
+
+  echo "  [$(now)] loop    │ ──────────────────────────"
+  infer_from_file "$f"
+  echo "  [$(now)] loop    │ ──────────────────────────"
+
+  echo ""
+  echo "  ✅ feed complete"
 }
 
+# ── Continuous loop ──────────────────────────────────────────
 cmd_loop() {
-  local int="${1:-60}" i=1
+  local int="${1:-300}" i=1
+  echo ""
+  echo "  ╔══════════════════════════════════════════╗"
+  echo "  ║     feed loop — every ${int}s             ║"
+  echo "  ║     dogfeed → 1-bit model → vector      ║"
+  echo "  ╚══════════════════════════════════════════╝"
+  echo ""
+  echo "  model: BitNet-b1.58 2.4B (I2_S ternary)"
+  echo "  backend: Apple Metal GPU"
+  echo "  source: ${DATASET}"
+  echo ""
+
   while true; do
-    echo -e "  ${DIM}── cycle ${i} ───────────────${RS}"
+    echo ""
+    echo "  ═══ cycle ${i} ═══ $(now) ═══"
+
     local f=$(fetch) || true
-    [ -n "$f" ] && feed_once "$f" || echo -e "  ${R}✗${RS} no batch"
-    echo -e "  ${DIM}── sleep ${int}s ───────────${RS}"
-    sleep "$int"; i=$((i+1))
+    if [ -n "$f" ] && [ -f "$f" ]; then
+      echo "  [$(now)] loop    │ ──────────────────────────"
+      infer_from_file "$f"
+      echo "  [$(now)] loop    │ ──────────────────────────"
+    else
+      echo "  [$(now)] loop    │ no batch available, will retry"
+    fi
+
+    echo "  ═══ sleep ${int}s ══════════════════════════"
+    sleep "$int"
+    i=$((i+1))
   done
 }
 
+# ── Main ─────────────────────────────────────────────────────
 case "${1:-once}" in
-  once|"") cmd_once ;;
-  loop)    shift; cmd_loop "${1:-60}" ;;
-  *)       echo "feed [once|loop]"; exit 1 ;;
+  once|"")  cmd_once ;;
+  loop)     shift; cmd_loop "${1:-300}" ;;
+  debug)    cmd_once ;;
+  *)
+    echo "feed — one wire from dogfeed → 1-bit model → vector"
+    echo ""
+    echo "Usage:"
+    echo "  feed              single pass (debug logs)"
+    echo "  feed loop [sec]   continuous loop every N seconds"
+    echo "  feed debug        verbose single pass"
+    echo ""
+    echo "Env:"
+    echo "  HF_TOKEN          HuggingFace token (required)"
+    echo "  FEED_MODEL        path to GGUF model"
+    exit 1
+    ;;
 esac
