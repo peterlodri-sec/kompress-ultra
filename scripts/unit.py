@@ -177,11 +177,16 @@ def infer(prompt, mem=None):
     env = os.environ.copy()
     env["LLAMA_ARG_N_GPU_LAYERS"] = "99"
 
-    result = subprocess.run(cmd, capture_output=True, text=True, timeout=120, env=env, cwd=BITNET)
+    try:
+        result = subprocess.run(cmd, capture_output=True, timeout=120, env=env, cwd=BITNET)
+        stdout = result.stdout.decode("utf-8", errors="replace")
+    except Exception as e:
+        print(f"  [unit] infer error: {e}")
+        return "(no output)", modulated
 
     # Extract output: the last stdout line that is the actual generated text
     output = "(no output)"
-    for line in reversed(result.stdout.strip().split("\n")):
+    for line in reversed(stdout.strip().split("\n")):
         line = line.strip()
         if line and not line.startswith(("llama_", "ggml_", "build:", "system_info", "sampler", "generate:", "main:", "common_")):
             output = line
