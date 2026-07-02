@@ -212,6 +212,46 @@ h1{font-size:.7rem;font-weight:400;color:#334155;letter-spacing:.2em;text-transf
 </body>
 </html>`;
 
+const JAM = `<!DOCTYPE html>
+<html lang="en">
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>jam</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:#07050a;color:#d4c5e0;font-family:system-ui,sans-serif;min-height:100vh;overflow:hidden}
+.stars{position:fixed;inset:0;pointer-events:none;z-index:0}
+.star{position:absolute;width:2px;height:2px;background:#d4c5e0;border-radius:50%;opacity:0;animation:twinkle var(--d,4s) ease-in-out infinite;animation-delay:var(--dd,0s)}
+@keyframes twinkle{0%,100%{opacity:0}50%{opacity:var(--o,0.8)}}
+.dust{position:fixed;inset:0;pointer-events:none;z-index:1;background:radial-gradient(ellipse at 50% 80%,rgba(180,100,60,0.06) 0%,transparent 60%),radial-gradient(ellipse at 30% 20%,rgba(100,60,180,0.04) 0%,transparent 50%)}
+main{position:relative;z-index:2;min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:2rem}
+.orb{width:200px;height:200px;border-radius:50%;background:radial-gradient(circle at 40% 35%,#b48bff20,#1a0a2e80);margin-bottom:2rem;position:relative;animation:drift 12s ease-in-out infinite}
+@keyframes drift{0%,100%{transform:translate(0,0) scale(1)}25%{transform:translate(20px,-10px) scale(1.02)}50%{transform:translate(-10px,-20px) scale(0.98)}75%{transform:translate(-20px,10px) scale(1.01)}}
+.orb-inner{position:absolute;inset:20%;border-radius:50%;background:radial-gradient(circle at 60% 40%,#ff6b3520,#b48bff10);animation:pulse-orb 8s ease-in-out infinite}
+@keyframes pulse-orb{0%,100%{transform:scale(1);opacity:.6}50%{transform:scale(1.15);opacity:1}}
+.tag{font-size:.5rem;color:#6a5080;letter-spacing:.3em;text-transform:uppercase;margin-top:1rem}
+.msg{font-size:.65rem;color:#8a7090;line-height:1.6;text-align:center;max-width:240px;margin-top:.5rem;opacity:.6}
+.bpm{font-size:.6rem;color:#4a3050;margin-top:2rem;letter-spacing:.1em}
+</style>
+</head>
+<body>
+<div class="stars" id="stars"></div>
+<div class="dust"></div>
+<main>
+<div class="orb"><div class="orb-inner"></div></div>
+<div class="tag">dusty space jam</div>
+<div class="msg">psychedelic stoner rock instrumental<br>somewhere in front of me</div>
+<div class="bpm">∞</div>
+</main>
+<script>
+const s=document.getElementById('stars');
+for(let i=0;i<80;i++){const d=document.createElement('div');d.className='star';
+d.style.left=Math.random()*100+'%';d.style.top=Math.random()*100+'%';
+d.style.setProperty('--d',(3+Math.random()*5)+'s');d.style.setProperty('--dd',(Math.random()*5)+'s');
+d.style.setProperty('--o',(0.3+Math.random()*0.7));s.appendChild(d);}
+</script>
+</body>
+</html>`;
+
 const LAB = (replicants, questions) => `<!DOCTYPE html>
 <html lang="en">
 <head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>lab</title>
@@ -338,6 +378,13 @@ async function handle(request) {
   // Walk — a page you walk through, not read
   if (host === "walk.vaked.dev" || url.pathname === "/walk") {
     return new Response(WALK, {
+      headers: { "content-type": "text/html;charset=utf-8" }
+    });
+  }
+
+  // Jam — dusty space jam surface for Peter
+  if (host === "jam.vaked.dev" || url.pathname === "/jam") {
+    return new Response(JAM, {
       headers: { "content-type": "text/html;charset=utf-8" }
     });
   }
