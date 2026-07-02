@@ -136,8 +136,7 @@ const THEMES = {
     entangleRGB:'0,122,74', playerLetter:'#fff'
   }
 };
-let themeName = localStorage.getItem('cosmic-theme') ||
-  (window.matchMedia && window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark');
+let themeName = localStorage.getItem('cosmic-theme') || 'light';  // adults default to daylight
 let P = THEMES[themeName];
 
 function applyTheme() {

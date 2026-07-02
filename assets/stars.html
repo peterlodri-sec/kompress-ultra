@@ -10,15 +10,15 @@
 <style>
 * { margin:0; padding:0; box-sizing:border-box; }
 html, body { height:100%; overflow:hidden; }
-body { font-family:'Fredoka', system-ui, sans-serif; background:#aee3ff; touch-action:none; }
+body { font-family:'Fredoka', system-ui, sans-serif; background:#0a0d2a; touch-action:none; }
 canvas { display:block; }
 .overlay {
-  position:fixed; inset:0; background:#eef2fbee;
+  position:fixed; inset:0; background:#0a0d2aee;
   display:flex; flex-direction:column; align-items:center; justify-content:center; gap:12px;
   text-align:center; z-index:10; padding:20px;
 }
-.overlay h1 { font-size:clamp(30px, 8vw, 48px); color:#2c3a8c; font-weight:600; }
-.overlay p { color:#5a648c; font-size:17px; max-width:340px; }
+.overlay h1 { font-size:clamp(30px, 8vw, 48px); color:#aee3ff; font-weight:600; }
+.overlay p { color:#8891b4; font-size:17px; max-width:340px; }
 .big-btn {
   margin-top:12px; padding:16px 44px; border:none; border-radius:30px;
   background:#0e5bd8; color:#fff; font-family:inherit; font-size:20px; font-weight:600;
@@ -26,13 +26,13 @@ canvas { display:block; }
 }
 .big-btn:active { transform:translateY(3px); box-shadow:0 1px 0 #0a41a0; }
 .home {
-  font-size:15px; color:#5a648c; text-decoration:none;
-  padding:8px 16px; border-radius:20px; background:#ffffffaa; margin-top:10px;
+  font-size:15px; color:#8891b4; text-decoration:none;
+  padding:8px 16px; border-radius:20px; background:#ffffff14; margin-top:10px;
 }
-.home:hover { color:#2c3a8c; }
+.home:hover { color:#cfe4ff; }
 #hud {
   position:fixed; top:12px; left:0; right:0; display:flex; justify-content:center; gap:28px;
-  font-size:clamp(18px, 5vw, 24px); font-weight:600; color:#2c3a8c; z-index:5;
+  font-size:clamp(18px, 5vw, 24px); font-weight:600; color:#cfe4ff; z-index:5;
   pointer-events:none;
 }
 #end { display:none; }
@@ -94,18 +94,22 @@ function spawnStar(now) {
 
 function drawSky() {
   const g = ctx.createLinearGradient(0,0,0,H);
-  g.addColorStop(0,'#8fd4ff'); g.addColorStop(0.7,'#cfeaff'); g.addColorStop(1,'#fff3d6');
+  g.addColorStop(0,'#0a0d2a'); g.addColorStop(0.6,'#141838'); g.addColorStop(1,'#2c1a4a');
   ctx.fillStyle = g; ctx.fillRect(0,0,W,H);
-  // Soft clouds
-  ctx.fillStyle = 'rgba(255,255,255,0.7)';
-  for(let i=0;i<4;i++){
-    const cx = ((i*263 + performance.now()*0.01) % (W+200)) - 100;
-    const cy = 80 + i*70;
-    ctx.beginPath();
-    ctx.ellipse(cx, cy, 60, 22, 0, 0, Math.PI*2);
-    ctx.ellipse(cx+40, cy+8, 45, 18, 0, 0, Math.PI*2);
-    ctx.fill();
+  // Twinkling background stars
+  const now = performance.now();
+  for(let i=0;i<60;i++){
+    const sx = (i*137.5) % W, sy = (i*89.7) % (H*0.85);
+    const tw = 0.25 + 0.35*Math.sin(now*0.002 + i*1.7);
+    ctx.fillStyle = `rgba(220,230,255,${tw})`;
+    ctx.fillRect(sx, sy, i%7===0 ? 2.5 : 1.5, i%7===0 ? 2.5 : 1.5);
   }
+  // Crescent moon glow, top-left
+  const mg = ctx.createRadialGradient(70,80,0,70,80,90);
+  mg.addColorStop(0,'rgba(232,242,255,0.25)'); mg.addColorStop(1,'transparent');
+  ctx.fillStyle = mg; ctx.beginPath(); ctx.arc(70,80,90,0,Math.PI*2); ctx.fill();
+  ctx.font='40px serif'; ctx.textAlign='center'; ctx.textBaseline='middle';
+  ctx.fillText('🌙', 70, 80);
 }
 
 function frame(now) {
@@ -148,7 +152,7 @@ function frame(now) {
   pops.forEach(p => {
     const a = 1 - (now-p.t)/700;
     ctx.font = 'bold 22px Fredoka, sans-serif';
-    ctx.fillStyle = p.golden ? `rgba(200,140,0,${a})` : `rgba(14,91,216,${a})`;
+    ctx.fillStyle = p.golden ? `rgba(255,210,90,${a})` : `rgba(140,190,255,${a})`;
     ctx.fillText(p.text, p.x, p.y - (now-p.t)*0.05);
   });
 

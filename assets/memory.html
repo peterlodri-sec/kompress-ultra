@@ -12,17 +12,27 @@
 html, body { height:100%; }
 body {
   font-family:'Fredoka', system-ui, sans-serif;
-  background:linear-gradient(180deg, #aee3ff 0%, #e6f5ff 60%, #fff8e8 100%);
-  color:#1c2340;
+  background:linear-gradient(180deg, #0a0d2a 0%, #141838 60%, #241a45 100%);
+  color:#e6ecff;
   display:flex; flex-direction:column; align-items:center;
   min-height:100%; padding:16px;
 }
+body::before {
+  content:''; position:fixed; inset:0; pointer-events:none;
+  background-image:
+    radial-gradient(2px 2px at 12% 18%, #ffffffcc, transparent),
+    radial-gradient(1.5px 1.5px at 68% 8%, #ffffff99, transparent),
+    radial-gradient(2px 2px at 85% 32%, #ffffffbb, transparent),
+    radial-gradient(1.5px 1.5px at 30% 68%, #ffffff88, transparent),
+    radial-gradient(2px 2px at 55% 88%, #ffffffaa, transparent),
+    radial-gradient(1.5px 1.5px at 92% 72%, #ffffff99, transparent);
+}
 header { text-align:center; margin:8px 0 16px; }
-h1 { font-size:clamp(28px, 7vw, 44px); font-weight:600; letter-spacing:1px; color:#2c3a8c; }
-.sub { font-size:15px; color:#5a648c; }
+h1 { font-size:clamp(28px, 7vw, 44px); font-weight:600; letter-spacing:1px; color:#aee3ff; }
+.sub { font-size:15px; color:#8891b4; }
 #stats {
   display:flex; gap:24px; margin-bottom:16px;
-  font-size:16px; color:#2c3a8c; font-weight:500;
+  font-size:16px; color:#cfe4ff; font-weight:500;
 }
 #grid {
   display:grid; grid-template-columns:repeat(4, 1fr); gap:10px;
@@ -43,24 +53,24 @@ h1 { font-size:clamp(28px, 7vw, 44px); font-weight:600; letter-spacing:1px; colo
 }
 .back {
   background:#2c3a8c; color:#aee3ff; font-size:clamp(20px, 6vw, 30px);
-  box-shadow:0 3px 0 #1c2870;
+  box-shadow:0 3px 0 #1c2870, 0 0 14px #2c3a8c66;
 }
 .front {
-  background:#ffffff; transform:rotateY(180deg);
+  background:#1a2050; transform:rotateY(180deg);
   font-size:clamp(28px, 9vw, 46px);
-  box-shadow:0 3px 0 #d5ddf0;
+  box-shadow:0 3px 0 #0c1030;
 }
-.card.matched .front { outline:3px solid #35b06f; outline-offset:-3px; }
+.card.matched .front { outline:3px solid #4ade8c; outline-offset:-3px; box-shadow:0 3px 0 #0c1030, 0 0 16px #4ade8c55; }
 .card.matched { animation:pop .4s ease; cursor:default; }
 @keyframes pop { 50% { transform:scale(1.08); } }
-.card:focus-visible { outline:3px solid #0e5bd8; outline-offset:2px; border-radius:16px; }
+.card:focus-visible { outline:3px solid #7ab3ff; outline-offset:2px; border-radius:16px; }
 #win {
-  position:fixed; inset:0; background:#eef2fbee;
+  position:fixed; inset:0; background:#0a0d2aee;
   display:none; flex-direction:column; align-items:center; justify-content:center; gap:12px;
   text-align:center; z-index:10;
 }
-#win h2 { font-size:clamp(28px, 8vw, 42px); color:#2c3a8c; }
-#win p { color:#5a648c; font-size:17px; }
+#win h2 { font-size:clamp(28px, 8vw, 42px); color:#aee3ff; }
+#win p { color:#8891b4; font-size:17px; }
 .big-btn {
   margin-top:12px; padding:14px 36px; border:none; border-radius:28px;
   background:#0e5bd8; color:#fff; font-family:inherit; font-size:18px; font-weight:600;
@@ -68,10 +78,10 @@ h1 { font-size:clamp(28px, 7vw, 44px); font-weight:600; letter-spacing:1px; colo
 }
 .big-btn:active { transform:translateY(3px); box-shadow:0 1px 0 #0a41a0; }
 .home {
-  margin-top:18px; font-size:15px; color:#5a648c; text-decoration:none;
-  padding:8px 16px; border-radius:20px; background:#ffffffaa;
+  margin-top:18px; font-size:15px; color:#8891b4; text-decoration:none;
+  padding:8px 16px; border-radius:20px; background:#ffffff14;
 }
-.home:hover { color:#2c3a8c; }
+.home:hover { color:#cfe4ff; }
 .confetti {
   position:fixed; top:-40px; font-size:26px; z-index:9; pointer-events:none;
   animation:fall linear forwards;

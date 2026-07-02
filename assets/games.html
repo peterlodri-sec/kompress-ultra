@@ -12,42 +12,52 @@
 html, body { min-height:100%; }
 body {
   font-family:'Fredoka', system-ui, sans-serif;
-  background:linear-gradient(180deg, #aee3ff 0%, #e6f5ff 55%, #fff8e8 100%);
-  color:#1c2340;
+  background:linear-gradient(180deg, #0a0d2a 0%, #141838 55%, #241a45 100%);
+  color:#e6ecff;
   display:flex; flex-direction:column; align-items:center;
   padding:40px 20px; position:relative; overflow-x:hidden;
 }
-/* The sun — daytime cosmos */
+/* The moon — night cosmos */
 body::before {
-  content:''; position:fixed; top:-80px; right:-80px; width:260px; height:260px;
-  border-radius:50%; background:radial-gradient(circle, #ffe9a8 0%, #ffd76e 45%, transparent 70%);
+  content:''; position:fixed; top:-60px; right:-60px; width:240px; height:240px;
+  border-radius:50%; background:radial-gradient(circle, #e8f2ff55 0%, #b9d4ff33 45%, transparent 70%);
   pointer-events:none;
 }
+body::after {
+  content:''; position:fixed; inset:0; pointer-events:none;
+  background-image:
+    radial-gradient(2px 2px at 12% 18%, #ffffffcc, transparent),
+    radial-gradient(1.5px 1.5px at 68% 8%, #ffffff99, transparent),
+    radial-gradient(2px 2px at 85% 42%, #ffffffbb, transparent),
+    radial-gradient(1.5px 1.5px at 30% 62%, #ffffff88, transparent),
+    radial-gradient(2px 2px at 55% 85%, #ffffffaa, transparent),
+    radial-gradient(1.5px 1.5px at 8% 82%, #ffffff99, transparent);
+}
 header { text-align:center; margin-bottom:36px; }
-h1 { font-size:clamp(32px, 8vw, 54px); font-weight:600; letter-spacing:1px; color:#2c3a8c; }
-.sub { font-size:17px; color:#5a648c; margin-top:6px; }
+h1 { font-size:clamp(32px, 8vw, 54px); font-weight:600; letter-spacing:1px; color:#aee3ff; }
+.sub { font-size:17px; color:#8891b4; margin-top:6px; }
 #cards {
   display:grid; grid-template-columns:repeat(auto-fit, minmax(240px, 1fr));
   gap:20px; width:min(94vw, 860px);
 }
 .game-card {
-  background:#ffffff; border-radius:24px; padding:32px 24px;
+  background:#161c48; border-radius:24px; padding:32px 24px;
   text-align:center; text-decoration:none; color:inherit;
-  box-shadow:0 4px 0 #d5ddf0;
+  box-shadow:0 4px 0 #0c1030, 0 0 18px #2c3a8c33;
   transition:transform .15s ease, box-shadow .15s ease;
 }
 .game-card:hover, .game-card:focus-visible {
-  transform:translateY(-4px); box-shadow:0 8px 0 #d5ddf0;
+  transform:translateY(-4px); box-shadow:0 8px 0 #0c1030, 0 0 26px #2c3a8c55;
   outline:none;
 }
-.game-card:focus-visible { outline:3px solid #0e5bd8; outline-offset:3px; }
+.game-card:focus-visible { outline:3px solid #7ab3ff; outline-offset:3px; }
 .game-card .icon { font-size:64px; display:block; margin-bottom:12px; }
-.game-card h2 { font-size:24px; color:#2c3a8c; font-weight:600; }
-.game-card p { font-size:15px; color:#5a648c; margin-top:6px; }
-.tag { display:inline-block; margin-top:12px; font-size:13px; color:#0e5bd8;
-       background:#e3edfd; padding:4px 14px; border-radius:14px; }
-footer { margin-top:40px; font-size:13px; color:#8891b4; text-align:center; }
-footer a { color:#5a648c; }
+.game-card h2 { font-size:24px; color:#cfe4ff; font-weight:600; }
+.game-card p { font-size:15px; color:#8891b4; margin-top:6px; }
+.tag { display:inline-block; margin-top:12px; font-size:13px; color:#9db9ff;
+       background:#22307a; padding:4px 14px; border-radius:14px; }
+footer { margin-top:40px; font-size:13px; color:#5a648c; text-align:center; }
+footer a { color:#8891b4; }
 @media (prefers-reduced-motion: reduce) {
   .game-card { transition:none; }
 }
@@ -57,7 +67,7 @@ footer a { color:#5a648c; }
 
 <header>
   <h1>COSMIC PLAYGROUND</h1>
-  <div class="sub">games for the whole family ☀️</div>
+  <div class="sub">games for the whole family 🌙</div>
 </header>
 
 <div id="cards">
