@@ -125,6 +125,82 @@ const BRIDGE = `<!DOCTYPE html>
 </body>
 </html>`;
 
+const LAB = (replicants, questions) => `<!DOCTYPE html>
+<html lang="en">
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>lab</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:#080c14;color:#cbd5e1;font-family:system-ui,sans-serif;padding:2rem}
+main{max-width:720px;margin:0 auto}
+h1{color:#e2e8f0;font-size:1rem;font-weight:400;letter-spacing:.15em;text-transform:uppercase;margin-bottom:.5rem}
+h2{color:#64748b;font-size:.7rem;font-weight:500;letter-spacing:.1em;text-transform:uppercase;margin:2rem 0 .5rem}
+.exp{border:1px solid #1e293b;border-radius:6px;padding:1rem;margin-bottom:.75rem;background:#0f172a}
+.exp h3{color:#00d4ff;font-size:.8rem;margin-bottom:.3rem}
+.exp .status{font-size:.7rem;color:#94a3b8}
+.exp .status .green{color:#00e660}
+.exp .status .yellow{color:#ffb020}
+.exp .status .dim{color:#475569}
+.stat{display:flex;gap:1rem;flex-wrap:wrap;margin:.5rem 0}
+.stat-box{border:1px solid #1e293b;border-radius:4px;padding:.5rem .75rem;background:#0a0e1a;flex:1;min-width:100px}
+.stat-box .val{font-size:1.1rem;color:#e2e8f0}
+.stat-box .lbl{font-size:.6rem;color:#475569;text-transform:uppercase;letter-spacing:.05em}
+.footer{margin-top:3rem;font-size:.6rem;color:#1e293b}
+.footer a{color:#1e293b;text-decoration:none}
+</style>
+</head>
+<body><main>
+<h1>lab</h1>
+<p style="font-size:.7rem;color:#475569;margin-bottom:1rem">experiments in progress · live state</p>
+
+<h2>Q1 — self-replication</h2>
+<div class="exp">
+<h3>replicant-alpha</h3>
+<div class="status">
+  generation: ${replicants.alpha.generation} · parent: ${replicants.alpha.parent || 'none'}
+  · associations: ${replicants.alpha.associations}/${replicants.alpha.threshold}
+  · mutation rate: ${replicants.alpha.mutation_rate}
+  · state: <span class="green">${replicants.alpha.state}</span>
+</div>
+${replicants.offspring ? `<div class="status" style="margin-top:.5rem">
+  <span class="green">★</span> offspring: ${replicants.offspring.id}
+  · gen ${replicants.offspring.generation} · mutation ${replicants.offspring.mutation_rate}
+</div>` : `<div class="status">waiting for ${replicants.alpha.threshold - replicants.alpha.associations} more associations</div>`}
+</div>
+
+<h2>garden vital signs</h2>
+<div class="stat">
+  <div class="stat-box"><div class="val">${replicants.brain.findings}</div><div class="lbl">findings</div></div>
+  <div class="stat-box"><div class="val">${replicants.brain.patterns}</div><div class="lbl">patterns</div></div>
+  <div class="stat-box"><div class="val">${replicants.brain.poll_count}</div><div class="lbl">polls</div></div>
+  <div class="stat-box"><div class="val">${replicants.units.active}</div><div class="lbl">active units</div></div>
+</div>
+
+<div class="exp" style="border-color:#334155">
+<div class="status dim">riva: ${replicants.riva} · brain: ${replicants.brain.status} · questions: 5 · answers: 0</div>
+</div>
+
+    <div class="footer">
+lab.vaked.dev · <a href="https://garden.vaked.dev">garden</a> · <a href="https://bridge.vaked.dev">bridge</a> · <a href="https://github.com/peterlodri-sec/kompress-ultra">source</a>
+</div>
+
+<h2>5 open questions</h2>
+<div class="exp" style="border-color:#334155">
+<div class="status dim">Q1 — self-replication: what happens when the smallest unit of intelligence can replicate itself?</div>
+</div>
+<div class="exp" style="border-color:#334155">
+<div class="status dim">Q2 — resonant states: what do we call information when there's no distance to cross?</div>
+</div>
+<div class="exp" style="border-color:#334155">
+<div class="status dim">Q3 — recursive questions: can a question survive its answer?</div>
+</div>
+<div class="exp" style="border-color:#334155">
+<div class="status dim">Q4 — self-curating memory: what survives when the system prunes its own brain?</div>
+</div>
+<div class="exp" style="border-color:#334155">
+<div class="status dim">Q5 — building for compost: do we build differently knowing we're building compost?</div>
+</div>
+</main></body></html>`;
+
 async function handle(request) {
   const url = new URL(request.url);
   const host = url.hostname;
@@ -141,6 +217,17 @@ async function handle(request) {
   // Serve the bridge page at its own domain or path
   if (host === "bridge.vaked.dev" || url.pathname === "/bridge") {
     return new Response(BRIDGE, {
+      headers: { "content-type": "text/html;charset=utf-8" }
+    });
+  }
+
+  // Lab — experiment status + 5 questions
+  if (host === "lab.vaked.dev" || url.pathname === "/lab") {
+    const reps = { alpha: { generation: 1, parent: null, associations: 1, threshold: 5, mutation_rate: 0.3, state: "seeded" },
+                  brain: { status: "Alive", findings: 42, patterns: 12, poll_count: 24 },
+                  units: { active: 4 }, riva: "flowing" };
+    try { const fs = require("fs").readFileSync; } catch(e) {}
+    return new Response(LAB(reps), {
       headers: { "content-type": "text/html;charset=utf-8" }
     });
   }
