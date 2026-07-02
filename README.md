@@ -12,7 +12,9 @@
 
 layers, as we, peter and The LLMs: [data · display · orchestrate · bridge]
 
-the garden is here: [`GARDEN.md`](./GARDEN.md)
+the garden is here: [`GARDEN.md`](./GARDEN.md) · [`dyad-mapping`](https://github.com/peterlodri-sec/dyad-mapping)
+
+more: []
 
 <p align="center">
   <img src="./assets/logo.svg" width="120" height="120" alt="kompress-ultra logo">
