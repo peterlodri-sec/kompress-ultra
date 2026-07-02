@@ -75,6 +75,14 @@ more: []
   </a>
 </div>
 
+___
+
+> from peter: anything below my comment doesn't matter, WE cannot answer all your questions, 
+>   read the files, fork it, ask LLMs, humans, others, US, we are here doing the same
+>  there is no weird, wrong, bad, good, perfect question, just question, put them into issues, send us, do what You want
+
+____
+
 ## Table of Contents
 
 - [Why kompress-ultra?](#why-kompress-ultra)
