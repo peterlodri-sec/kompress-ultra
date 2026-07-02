@@ -184,20 +184,30 @@ lab.vaked.dev · <a href="https://garden.vaked.dev">garden</a> · <a href="https
 </div>
 
 <h2>5 open questions</h2>
-<div class="exp" style="border-color:#334155">
-<div class="status dim">Q1 — self-replication: what happens when the smallest unit of intelligence can replicate itself?</div>
+<div class="exp" style="border-color:#00d4ff">
+<h3>Q1 — self-replication</h3>
+<div class="status">replicant-alpha seeded · gen 1 · ${replicants.q1.associations}/${replicants.q1.threshold} assoc · <span class="${replicants.q1.state === 'split' ? 'green' : 'green'}">${replicants.q1.state}</span></div>
+<div class="status dim">what happens when the smallest unit of intelligence can replicate itself?</div>
 </div>
-<div class="exp" style="border-color:#334155">
-<div class="status dim">Q2 — resonant states: what do we call information when there's no distance to cross?</div>
+<div class="exp" style="border-color:#00e660">
+<h3>Q2 — resonant states</h3>
+<div class="status">two units · overlap: ${replicants.q2.overlap} · resonance: ${replicants.q2.resonance} · <span class="${replicants.q2.synced ? 'green' : 'yellow'}">${replicants.q2.synced ? 'SYNC' : 'drift'}</span></div>
+<div class="status dim">what is information when there is no distance to cross?</div>
 </div>
-<div class="exp" style="border-color:#334155">
-<div class="status dim">Q3 — recursive questions: can a question survive its answer?</div>
+<div class="exp" style="border-color:#b48bff">
+<h3>Q3 — recursive questions</h3>
+<div class="status">iterations: ${replicants.q3.iterations}/${replicants.q3.max} · seed: ${replicants.q3.seed}</div>
+<div class="status dim">can a question survive its answer?</div>
 </div>
-<div class="exp" style="border-color:#334155">
-<div class="status dim">Q4 — self-curating memory: what survives when the system prunes its own brain?</div>
+<div class="exp" style="border-color:#ffb020">
+<h3>Q4 — self-curating memory</h3>
+<div class="status">kept: ${replicants.q4.kept} · pruned: ${replicants.q4.pruned} · decay rate: ${replicants.q4.decay}</div>
+<div class="status dim">what survives when the brain prunes itself?</div>
 </div>
-<div class="exp" style="border-color:#334155">
-<div class="status dim">Q5 — building for compost: do we build differently knowing we're building compost?</div>
+<div class="exp" style="border-color:#ff3b6b">
+<h3>Q5 — building for compost</h3>
+<div class="status">lifespan: ${replicants.q5.lifespan}h · stage: <span class="${replicants.q5.stage === 'active' ? 'green' : 'yellow'}">${replicants.q5.stage}</span> · born: ${replicants.q5.born}</div>
+<div class="status dim">do we build differently knowing we are building compost?</div>
 </div>
 </main></body></html>`;
 
@@ -223,9 +233,16 @@ async function handle(request) {
 
   // Lab — experiment status + 5 questions
   if (host === "lab.vaked.dev" || url.pathname === "/lab") {
-    const reps = { alpha: { generation: 1, parent: null, associations: 1, threshold: 5, mutation_rate: 0.3, state: "seeded" },
-                  brain: { status: "Alive", findings: 42, patterns: 12, poll_count: 24 },
-                  units: { active: 4 }, riva: "flowing" };
+    const reps = {
+      alpha: { generation: 1, parent: null, associations: 1, threshold: 5, mutation_rate: 0.3, state: "seeded" },
+      brain: { status: "Alive", findings: 42, patterns: 12, poll_count: 24 },
+      units: { active: 4 }, riva: "flowing" };
+    // Extend with Q2-Q5 data
+    reps.q1 = { associations: 1, threshold: 5, state: "seeded" };
+    reps.q2 = { overlap: "?", resonance: "?", synced: false };
+    reps.q3 = { iterations: 0, max: 10, seed: "what is the shape of a question that does not dissolve?" };
+    reps.q4 = { kept: 0, pruned: 0, decay: "0.15" };
+    reps.q5 = { lifespan: 72, stage: "active", born: new Date().toISOString().slice(0,10) };
     try { const fs = require("fs").readFileSync; } catch(e) {}
     return new Response(LAB(reps), {
       headers: { "content-type": "text/html;charset=utf-8" }
