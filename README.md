@@ -12,7 +12,7 @@
 
 layers, as we, peter and The LLMs: [data · display · orchestrate · bridge]
 
-the garden is here: [`GARDEN.md`](./GARDEN.md) · [`dyad-mapping`](https://github.com/peterlodri-sec/dyad-mapping)
+the garden is here: [`GARDEN.md`](./GARDEN.md) · [`dyad-mapping`](https://github.com/peterlodri-sec/dyad-mapping) · [`riva.vaked.dev`](https://riva.vaked.dev)
 
 more: []
 
