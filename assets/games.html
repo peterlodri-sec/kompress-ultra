@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Cosmic Playground</title>
+<meta name="description" content="Games for the whole family — mazes, memory, and falling stars in the daytime cosmos.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600&display=swap" rel="stylesheet">
+<style>
+* { margin:0; padding:0; box-sizing:border-box; }
+html, body { min-height:100%; }
+body {
+  font-family:'Fredoka', system-ui, sans-serif;
+  background:linear-gradient(180deg, #aee3ff 0%, #e6f5ff 55%, #fff8e8 100%);
+  color:#1c2340;
+  display:flex; flex-direction:column; align-items:center;
+  padding:40px 20px; position:relative; overflow-x:hidden;
+}
+/* The sun — daytime cosmos */
+body::before {
+  content:''; position:fixed; top:-80px; right:-80px; width:260px; height:260px;
+  border-radius:50%; background:radial-gradient(circle, #ffe9a8 0%, #ffd76e 45%, transparent 70%);
+  pointer-events:none;
+}
+header { text-align:center; margin-bottom:36px; }
+h1 { font-size:clamp(32px, 8vw, 54px); font-weight:600; letter-spacing:1px; color:#2c3a8c; }
+.sub { font-size:17px; color:#5a648c; margin-top:6px; }
+#cards {
+  display:grid; grid-template-columns:repeat(auto-fit, minmax(240px, 1fr));
+  gap:20px; width:min(94vw, 860px);
+}
+.game-card {
+  background:#ffffff; border-radius:24px; padding:32px 24px;
+  text-align:center; text-decoration:none; color:inherit;
+  box-shadow:0 4px 0 #d5ddf0;
+  transition:transform .15s ease, box-shadow .15s ease;
+}
+.game-card:hover, .game-card:focus-visible {
+  transform:translateY(-4px); box-shadow:0 8px 0 #d5ddf0;
+  outline:none;
+}
+.game-card:focus-visible { outline:3px solid #0e5bd8; outline-offset:3px; }
+.game-card .icon { font-size:64px; display:block; margin-bottom:12px; }
+.game-card h2 { font-size:24px; color:#2c3a8c; font-weight:600; }
+.game-card p { font-size:15px; color:#5a648c; margin-top:6px; }
+.tag { display:inline-block; margin-top:12px; font-size:13px; color:#0e5bd8;
+       background:#e3edfd; padding:4px 14px; border-radius:14px; }
+footer { margin-top:40px; font-size:13px; color:#8891b4; text-align:center; }
+footer a { color:#5a648c; }
+@media (prefers-reduced-motion: reduce) {
+  .game-card { transition:none; }
+}
+</style>
+</head>
+<body>
+
+<header>
+  <h1>COSMIC PLAYGROUND</h1>
+  <div class="sub">games for the whole family ☀️</div>
+</header>
+
+<div id="cards">
+  <a class="game-card" href="maze.html">
+    <span class="icon">🌀</span>
+    <h2>Cosmic Maze</h2>
+    <p>Race through the maze and reach COSMOS first</p>
+    <span class="tag">2 players · keyboard</span>
+  </a>
+  <a class="game-card" href="memory.html">
+    <span class="icon">🃏</span>
+    <h2>Space Match</h2>
+    <p>Flip the cards and find all the matching pairs</p>
+    <span class="tag">1 player · tap or click</span>
+  </a>
+  <a class="game-card" href="stars.html">
+    <span class="icon">⭐</span>
+    <h2>Star Catcher</h2>
+    <p>Fly your rocket and catch the falling stars</p>
+    <span class="tag">1 player · keys or touch</span>
+  </a>
+</div>
+
+<footer>
+  part of <a href="brain-dist.html">kompress-ultra</a> · the daytime cosmos
+</footer>
+
+</body>
+</html>
