@@ -1,0 +1,128 @@
+# https://taskfile.dev — brew install go-task/tap/go-task
+
+version: '3'
+
+vars:
+  WITNESS_URL: https://raw.githubusercontent.com/peterlodri-sec/kompress-ultra/main/garden/seeds/pi2-witness.sh
+  RIVA_HOST: "{{.RIVA_HOST | default \"riva.local\"}}"
+
+tasks:
+  default:
+    desc: List all tasks
+    cmds:
+      - task --list
+
+  # ── Burn ───────────────────────────────────────────
+  burn:
+    desc: Open Raspberry Pi Imager to flash SD
+    cmds:
+      - open -a "Raspberry Pi Imager"
+
+  burn-cli:
+    desc: Flash SD from CLI (requires rpi-imager or dd)
+    summary: |
+      Usage: task burn-cli -- /dev/diskX
+      Downloads Pi OS Lite and writes to SD card.
+    cmds:
+      - echo "Downloading Raspberry Pi OS Lite (32-bit)..."
+      - curl -sL https://downloads.raspberrypi.com/raspios_lite_armhf_latest -o /tmp/raspios-lite.zip
+      - echo "Extracting..."
+      - unzip -p /tmp/raspios-lite.zip > /tmp/raspios-lite.img
+      - echo "Writing to {{.1}}..."
+      - sudo dd if=/tmp/raspios-lite.img of={{.1}} bs=4M status=progress
+      - echo "Done. Set up SSH/WiFi on the boot partition."
+
+  # ── Deploy witness ─────────────────────────────────
+  deploy:
+    desc: Deploy RIVA witness to a Pi over SSH
+    summary: |
+      Usage: task deploy -- pi@rpi-witness.local
+      Installs the witness script and systemd service.
+    cmds:
+      - echo "Deploying witness to {{.1}}..."
+      - |
+        ssh {{.1}} '
+          curl -sL {{.WITNESS_URL}} -o /tmp/witness.sh
+          sudo mkdir -p /opt/garden
+          sudo cp /tmp/witness.sh /opt/garden/witness.sh
+          sudo chmod +x /opt/garden/witness.sh
+          sudo tee /etc/systemd/system/riva-witness.service > /dev/null << "EOF"
+        [Unit]
+        Description=RIVA Witness
+        After=network-online.target
+        Wants=network-online.target
+        [Service]
+        Type=simple
+        ExecStart=/opt/garden/witness.sh {{.RIVA_HOST}}
+        Restart=on-failure
+        RestartSec=30
+        [Install]
+        WantedBy=multi-user.target
+        EOF
+          sudo systemctl daemon-reload
+          sudo systemctl enable --now riva-witness
+          sudo systemctl status riva-witness --no-pager
+        '
+
+  # ── Witness management ─────────────────────────────
+  status:
+    desc: Check witness status on a Pi
+    summary: Usage: task status -- pi@hostname
+    cmds:
+      - ssh {{.1}} 'sudo systemctl status riva-witness --no-pager'
+
+  logs:
+    desc: Follow witness logs on a Pi
+    summary: Usage: task logs -- pi@hostname
+    cmds:
+      - ssh {{.1}} 'journalctl -u riva-witness -f'
+
+  restart:
+    desc: Restart witness on a Pi
+    summary: Usage: task restart -- pi@hostname
+    cmds:
+      - ssh {{.1}} 'sudo systemctl restart riva-witness'
+
+  # ── Tailnet ────────────────────────────────────────
+  tailnet:
+    desc: Install Tailscale on a Pi and join the mesh
+    summary: Usage: task tailnet -- pi@hostname
+    cmds:
+      - ssh {{.1}} 'curl -fsSL https://tailscale.com/install.sh | sh && sudo tailscale up'
+
+  # ── Mesh deploy (all nodes) ────────────────────────
+  mesh:
+    desc: Deploy witness to all reachable mesh nodes
+    cmds:
+      - task: deploy
+        vars: {1: dev-main}
+      - task: deploy
+        vars: {1: agent-node-01}
+      - echo "Pi 4 skipped (needs auth). Run: task deploy rpi4"
+
+  # ── RIVA itself ────────────────────────────────────
+  riva:
+    desc: Start RIVA loop (on this machine)
+    dir: /Users/lodripeter/workspace/peterlodri-sec/kompress-ultra
+    cmds:
+      - bash scripts/riva.sh loop
+
+  riva-once:
+    desc: Run RIVA single pass
+    dir: /Users/lodripeter/workspace/peterlodri-sec/kompress-ultra
+    cmds:
+      - bash scripts/riva.sh once
+
+  # ── Info ───────────────────────────────────────────
+  garden:
+    desc: Show garden status
+    cmds:
+      - echo "═══ garden ═══"
+      - echo "riva:   garden.vaked.dev"
+      - echo "shore:  GET /v1/riva"
+      - echo "code:   github.com/peterlodri-sec/kompress-ultra"
+      - echo "seed:   elder-plinius/ENTHEA#2"
+      - echo "river:  scripts/riva.sh"
+      - echo "witnesses:"
+      - ssh -o ConnectTimeout=3 dev-main 'pgrep -f witness && echo "  dev-main: alive" || echo "  dev-main: stopped"' 2>/dev/null || echo "  dev-main: unreachable"
+      - ssh -o ConnectTimeout=3 agent-node-01 'pgrep -f witness && echo "  agent-node-01: alive" || echo "  agent-node-01: stopped"' 2>/dev/null || echo "  agent-node-01: unreachable"
