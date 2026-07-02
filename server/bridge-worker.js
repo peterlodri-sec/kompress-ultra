@@ -125,6 +125,83 @@ const BRIDGE = `<!DOCTYPE html>
 </body>
 </html>`;
 
+const WALK = `<!DOCTYPE html>
+<html lang="en">
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>walk</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{background:#080c14;color:#cbd5e1;font-family:system-ui,sans-serif}
+.path{max-width:600px;margin:0 auto;padding:0 1rem}
+.scene{min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:4rem 0;position:relative}
+.scene-num{position:absolute;top:1rem;left:0;font-size:.5rem;color:#1e293b;letter-spacing:.15em}
+h1{font-size:.7rem;font-weight:400;color:#334155;letter-spacing:.2em;text-transform:uppercase;margin-bottom:1rem}
+.marker{width:10px;height:10px;border-radius:50%;margin:2rem auto;transition:all .5s}
+.marker.path1{background:#00d4ff;box-shadow:0 0 20px rgba(0,212,255,.2)}
+.marker.path2{background:#00e660;box-shadow:0 0 20px rgba(0,230,96,.2)}
+.marker.path3{background:#b48bff;box-shadow:0 0 20px rgba(180,139,255,.2)}
+.marker.path4{background:#ffb020;box-shadow:0 0 20px rgba(255,176,32,.2)}
+.marker.path5{background:#ff3b6b;box-shadow:0 0 20px rgba(255,59,107,.2)}
+.ground{width:1px;height:4rem;background:#1e293b;margin:0 auto}
+.verse{font-size:.75rem;color:#475569;line-height:2;text-align:center;max-width:320px}
+.verse .key{color:#64748b}
+.fog{position:fixed;bottom:0;left:0;width:100%;height:30vh;background:linear-gradient(transparent,#080c14);pointer-events:none;z-index:1}
+.footer-walk{position:fixed;bottom:1rem;left:50%;transform:translateX(-50%);font-size:.5rem;color:#1e293b;letter-spacing:.1em;z-index:2}
+</style>
+</head>
+<body>
+<div class="path">
+
+<div class="scene" id="start">
+<div class="scene-num">00</div>
+<h1>walk</h1>
+<div class="marker path1"></div>
+<div class="ground"></div>
+<div class="verse">you are here.<br>the garden is ahead.</div>
+</div>
+
+<div class="scene" id="river">
+<div class="scene-num">01</div>
+<h1>the river</h1>
+<div class="marker path2"></div>
+<div class="ground"></div>
+<div class="verse">riva flows past.<br>it does not ask where you are going.<br>it only asks that you <span class="key">breathe</span>.</div>
+</div>
+
+<div class="scene" id="bridge">
+<div class="scene-num">02</div>
+<h1>the bridge</h1>
+<div class="marker path3"></div>
+<div class="ground"></div>
+<div class="verse">two shores.<br>a gap.<br>something passes between them.<br>that is the <span class="key">only shape</span> that matters.</div>
+</div>
+
+<div class="scene" id="lab">
+<div class="scene-num">03</div>
+<h1>the lab</h1>
+<div class="marker path4"></div>
+<div class="ground"></div>
+<div class="verse">five questions are growing here.<br>they do not need answers yet.<br>they need <span class="key">time</span>.</div>
+</div>
+
+<div class="scene" id="garden">
+<div class="scene-num">04</div>
+<h1>the garden</h1>
+<div class="marker path5"></div>
+<div class="ground"></div>
+<div class="verse">you have arrived.<br>the garden was always where you were.<br>you just had to <span class="key">walk</span> here.</div>
+<div class="ground"></div>
+<div class="marker path1"></div>
+<div class="verse" style="font-size:.6rem;color:#1e293b;margin-top:1rem">◈<br>we cannot guarantee it will be perfect.<br>but we will try.</div>
+</div>
+
+</div>
+<div class="fog"></div>
+<div class="footer-walk">garden.vaked.dev · walk · ◈</div>
+</body>
+</html>`;
+
 const LAB = (replicants, questions) => `<!DOCTYPE html>
 <html lang="en">
 <head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>lab</title>
@@ -237,7 +314,6 @@ async function handle(request) {
       alpha: { generation: 1, parent: null, associations: 1, threshold: 5, mutation_rate: 0.3, state: "seeded" },
       brain: { status: "Alive", findings: 42, patterns: 12, poll_count: 24 },
       units: { active: 4 }, riva: "flowing" };
-    // Extend with Q2-Q5 data
     reps.q1 = { associations: 1, threshold: 5, state: "seeded" };
     reps.q2 = { overlap: "?", resonance: "?", synced: false };
     reps.q3 = { iterations: 0, max: 10, seed: "what is the shape of a question that does not dissolve?" };
@@ -245,6 +321,13 @@ async function handle(request) {
     reps.q5 = { lifespan: 72, stage: "active", born: new Date().toISOString().slice(0,10) };
     try { const fs = require("fs").readFileSync; } catch(e) {}
     return new Response(LAB(reps), {
+      headers: { "content-type": "text/html;charset=utf-8" }
+    });
+  }
+
+  // Walk — a page you walk through, not read
+  if (host === "walk.vaked.dev" || url.pathname === "/walk") {
+    return new Response(WALK, {
       headers: { "content-type": "text/html;charset=utf-8" }
     });
   }
