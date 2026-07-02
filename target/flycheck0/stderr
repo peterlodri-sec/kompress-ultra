@@ -1,0 +1,50 @@
+   0.064971583s  INFO prepare_target{force=false package_id=kompress-cli v0.1.0 (/Users/lodripeter/workspace/peterlodri-sec/kompress-ultra/crates/kompress-cli) target="kompress"}: cargo::core::compiler::fingerprint: fingerprint error for kompress-cli v0.1.0 (/Users/lodripeter/workspace/peterlodri-sec/kompress-ultra/crates/kompress-cli)/Check { test: false }/TargetInner { name: "kompress", doc: true, ..: with_path("/Users/lodripeter/workspace/peterlodri-sec/kompress-ultra/crates/kompress-cli/src/main.rs", Edition2021) }
+   0.065184583s  INFO prepare_target{force=false package_id=kompress-cli v0.1.0 (/Users/lodripeter/workspace/peterlodri-sec/kompress-ultra/crates/kompress-cli) target="kompress"}: cargo::core::compiler::fingerprint:     err: failed to read `/Users/lodripeter/workspace/peterlodri-sec/kompress-ultra/target/debug/.fingerprint/kompress-cli-ac4f3691691301be/bin-kompress`
+
+Caused by:
+    No such file or directory (os error 2)
+
+Stack backtrace:
+   0: <std::backtrace::Backtrace>::create
+   1: cargo_util::paths::read_bytes
+   2: cargo_util::paths::read
+   3: cargo::core::compiler::fingerprint::_compare_old_fingerprint
+   4: cargo::core::compiler::fingerprint::prepare_target
+   5: cargo::core::compiler::compile
+   6: <cargo::core::compiler::build_runner::BuildRunner>::compile
+   7: cargo::ops::cargo_compile::compile_with_exec
+   8: cargo::ops::cargo_compile::compile
+   9: cargo::commands::check::exec
+  10: <cargo::cli::Exec>::exec
+  11: cargo::main
+  12: std::sys::backtrace::__rust_begin_short_backtrace::<fn(), ()>
+  13: std::rt::lang_start::<()>::{closure#0}
+  14: std::rt::lang_start_internal
+  15: _main
+   0.097719917s  INFO prepare_target{force=false package_id=kompress-cli v0.1.0 (/Users/lodripeter/workspace/peterlodri-sec/kompress-ultra/crates/kompress-cli) target="kompress"}: cargo::core::compiler::fingerprint: fingerprint error for kompress-cli v0.1.0 (/Users/lodripeter/workspace/peterlodri-sec/kompress-ultra/crates/kompress-cli)/Check { test: true }/TargetInner { name: "kompress", doc: true, ..: with_path("/Users/lodripeter/workspace/peterlodri-sec/kompress-ultra/crates/kompress-cli/src/main.rs", Edition2021) }
+   0.097737458s  INFO prepare_target{force=false package_id=kompress-cli v0.1.0 (/Users/lodripeter/workspace/peterlodri-sec/kompress-ultra/crates/kompress-cli) target="kompress"}: cargo::core::compiler::fingerprint:     err: failed to read `/Users/lodripeter/workspace/peterlodri-sec/kompress-ultra/target/debug/.fingerprint/kompress-cli-f66071de772d56b2/test-bin-kompress`
+
+Caused by:
+    No such file or directory (os error 2)
+
+Stack backtrace:
+   0: <std::backtrace::Backtrace>::create
+   1: cargo_util::paths::read_bytes
+   2: cargo_util::paths::read
+   3: cargo::core::compiler::fingerprint::_compare_old_fingerprint
+   4: cargo::core::compiler::fingerprint::prepare_target
+   5: cargo::core::compiler::compile
+   6: <cargo::core::compiler::build_runner::BuildRunner>::compile
+   7: cargo::ops::cargo_compile::compile_with_exec
+   8: cargo::ops::cargo_compile::compile
+   9: cargo::commands::check::exec
+  10: <cargo::cli::Exec>::exec
+  11: cargo::main
+  12: std::sys::backtrace::__rust_begin_short_backtrace::<fn(), ()>
+  13: std::rt::lang_start::<()>::{closure#0}
+  14: std::rt::lang_start_internal
+  15: _main
+    Checking kompress-cli v0.1.0 (/Users/lodripeter/workspace/peterlodri-sec/kompress-ultra/crates/kompress-cli)
+error: could not compile `kompress-cli` (bin "kompress" test) due to 3 previous errors; 1 warning emitted
+warning: build failed, waiting for other jobs to finish...
+error: could not compile `kompress-cli` (bin "kompress") due to 3 previous errors; 1 warning emitted
