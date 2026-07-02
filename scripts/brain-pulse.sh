@@ -5,6 +5,7 @@
 set -euo pipefail
 cd "$(dirname "$0")/.."
 echo "[pulse] $(date -u +%H:%M:%S) — beat"
+python3 scripts/mygraph-bridge.py 2>/dev/null || true
 bash scripts/bodhisattva.sh 2>/dev/null || true
 bash scripts/repair-bot.sh 2>/dev/null || true
 bash scripts/ultramesh-mem.sh status 2>/dev/null || true
