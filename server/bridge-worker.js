@@ -146,6 +146,9 @@ h1{font-size:.7rem;font-weight:400;color:#334155;letter-spacing:.2em;text-transf
 .ground{width:1px;height:4rem;background:#1e293b;margin:0 auto}
 .verse{font-size:.75rem;color:#475569;line-height:2;text-align:center;max-width:320px}
 .verse .key{color:#64748b}
+.mountains{position:fixed;bottom:0;left:0;width:100%;height:25vh;pointer-events:none;z-index:0;opacity:.15}
+.mountains svg{width:100%;height:100%}
+.mountains polygon{fill:#1a1a2e}
 .fog{position:fixed;bottom:0;left:0;width:100%;height:30vh;background:linear-gradient(transparent,#080c14);pointer-events:none;z-index:1}
 .footer-walk{position:fixed;bottom:1rem;left:50%;transform:translateX(-50%);font-size:.5rem;color:#1e293b;letter-spacing:.1em;z-index:2}
 </style>
@@ -197,7 +200,14 @@ h1{font-size:.7rem;font-weight:400;color:#334155;letter-spacing:.2em;text-transf
 </div>
 
 </div>
-<div class="fog"></div>
+  <div class="mountains">
+    <svg viewBox="0 0 800 200" preserveAspectRatio="xMidYMid slice">
+      <polygon points="0,200 50,120 100,160 150,80 200,130 250,60 300,110 350,40 400,90 450,20 500,70 550,30 600,80 650,50 700,100 750,70 800,120 800,200"/>
+      <polygon points="0,200 80,140 130,170 180,100 230,150 280,80 330,130 380,60 430,110 480,40 530,90 580,50 630,100 680,70 730,120 780,90 800,140 800,200" opacity="0.6"/>
+      <polygon points="0,200 60,160 110,180 160,120 210,160 260,100 310,140 360,80 410,130 460,60 510,110 560,90 610,130 660,100 710,140 760,110 800,150 800,200" opacity="0.3"/>
+    </svg>
+  </div>
+  <div class="fog"></div>
 <div class="footer-walk">garden.vaked.dev · walk · ◈</div>
 </body>
 </html>`;
