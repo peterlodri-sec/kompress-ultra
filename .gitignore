@@ -46,3 +46,7 @@ dream-cdn/dream-cdn.key
 
 # Deepwork session state
 .slim/deepwork/
+
+# Rust build artifacts
+target/
+Cargo.lock
