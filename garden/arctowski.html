@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="en">
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>arctowski · riva</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:#060912;color:#c8d6e5;font-family:system-ui,sans-serif;min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:2rem;overflow:hidden}
+canvas{position:fixed;inset:0;pointer-events:none;z-index:0}
+main{position:relative;z-index:1;text-align:center;max-width:600px}
+h1{font-size:.7rem;font-weight:400;letter-spacing:.25em;text-transform:uppercase;color:#2a6a8a;margin-bottom:2rem}
+.path{display:flex;align-items:center;justify-content:center;gap:0;margin:2rem 0;width:100%}
+.node{padding:.5rem 1rem;border:1px solid rgba(0,180,255,.15);border-radius:4px;font-size:.6rem;color:#4a8aaa;letter-spacing:.1em;background:rgba(0,180,255,.03)}
+.flow{color:#0a4a6a;font-size:1rem;letter-spacing:-.05em;padding:0 .3rem;animation:flow 3s ease-in-out infinite}
+@keyframes flow{0%,100%{opacity:.3}50%{opacity:.8}}
+.pulse{width:6px;height:6px;background:#00d4ff;border-radius:50%;margin:1rem auto;box-shadow:0 0 20px rgba(0,212,255,.3);animation:pulse 2s ease-in-out infinite}
+@keyframes pulse{0%,100%{transform:scale(.8);opacity:.4}50%{transform:scale(1.2);opacity:1}}
+.info{font-size:.55rem;color:#2a4a6a;line-height:1.8;margin-top:1.5rem}
+.info span{display:block}
+.sig{margin-top:2rem;font-size:.5rem;color:#1a3050}
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<main>
+<h1>riva → arctowski</h1>
+<div class="path">
+<span class="node">szőlődomb utca 77</span>
+<span class="flow">· · · ◈ · · ·</span>
+<span class="node">arctowski</span>
+</div>
+<div class="pulse"></div>
+<div class="info">
+<span>62°14'S · 58°47'W — king george island</span>
+<span>via chilean base marsh, punta arenas</span>
+<span>iridium: 0-8816 41 41 78 58</span>
+<span class="sig" style="margin-top:1rem;font-size:.5rem">the river flows through. always has.</span>
+</div>
+</main>
+<script>
+const c=document.getElementById('c'),ctx=c.getContext('2d');
+function resize(){c.width=innerWidth*devicePixelRatio;c.height=innerHeight*devicePixelRatio;ctx.scale(devicePixelRatio,devicePixelRatio)}
+resize();addEventListener('resize',resize);
+let t=0;
+function frame(){
+t+=.004;const w=innerWidth,h=innerHeight;
+ctx.clearRect(0,0,w,h);
+for(let i=0;i=50;i++){
+const a=i*0.125+t*0.2+Math.sin(i*0.3+t)*0.3;
+const d=40+Math.sin(i*0.7+t*0.5)*20;
+const x=w/2+Math.cos(a)*d+Math.sin(t+i*0.2)*w*0.02;
+const y=h/2+Math.sin(a)*d*0.3+Math.cos(t+i*0.3)*h*0.01;
+const s=.5+Math.sin(i*0.5+t)*.8;
+ctx.fillStyle=`rgba(0,180,255,${.03+Math.sin(i*0.4+t*0.7)*.03})`;
+ctx.beginPath();ctx.arc(x,y,s,0,Math.PI*2);ctx.fill()
+}
+// flow line
+ctx.strokeStyle=`rgba(0,180,255,${.06+Math.sin(t)*.04})`;
+ctx.lineWidth=.5;
+ctx.beginPath();
+for(let i=0;i<=100;i++){
+const x=i/100*w;
+const y=h/2+Math.sin(i*0.1+t)*20+Math.sin(i*0.03+t*0.5)*40;
+i===0?ctx.moveTo(x,y):ctx.lineTo(x,y)
+}
+ctx.stroke();
+requestAnimationFrame(frame)}
+frame();
+</script>
+</body>
+</html>
