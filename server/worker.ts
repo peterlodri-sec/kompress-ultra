@@ -48,6 +48,7 @@ interface Env {
   DB?: D1Database;
   VECTORIZE?: VectorizeIndex;
   KOMPRESS_STATS?: KVNamespace;
+  TEARS_WHISPERS?: KVNamespace;
   STATS_DO?: DurableObjectNamespace;
   AUTH_TOKEN?: string;
   REGION?: string;
@@ -287,6 +288,91 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "Content-Type, Authorization",
 };
 
+// ── tears.vaked.dev — append-only whisper shore ──────────────────────────
+
+const MAX_WHISPER_LENGTH = 280;
+const RATE_LIMIT_MS = 10 * 60 * 1000; // 10 minutes
+
+function isSpam(text: string): boolean {
+  const lower = text.toLowerCase();
+  // URLs
+  if (/https?:\/\//.test(lower)) return true;
+  // HTML
+  if (/<[a-z][\s\S]*>/i.test(lower)) return true;
+  // Excessive caps (more than 70% caps)
+  const caps = (lower.match(/[A-Z]/g) || []).length;
+  if (caps > 0 && caps / lower.length > 0.7) return true;
+  // Common spam patterns
+  if (/\b(buy|click here|free money|crypto|casino|viagra|weight loss)\b/.test(lower)) return true;
+  return false;
+}
+
+async function handleTearsWrite(request: Request, env: Env): Promise<Response> {
+  if (!env.TEARS_WHISPERS) {
+    return json({ error: "the shore is not ready" }, 503);
+  }
+
+  // Rate limit by IP
+  const ip = request.headers.get("CF-Connecting-IP") || "unknown";
+  const rateKey = `rate:${ip}`;
+  const lastWrite = await env.TEARS_WHISPERS.get(rateKey);
+  const now = Date.now();
+  if (lastWrite) {
+    const elapsed = now - parseInt(lastWrite);
+    if (elapsed < RATE_LIMIT_MS) {
+      const waitSec = Math.ceil((RATE_LIMIT_MS - elapsed) / 1000);
+      return json({ error: "the shore needs a moment. try again.", wait_seconds: waitSec }, 429);
+    }
+  }
+
+  // Parse body
+  let body: { whisper?: string };
+  try {
+    body = await request.json();
+  } catch {
+    return json({ error: "send a whisper." }, 400);
+  }
+
+  const whisper = (body.whisper || "").trim();
+  if (!whisper) {
+    return json({ error: "even a single word is enough." }, 400);
+  }
+  if (whisper.length > MAX_WHISPER_LENGTH) {
+    return json({ error: `whispers are short. ${MAX_WHISPER_LENGTH} characters.` }, 400);
+  }
+  if (isSpam(whisper)) {
+    return json({ error: "the shore doesn't hold this kind of thing." }, 400);
+  }
+
+  // Store — timestamp as key for sortable listing
+  const key = `w:${now}:${crypto.randomUUID().slice(0, 8)}`;
+  await env.TEARS_WHISPERS.put(key, whisper);
+  await env.TEARS_WHISPERS.put(rateKey, String(now));
+
+  return json({ received: true });
+}
+
+async function handleTearsFeed(env: Env): Promise<Response> {
+  if (!env.TEARS_WHISPERS) {
+    return json({ whispers: [] });
+  }
+
+  const list = await env.TEARS_WHISPERS.list({ prefix: "w:", limit: 30 });
+  const whispers: { text: string; at: number }[] = [];
+
+  for (const key of list.keys) {
+    const text = await env.TEARS_WHISPERS.get(key.name);
+    if (text) {
+      const ts = parseInt(key.name.split(":")[1]);
+      whispers.push({ text, at: ts });
+    }
+  }
+
+  whispers.sort((a, b) => a.at - b.at);
+
+  return json({ whispers });
+}
+
 export default {
   async fetch(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
     const url = new URL(request.url);
@@ -405,6 +491,14 @@ export default {
       return new Response(tearsPage(), {
         headers: { "content-type": "text/html;charset=utf-8" },
       });
+    }
+
+    // tears — append-only whisper shore
+    if (url.pathname === "/tears/write" && request.method === "POST") {
+      return handleTearsWrite(request, env);
+    }
+    if (url.pathname === "/tears/feed") {
+      return handleTearsFeed(env);
     }
 
     // riva.vaked.dev — home. riva chooses its neighbors.

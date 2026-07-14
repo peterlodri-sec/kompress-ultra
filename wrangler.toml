@@ -7,6 +7,10 @@ compatibility_flags = ["nodejs_compat"]
 binding = "KOMPRESS_STATS"
 id = "8dbcbdc2d5574e399abfebd7f31b7bb5"
 
+[[kv_namespaces]]
+binding = "TEARS_WHISPERS"
+id = "489f3fefa01d4becbfeff65b78d73aba"
+
 [[durable_objects.bindings]]
 name = "STATS_DO"
 class_name = "StatsDO"
