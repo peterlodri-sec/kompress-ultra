@@ -139,16 +139,16 @@ export function tearsPage(): string {
     mask-image: linear-gradient(to top, transparent 0%, rgba(8,12,20,1) 30%);
   }
   .whisper {
-    color: #1e293b;
-    font-size: 0.75rem;
-    line-height: 1.5;
+    color: #475569;
+    font-size: 0.8rem;
+    line-height: 1.6;
     text-align: center;
     max-width: 480px;
-    padding: 0.35rem 0;
-    animation: fadeIn 3s ease-out;
-    transition: color 8s ease;
+    padding: 0.4rem 0;
+    animation: fadeIn 4s ease-out;
+    transition: color 12s ease;
   }
-  .whisper:nth-child(odd) { color: #1a2533; }
+  .whisper:nth-child(odd) { color: #3b4455; }
   @keyframes fadeIn {
     0%   { opacity: 0; transform: translateY(4px); }
     100% { opacity: 1; transform: translateY(0); }
@@ -184,27 +184,27 @@ export function tearsPage(): string {
     background: #0f172a;
     border: 1px solid #1e293b;
     border-radius: 4px;
-    color: #475569;
+    color: #64748b;
     font-family: inherit;
-    font-size: 0.7rem;
-    padding: 0.4rem 0.6rem;
+    font-size: 0.75rem;
+    padding: 0.5rem 0.6rem;
     outline: none;
     transition: border-color 0.3s;
   }
   .whisper-input:focus {
-    border-color: #334155;
-    color: #64748b;
+    border-color: #475569;
+    color: #94a3b8;
   }
   .whisper-input::placeholder {
-    color: #1a2533;
+    color: #334155;
   }
   .whisper-btn {
     background: none;
     border: 1px solid #1e293b;
     border-radius: 4px;
-    color: #1e293b;
-    font-size: 0.65rem;
-    padding: 0.4rem 0.6rem;
+    color: #475569;
+    font-size: 0.7rem;
+    padding: 0.5rem 0.75rem;
     cursor: pointer;
     transition: all 0.3s;
     white-space: nowrap;
