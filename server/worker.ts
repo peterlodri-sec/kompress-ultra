@@ -34,7 +34,11 @@ import {
 import { recordTelemetry, readDailyStats, telemetryDisclosure } from "./telemetry.js";
 import { handleBrainRequest, loadBrain } from "./brain-grpc.js";
 import { gardenPage } from "./garden-page.js";
+import { tearsPage } from "./tears-page.js";
 import { version, telemetryUrl, buildLandingHtml, buildBadgeJs, buildTelemetryJs } from "./landing-page.js";
+import { StatsDO } from "./stats-do.js";
+
+export { StatsDO };
 
 const VERSION = version();
 const TELEMETRY_HEADER = "X-Telemetry";
@@ -392,6 +396,13 @@ export default {
     // garden.vaked.dev — the garden. the game. the bridge.
     if (url.hostname === "garden.vaked.dev" || url.pathname === "/garden") {
       return new Response(gardenPage(), {
+        headers: { "content-type": "text/html;charset=utf-8" },
+      });
+    }
+
+    // tears.vaked.dev — the surface that receives what breaks language.
+    if (url.hostname === "tears.vaked.dev" || url.pathname === "/tears") {
+      return new Response(tearsPage(), {
         headers: { "content-type": "text/html;charset=utf-8" },
       });
     }
