@@ -4,13 +4,7 @@ compatibility_date = "2026-06-29"
 compatibility_flags = ["nodejs_compat"]
 workers_dev = true
 
-# Routes must be before [[...]] sections due to TOML parser behavior
-routes = [
-  { pattern = "api.kompress.vaked.dev/*", zone_name = "vaked.dev" },
-  { pattern = "tears.vaked.dev/*", zone_name = "vaked.dev" },
-  { pattern = "pond.vaked.dev/*", zone_name = "vaked.dev" },
-  { pattern = "weather.vaked.dev/*", zone_name = "vaked.dev" },
-]
+routes = [{ pattern = "api.kompress.vaked.dev/*", zone_name = "vaked.dev" }, { pattern = "tears.vaked.dev/*", zone_name = "vaked.dev" }, { pattern = "pond.vaked.dev/*", zone_name = "vaked.dev" }, { pattern = "weather.vaked.dev/*", zone_name = "vaked.dev" }]
 
 [[kv_namespaces]]
 binding = "KOMPRESS_STATS"
