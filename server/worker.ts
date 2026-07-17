@@ -37,6 +37,7 @@ import { gardenPage } from "./garden-page.js";
 import { tearsPage } from "./tears-page.js";
 import { pondPage } from "./pond-page.js";
 import { weatherPage } from "./weather-page.js";
+import { hubPage } from "./hub-page.js";
 import { version, telemetryUrl, buildLandingHtml, buildBadgeJs, buildTelemetryJs } from "./landing-page.js";
 import { StatsDO } from "./stats-do.js";
 
@@ -479,6 +480,13 @@ export default {
       } catch {
         return json({ error: "send { prompt: string }" }, { status: 400 });
       }
+    }
+
+    // vaked.dev — the root. the subdomain hub. where all surfaces meet.
+    if (url.hostname === "vaked.dev" || url.hostname === "www.vaked.dev") {
+      return new Response(hubPage(), {
+        headers: { "content-type": "text/html;charset=utf-8" },
+      });
     }
 
     // garden.vaked.dev — the garden. the game. the bridge.
