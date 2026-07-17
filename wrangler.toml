@@ -16,11 +16,11 @@ id = "489f3fefa01d4becbfeff65b78d73aba"
 name = "STATS_DO"
 class_name = "StatsDO"
 
+routes = [{ pattern = "api.kompress.vaked.dev/*", zone_name = "vaked.dev" }, { pattern = "tears.vaked.dev/*", zone_name = "vaked.dev" }, { pattern = "pond.vaked.dev/*", zone_name = "vaked.dev" }, { pattern = "weather.vaked.dev/*", zone_name = "vaked.dev" }]
+
 [[migrations]]
 tag = "v1"
 new_classes = ["StatsDO"]
-
-routes = [{ pattern = "api.kompress.vaked.dev/*", zone_name = "vaked.dev" }, { pattern = "tears.vaked.dev/*", zone_name = "vaked.dev" }, { pattern = "pond.vaked.dev/*", zone_name = "vaked.dev" }, { pattern = "weather.vaked.dev/*", zone_name = "vaked.dev" }]
 
 [vars]
 VERSION = "15.0.0"
