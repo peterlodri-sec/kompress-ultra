@@ -37,7 +37,6 @@ import { gardenPage } from "./garden-page.js";
 import { tearsPage } from "./tears-page.js";
 import { pondPage } from "./pond-page.js";
 import { weatherPage } from "./weather-page.js";
-import type { WeatherData } from "./weather-page.js";
 import { version, telemetryUrl, buildLandingHtml, buildBadgeJs, buildTelemetryJs } from "./landing-page.js";
 import { StatsDO } from "./stats-do.js";
 
@@ -505,36 +504,7 @@ export default {
 
     // weather.vaked.dev — the weather layer. live local weather + buddhist dharma.
     if (url.hostname === "weather.vaked.dev" || url.pathname === "/weather") {
-      let weatherData: WeatherData | undefined;
-      try {
-        const cf = (request as any).cf;
-        if (cf?.latitude && cf?.longitude) {
-          const lat = cf.latitude as number;
-          const lon = cf.longitude as number;
-          const loc = [cf.city, cf.region, cf.country].filter(Boolean).join(", ") || "unknown";
-          const meteoResp = await fetch(
-            `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,relative_humidity_2m,weather_code,wind_speed_10m,is_day&timezone=auto`
-          );
-          if (meteoResp.ok) {
-            const body = await meteoResp.json() as any;
-            const c = body.current;
-            weatherData = {
-              location: loc,
-              temperature: Math.round(c.temperature_2m),
-              humidity: c.relative_humidity_2m,
-              windSpeed: Math.round(c.wind_speed_10m),
-              weatherCode: c.weather_code,
-              isDay: c.is_day === 1,
-              lat,
-              lon,
-              timezone: body.timezone || "unknown",
-            };
-          }
-        }
-      } catch (_) {
-        // graceful fallback to no local weather
-      }
-      return new Response(weatherPage(weatherData), {
+      return new Response(weatherPage(), {
         headers: { "content-type": "text/html;charset=utf-8" },
       });
     }
