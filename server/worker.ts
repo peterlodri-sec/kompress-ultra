@@ -36,7 +36,7 @@ import { handleBrainRequest, loadBrain } from "./brain-grpc.js";
 import { gardenPage } from "./garden-page.js";
 import { tearsPage } from "./tears-page.js";
 import { pondPage } from "./pond-page.js";
-import { weatherPage } from "./weather-page.js";
+import { weatherPage, type WeatherData } from "./weather-page.js";
 import { version, telemetryUrl, buildLandingHtml, buildBadgeJs, buildTelemetryJs } from "./landing-page.js";
 import { StatsDO } from "./stats-do.js";
 
@@ -504,7 +504,7 @@ export default {
 
     // weather.vaked.dev — the weather layer. live local weather + buddhist dharma.
     if (url.hostname === "weather.vaked.dev" || url.pathname === "/weather") {
-      let weatherData: import("./weather-page.js").WeatherData | undefined;
+      let weatherData: WeatherData | undefined;
       try {
         const cf = (request as any).cf;
         if (cf?.latitude && cf?.longitude) {
