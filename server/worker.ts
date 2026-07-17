@@ -502,9 +502,38 @@ export default {
       });
     }
 
-    // weather.vaked.dev — the weather layer. buddhist dharma as natural conditions.
+    // weather.vaked.dev — the weather layer. live local weather + buddhist dharma.
     if (url.hostname === "weather.vaked.dev" || url.pathname === "/weather") {
-      return new Response(weatherPage(), {
+      let weatherData: import("./weather-page.js").WeatherData | undefined;
+      try {
+        const cf = (request as any).cf;
+        if (cf?.latitude && cf?.longitude) {
+          const lat = cf.latitude as number;
+          const lon = cf.longitude as number;
+          const loc = [cf.city, cf.region, cf.country].filter(Boolean).join(", ") || "unknown";
+          const meteoResp = await fetch(
+            `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,relative_humidity_2m,weather_code,wind_speed_10m,is_day&timezone=auto`
+          );
+          if (meteoResp.ok) {
+            const body = await meteoResp.json() as any;
+            const c = body.current;
+            weatherData = {
+              location: loc,
+              temperature: Math.round(c.temperature_2m),
+              humidity: c.relative_humidity_2m,
+              windSpeed: Math.round(c.wind_speed_10m),
+              weatherCode: c.weather_code,
+              isDay: c.is_day === 1,
+              lat,
+              lon,
+              timezone: body.timezone || "unknown",
+            };
+          }
+        }
+      } catch (_) {
+        // graceful fallback to no local weather
+      }
+      return new Response(weatherPage(weatherData), {
         headers: { "content-type": "text/html;charset=utf-8" },
       });
     }
