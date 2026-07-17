@@ -2,9 +2,6 @@ name = "kompress-ultra-api"
 main = "server/worker.ts"
 compatibility_date = "2026-06-29"
 compatibility_flags = ["nodejs_compat"]
-workers_dev = true
-
-routes = [{ pattern = "api.kompress.vaked.dev/*", zone_name = "vaked.dev" }, { pattern = "tears.vaked.dev/*", zone_name = "vaked.dev" }, { pattern = "pond.vaked.dev/*", zone_name = "vaked.dev" }, { pattern = "weather.vaked.dev/*", zone_name = "vaked.dev" }]
 
 [[kv_namespaces]]
 binding = "KOMPRESS_STATS"
@@ -21,6 +18,8 @@ class_name = "StatsDO"
 [[migrations]]
 tag = "v1"
 new_classes = ["StatsDO"]
+
+routes = [{ pattern = "api.kompress.vaked.dev/*", zone_name = "vaked.dev" }, { pattern = "tears.vaked.dev/*", zone_name = "vaked.dev" }, { pattern = "pond.vaked.dev/*", zone_name = "vaked.dev" }, { pattern = "weather.vaked.dev/*", zone_name = "vaked.dev" }]
 
 [vars]
 VERSION = "15.0.0"
