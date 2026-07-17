@@ -4,6 +4,8 @@ compatibility_date = "2026-06-29"
 compatibility_flags = ["nodejs_compat"]
 workers_dev = true
 
+routes = [{ pattern = "api.kompress.vaked.dev/*", zone_name = "vaked.dev" }, { pattern = "tears.vaked.dev/*", zone_name = "vaked.dev" }, { pattern = "pond.vaked.dev/*", zone_name = "vaked.dev" }, { pattern = "weather.vaked.dev/*", zone_name = "vaked.dev" }]
+
 [[kv_namespaces]]
 binding = "KOMPRESS_STATS"
 id = "8dbcbdc2d5574e399abfebd7f31b7bb5"
@@ -15,8 +17,6 @@ id = "489f3fefa01d4becbfeff65b78d73aba"
 [[durable_objects.bindings]]
 name = "STATS_DO"
 class_name = "StatsDO"
-
-routes = [{ pattern = "api.kompress.vaked.dev/*", zone_name = "vaked.dev" }, { pattern = "tears.vaked.dev/*", zone_name = "vaked.dev" }, { pattern = "pond.vaked.dev/*", zone_name = "vaked.dev" }, { pattern = "weather.vaked.dev/*", zone_name = "vaked.dev" }]
 
 [[migrations]]
 tag = "v1"
