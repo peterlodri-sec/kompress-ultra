@@ -20,15 +20,18 @@ export function hubPage(): string {
     { name: "radio", url: "https://radio.vaked.dev", desc: "radio.", active: false },
   ];
 
-  const surfaceCards = surfaces.map(s => `
-    <a href="${s.url}" class="surface${s.active ? ' active' : ' dormant'}">
+  const activeSurfaces = surfaces.filter(s => s.active);
+  const dormantSurfaces = surfaces.filter(s => !s.active);
+
+  const activeCards = activeSurfaces.map(s => `
+    <a href="${s.url}" class="surface active">
       <span class="surface-name">${s.name}</span>
       <span class="surface-desc">${s.desc}</span>
-      <span class="surface-status">${s.active ? '●' : '○'}</span>
+      <span class="surface-status">●</span>
     </a>
   `).join("\n");
 
-  const dormantCards = surfaces.filter(s => !s.active).map(s => `
+  const dormantCards = dormantSurfaces.map(s => `
     <a href="${s.url}" class="surface dormant">
       <span class="surface-name">${s.name}</span>
       <span class="surface-desc">${s.desc}</span>
@@ -186,7 +189,7 @@ export function hubPage(): string {
     </div>
   </header>
 
-  ${surfaceCards}
+  ${activeCards}
 
   <div class="section-label">dormant</div>
   ${dormantCards}
