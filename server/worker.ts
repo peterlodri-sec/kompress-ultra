@@ -504,7 +504,47 @@ export default {
 
     // weather.vaked.dev — the weather layer. live local weather + buddhist dharma.
     if (url.hostname === "weather.vaked.dev" || url.pathname === "/weather") {
-      return new Response(weatherPage(), {
+      const cf = (request as any).cf;
+      let weatherHtml = `
+  <div class="local-weather missing">
+    <div class="local-label">location unknown</div>
+    <div class="local-note">weather is everywhere. we just can't name yours yet.</div>
+  </div>`;
+
+      if (cf?.latitude && cf?.longitude) {
+        try {
+          const lat = cf.latitude as number;
+          const lon = cf.longitude as number;
+          const loc = [cf.city, cf.region, cf.country].filter(Boolean).join(", ") || "unknown";
+          const meteoResp = await fetch(
+            `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,relative_humidity_2m,weather_code,wind_speed_10m,is_day&timezone=auto`
+          );
+          if (meteoResp.ok) {
+            const body: any = await meteoResp.json();
+            const c = body.current;
+            const t = Math.round(c.temperature_2m);
+            const h = c.relative_humidity_2m;
+            const w = Math.round(c.wind_speed_10m);
+            const code = c.weather_code;
+            const day = c.is_day === 1;
+            weatherHtml = `
+  <div class="local-weather">
+    <div class="local-icon">${day ? "☀️" : "🌙"}</div>
+    <div class="local-temp">${t}°C</div>
+    <div class="local-label">${["clear","partly cloudy","fog","drizzle","rain","snow","heavy rain","thunderstorm"][code] || "unknown"}</div>
+    <div class="local-details">
+      <span>${h}% humidity</span>
+      <span>·</span>
+      <span>${w} km/h</span>
+    </div>
+    <div class="local-location">${loc}</div>
+    <div class="local-note">${lat.toFixed(2)}, ${lon.toFixed(2)} — ${body.timezone || "unknown"}</div>
+  </div>`;
+          }
+        } catch (_) { /* fallback */ }
+      }
+
+      return new Response(weatherPage(weatherHtml), {
         headers: { "content-type": "text/html;charset=utf-8" },
       });
     }

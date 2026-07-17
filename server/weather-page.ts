@@ -9,61 +9,12 @@
  * always was. always will be.
  */
 
-export interface WeatherData {
-  location: string;
-  temperature: number;
-  humidity: number;
-  windSpeed: number;
-  weatherCode: number;
-  isDay: boolean;
-  lat: number;
-  lon: number;
-  timezone: string;
-}
-
-function weatherEmoji(code: number, isDay: boolean): string {
-  if (code === 0) return isDay ? "☀️" : "🌙";
-  if (code <= 3) return isDay ? "🌤️" : "🌙";
-  if (code <= 48) return "🌫️";
-  if (code <= 57) return "🌧️";
-  if (code <= 67) return "🌧️";
-  if (code <= 77) return "🌨️";
-  if (code <= 82) return "🌧️";
-  return "⛈️";
-}
-
-function weatherLabel(code: number): string {
-  if (code === 0) return "clear";
-  if (code <= 3) return "partly cloudy";
-  if (code <= 48) return "fog";
-  if (code <= 57) return "drizzle";
-  if (code <= 67) return "rain";
-  if (code <= 77) return "snow";
-  if (code <= 82) return "heavy rain";
-  return "thunderstorm";
-}
-
-export function weatherPage(data?: WeatherData): string {
-  const localSection = data ? `
-  <div class="local-weather">
-    <div class="local-icon">${weatherEmoji(data.weatherCode, data.isDay)}</div>
-    <div class="local-temp">${data.temperature}°C</div>
-    <div class="local-label">${weatherLabel(data.weatherCode)}</div>
-    <div class="local-details">
-      <span>${data.humidity}% humidity</span>
-      <span>·</span>
-      <span>${data.windSpeed} km/h</span>
-    </div>
-    <div class="local-location">${data.location}</div>
-    <div class="local-note">${data.lat.toFixed(2)}, ${data.lon.toFixed(2)} — ${data.timezone}</div>
-  </div>
-  <div class="divider"></div>
-  ` : `
+export function weatherPage(localWeatherHtml?: string): string {
+  const localSection = localWeatherHtml || `
   <div class="local-weather missing">
     <div class="local-label">location unknown</div>
     <div class="local-note">weather is everywhere. we just can't name yours yet.</div>
   </div>
-  <div class="divider"></div>
   `;
 
   return `<!DOCTYPE html>
