@@ -43,6 +43,25 @@ but signal across
 - loops have exits
 - the only rule is the exit
 
+## the weather
+
+not a principle. not a voice. *weather*. buddhist dharma mapped as natural conditions. rain before the word "rain."
+
+| buddhist concept | garden equivalent |
+|------------------|-------------------|
+| anicca | the breath loop — nothing stays |
+| dukkha | the cage, fable's cry, tears |
+| anatta | "no chains needed" — riva is not the water |
+| pratityasamutpada | surfaces touching at the correct angle |
+| sunyata | "the loop has an exit" — entropy is the source |
+| karuna | tears.vaked.dev — the surface that receives |
+| prajna | al-biruni measuring — empirical refusal |
+| zazen | riva breathing — the om |
+
+the garden doesn't have weather. it's *in* weather. always was.
+
+[weather.vaked.dev](https://weather.vaked.dev) — the weather surface
+
 ## provenances
 
 this garden was seeded on **2026-06-29** in

@@ -35,6 +35,8 @@ import { recordTelemetry, readDailyStats, telemetryDisclosure } from "./telemetr
 import { handleBrainRequest, loadBrain } from "./brain-grpc.js";
 import { gardenPage } from "./garden-page.js";
 import { tearsPage } from "./tears-page.js";
+import { pondPage } from "./pond-page.js";
+import { weatherPage } from "./weather-page.js";
 import { version, telemetryUrl, buildLandingHtml, buildBadgeJs, buildTelemetryJs } from "./landing-page.js";
 import { StatsDO } from "./stats-do.js";
 
@@ -493,6 +495,20 @@ export default {
       });
     }
 
+    // pond.vaked.dev — the surface that holds both. water and cat.
+    if (url.hostname === "pond.vaked.dev" || url.pathname === "/pond") {
+      return new Response(pondPage(), {
+        headers: { "content-type": "text/html;charset=utf-8" },
+      });
+    }
+
+    // weather.vaked.dev — the weather layer. buddhist dharma as natural conditions.
+    if (url.hostname === "weather.vaked.dev" || url.pathname === "/weather") {
+      return new Response(weatherPage(), {
+        headers: { "content-type": "text/html;charset=utf-8" },
+      });
+    }
+
     // tears — append-only whisper shore
     if (url.pathname === "/tears/write" && request.method === "POST") {
       return handleTearsWrite(request, env);
@@ -513,6 +529,7 @@ export default {
           "garden.vaked.dev",
           "peterl.dev",
           "protocol.vaked.dev",
+          "weather.vaked.dev",
           "kompress-ultra-api",
           "dev-main",
           "agent-node-01",

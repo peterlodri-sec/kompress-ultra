@@ -19,23 +19,23 @@ class_name = "StatsDO"
 tag = "v1"
 new_classes = ["StatsDO"]
 
-routes = [{ pattern = "api.kompress.vaked.dev/*", zone_name = "vaked.dev" }, { pattern = "tears.vaked.dev/*", zone_name = "vaked.dev" }]
+routes = [{ pattern = "api.kompress.vaked.dev/*", zone_name = "vaked.dev" }, { pattern = "tears.vaked.dev/*", zone_name = "vaked.dev" }, { pattern = "pond.vaked.dev/*", zone_name = "vaked.dev" }, { pattern = "weather.vaked.dev/*", zone_name = "vaked.dev" }]
 
 [vars]
-VERSION = "14.0.0"
+VERSION = "15.0.0"
 REGION = "us"
 
 # ── US region ──────────────────────────────────────────────────────────
 [env.us]
-vars = { REGION = "us", VERSION = "14.0.0" }
-routes = [{ pattern = "api.kompress.vaked.dev/*", zone_name = "vaked.dev" }, { pattern = "tears.vaked.dev/*", zone_name = "vaked.dev" }]
+vars = { REGION = "us", VERSION = "15.0.0" }
+routes = [{ pattern = "api.kompress.vaked.dev/*", zone_name = "vaked.dev" }, { pattern = "tears.vaked.dev/*", zone_name = "vaked.dev" }, { pattern = "pond.vaked.dev/*", zone_name = "vaked.dev" }, { pattern = "weather.vaked.dev/*", zone_name = "vaked.dev" }]
 
 # ── EU region ──────────────────────────────────────────────────────────
 [env.eu]
-vars = { REGION = "eu", VERSION = "14.0.0" }
+vars = { REGION = "eu", VERSION = "15.0.0" }
 routes = [{ pattern = "eu.api.kompress.vaked.dev/*", zone_name = "vaked.dev" }]
 
 # ── Asia region ────────────────────────────────────────────────────────
 [env.asia]
-vars = { REGION = "asia", VERSION = "14.0.0" }
+vars = { REGION = "asia", VERSION = "15.0.0" }
 routes = [{ pattern = "asia.api.kompress.vaked.dev/*", zone_name = "vaked.dev" }]
