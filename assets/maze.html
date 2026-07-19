@@ -2,6 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>RALPH × LODRI — cosmic maze</title>
     <meta name='description' content='RALPH × LODRI: an entanglement metaphor for the longrun-eval-kompress collaboration with Leonid.'>
     <!-- Framing: RALPH × LODRI: an entanglement metaphor for the longrun-eval-kompress collaboration with Leonid. -->
@@ -24,7 +25,7 @@ body.light {
   --overlay-bg:#eef2fbee; --win-bg:#eef2fbdd;
 }
 body { background:var(--bg); color:var(--fg); font-family:'JetBrains Mono','Fira Code',monospace; overflow:hidden; }
-canvas { display:block; }
+canvas { display:block; touch-action:none; }
 #hud {
   position:fixed; top:0; left:0; right:0;
   display:flex; justify-content:space-between; align-items:center;
@@ -65,6 +66,36 @@ canvas { display:block; }
   font-family:monospace; font-size:14px; text-decoration:none;
 }
 #games-link:hover { border-color:var(--accent); }
+#touch-controls {
+  position:fixed; left:50%; bottom:max(10px, env(safe-area-inset-bottom));
+  z-index:35; width:min(430px, calc(100% - 20px));
+  display:none; justify-content:space-between; align-items:flex-end;
+  transform:translateX(-50%); pointer-events:none;
+}
+.touch-player { display:flex; flex-direction:column; align-items:center; gap:4px; pointer-events:auto; }
+.touch-label { font-size:10px; font-weight:700; letter-spacing:1px; }
+.dpad { display:grid; grid-template-columns:repeat(3, 42px); grid-template-rows:repeat(3, 42px); gap:2px; }
+.dpad button {
+  border:1px solid var(--hud-border); border-radius:10px;
+  background:var(--hud-bg); color:var(--fg); font:700 20px/1 monospace;
+  touch-action:manipulation; user-select:none; -webkit-user-select:none;
+  -webkit-tap-highlight-color:transparent;
+}
+.dpad button:active { border-color:var(--accent); transform:scale(.94); }
+.dpad .up { grid-column:2; grid-row:1; }
+.dpad .left { grid-column:1; grid-row:2; }
+.dpad .right { grid-column:3; grid-row:2; }
+.dpad .down { grid-column:2; grid-row:3; }
+@media (pointer:coarse), (max-width:700px) {
+  body.playing #touch-controls { display:flex; }
+  #hud { padding:7px 8px; font-size:10px; }
+  #hud .controls { display:none; }
+  .player-hud { gap:5px; }
+  #theme-btn { top:44px; right:8px; bottom:auto; padding:8px 12px; font-size:11px; }
+  #games-link { top:44px; left:8px; bottom:auto; padding:8px 12px; font-size:11px; }
+  #overlay { padding:20px; text-align:center; }
+  #overlay h1 { font-size:24px; }
+}
 </style>
 </head>
 <body>
@@ -93,10 +124,31 @@ canvas { display:block; }
 <button id="theme-btn" onclick="toggleTheme()">☀️ light</button>
 <a id="games-link" href="games.html">🎮 more games</a>
 
+<div id="touch-controls" aria-label="Touch controls">
+  <section class="touch-player" aria-label="RALPH controls">
+    <span class="touch-label" style="color:var(--ralph)">RALPH</span>
+    <div class="dpad">
+      <button class="up" data-player="ralph" data-dr="-1" data-dc="0" aria-label="Move RALPH up">↑</button>
+      <button class="left" data-player="ralph" data-dr="0" data-dc="-1" aria-label="Move RALPH left">←</button>
+      <button class="right" data-player="ralph" data-dr="0" data-dc="1" aria-label="Move RALPH right">→</button>
+      <button class="down" data-player="ralph" data-dr="1" data-dc="0" aria-label="Move RALPH down">↓</button>
+    </div>
+  </section>
+  <section class="touch-player" aria-label="LODRI controls">
+    <span class="touch-label" style="color:var(--lodri)">LODRI</span>
+    <div class="dpad">
+      <button class="up" data-player="lodri" data-dr="-1" data-dc="0" aria-label="Move LODRI up">↑</button>
+      <button class="left" data-player="lodri" data-dr="0" data-dc="-1" aria-label="Move LODRI left">←</button>
+      <button class="right" data-player="lodri" data-dr="0" data-dc="1" aria-label="Move LODRI right">→</button>
+      <button class="down" data-player="lodri" data-dr="1" data-dc="0" aria-label="Move LODRI down">↓</button>
+    </div>
+  </section>
+</div>
+
 <div id="overlay">
   <h1>COSMIC MAZE</h1>
-  <p style="color:var(--ralph)">RALPH <span style="color:var(--muted)">(you)</span> — WASD</p>
-  <p style="color:var(--lodri)">LODRI <span style="color:var(--muted)">(player 2)</span> — ↑↓←→</p>
+  <p style="color:var(--ralph)">RALPH <span style="color:var(--muted)">(you)</span> — WASD / touch</p>
+  <p style="color:var(--lodri)">LODRI <span style="color:var(--muted)">(player 2)</span> — arrows / touch</p>
   <p style="color:var(--cosmos)">reach <b>COSMOS</b> — 0.6 EeV · Im axis · λ=3.0</p>
   <p style="color:var(--dim); font-size:11px">first to exit → entanglement confirmed</p>
   <button class="btn" onclick="startGame()">BEGIN TRANSMISSION</button>
@@ -152,12 +204,22 @@ function toggleTheme() {
 }
 
 // ── Maze config ───────────────────────────────────────────────────────────
-const COLS = 31, ROWS = 21, CELL = 28;
+const COLS = 31, ROWS = 21;
+let CELL = 28;
 let maze = [], W, H;
+
+function touchLayout() {
+  return window.matchMedia('(pointer: coarse)').matches || window.innerWidth <= 700;
+}
 
 function resize() {
   W = canvas.width  = window.innerWidth;
-  H = canvas.height = window.innerHeight - 36;
+  H = canvas.height = window.innerHeight;
+  const availableHeight = H - (touchLayout() ? 190 : 44);
+  CELL = Math.max(9, Math.min(28,
+    Math.floor((W - 16) / COLS),
+    Math.floor(availableHeight / ROWS)
+  ));
 }
 resize();
 window.addEventListener('resize', () => { resize(); if(running) draw(); else drawMaze(); });
@@ -219,6 +281,7 @@ function move(p, dr, dc) {
 function checkWin(p) {
   if(p.r===ROWS-2&&p.c===COLS-2) {
     p.won=true; running=false;
+    document.body.classList.remove('playing');
     const wo = document.getElementById('win-overlay');
     document.getElementById('win-name').textContent = p.name;
     document.getElementById('win-name').style.color = P[p.key];
@@ -247,6 +310,15 @@ window.addEventListener('keydown', e => {
   }
 });
 
+document.getElementById('touch-controls').addEventListener('pointerdown', e => {
+  const button = e.target.closest('button[data-player]');
+  if(!button) return;
+  e.preventDefault();
+  const player = button.dataset.player === 'ralph' ? RALPH : LODRI;
+  move(player, Number(button.dataset.dr), Number(button.dataset.dc));
+  if(navigator.vibrate) navigator.vibrate(8);
+});
+
 // ── Draw ──────────────────────────────────────────────────────────────────
 let running = false;
 let t = 0;
@@ -254,7 +326,8 @@ let t = 0;
 function drawMaze() {
   // Compute offset to center maze
   const mw = COLS*CELL, mh = ROWS*CELL;
-  const ox = Math.floor((W-mw)/2), oy = Math.floor((H-mh)/2) + 18;
+  const playHeight = H - (touchLayout() ? 150 : 0);
+  const ox = Math.floor((W-mw)/2), oy = Math.max(40, Math.floor((playHeight-mh)/2) + 18);
 
   // Stars background (faint in daylight, bright at night)
   ctx.fillStyle=P.bg; ctx.fillRect(0,0,W,H);
@@ -333,6 +406,7 @@ function startGame() {
   document.getElementById('lodri-steps').textContent='0 steps';
   document.getElementById('overlay').style.display='none';
   document.getElementById('win-overlay').style.display='none';
+  document.body.classList.add('playing');
   running=true; t=0;
   requestAnimationFrame(draw);
 }
@@ -340,6 +414,7 @@ function startGame() {
 function resetGame() {
   document.getElementById('win-overlay').style.display='none';
   document.getElementById('overlay').style.display='flex';
+  document.body.classList.remove('playing');
   running=false;
 }
 
