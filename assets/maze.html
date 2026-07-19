@@ -45,6 +45,9 @@ canvas { display:block; touch-action:none; }
 .btn { padding:10px 32px; border:1px solid var(--accent); background:none; color:var(--accent);
        font-family:monospace; font-size:14px; cursor:pointer; letter-spacing:2px; }
 .btn:hover { background:color-mix(in srgb, var(--accent) 15%, transparent); }
+#mode-select { display:flex; gap:8px; padding:4px; border:1px solid var(--hud-border); border-radius:24px; background:var(--hud-bg); }
+.mode-btn { padding:8px 16px; border:0; border-radius:18px; background:transparent; color:var(--muted); font:700 12px monospace; cursor:pointer; }
+.mode-btn[aria-pressed="true"] { background:var(--accent); color:var(--bg); }
 #win-overlay {
   position:fixed; inset:0; background:var(--win-bg);
   display:none; flex-direction:column; align-items:center; justify-content:center;
@@ -88,6 +91,8 @@ canvas { display:block; touch-action:none; }
 .dpad .down { grid-column:2; grid-row:3; }
 @media (pointer:coarse), (max-width:700px) {
   body.playing #touch-controls { display:flex; }
+  body.solo #touch-controls { justify-content:center; }
+  body.solo .ralph-controls { display:none; }
   #hud { padding:7px 8px; font-size:10px; }
   #hud .controls { display:none; }
   .player-hud { gap:5px; }
@@ -104,7 +109,7 @@ canvas { display:block; touch-action:none; }
   <div class="player-hud">
     <div class="pip" style="background:var(--ralph);box-shadow:0 0 8px var(--ralph)"></div>
     <span style="color:var(--ralph)">RALPH</span>
-    <span style="color:var(--dim)">WASD</span>
+    <span id="ralph-control-hint" style="color:var(--dim)">ANCHOR</span>
     <span id="ralph-steps" style="color:var(--muted)">0 steps</span>
   </div>
   <div class="controls">
@@ -113,7 +118,7 @@ canvas { display:block; touch-action:none; }
   </div>
   <div class="player-hud">
     <span id="lodri-steps" style="color:var(--muted)">0 steps</span>
-    <span style="color:var(--dim)">↑↓←→</span>
+    <span id="lodri-control-hint" style="color:var(--dim)">WASD / ↑↓←→</span>
     <span style="color:var(--lodri)">LODRI</span>
     <div class="pip" style="background:var(--lodri);box-shadow:0 0 8px var(--lodri)"></div>
   </div>
@@ -125,7 +130,7 @@ canvas { display:block; touch-action:none; }
 <a id="games-link" href="games.html">🎮 more games</a>
 
 <div id="touch-controls" aria-label="Touch controls">
-  <section class="touch-player" aria-label="RALPH controls">
+  <section class="touch-player ralph-controls" aria-label="RALPH controls">
     <span class="touch-label" style="color:var(--ralph)">RALPH</span>
     <div class="dpad">
       <button class="up" data-player="ralph" data-dr="-1" data-dc="0" aria-label="Move RALPH up">↑</button>
@@ -147,8 +152,12 @@ canvas { display:block; touch-action:none; }
 
 <div id="overlay">
   <h1>COSMIC MAZE</h1>
-  <p style="color:var(--ralph)">RALPH <span style="color:var(--muted)">(you)</span> — WASD / touch</p>
-  <p style="color:var(--lodri)">LODRI <span style="color:var(--muted)">(player 2)</span> — arrows / touch</p>
+  <div id="mode-select" role="group" aria-label="Number of players">
+    <button id="solo-mode" class="mode-btn" type="button" aria-pressed="true" onclick="setMode(1)">1 PLAYER</button>
+    <button id="duo-mode" class="mode-btn" type="button" aria-pressed="false" onclick="setMode(2)">2 PLAYERS</button>
+  </div>
+  <p id="ralph-instructions" style="color:var(--ralph)">RALPH <span style="color:var(--muted)">(anchor)</span> — holds the corner</p>
+  <p id="lodri-instructions" style="color:var(--lodri)">LODRI <span style="color:var(--muted)">(you)</span> — WASD, arrows, or touch</p>
   <p style="color:var(--cosmos)">reach <b>COSMOS</b> — 0.6 EeV · Im axis · λ=3.0</p>
   <p style="color:var(--dim); font-size:11px">first to exit → entanglement confirmed</p>
   <button class="btn" onclick="startGame()">BEGIN TRANSMISSION</button>
@@ -258,6 +267,24 @@ function genMaze() {
 // ── Players ───────────────────────────────────────────────────────────────
 const RALPH = {name:'RALPH', key:'ralph', glowKey:'ralphGlow', r:1, c:1, steps:0, won:false};
 const LODRI  = {name:'LODRI', key:'lodri', glowKey:'lodriGlow', r:1, c:3, steps:0, won:false};
+let playerMode = 1;
+
+function setMode(mode) {
+  playerMode = mode === 2 ? 2 : 1;
+  const solo = playerMode === 1;
+  document.body.classList.toggle('solo', solo);
+  document.getElementById('solo-mode').setAttribute('aria-pressed', String(solo));
+  document.getElementById('duo-mode').setAttribute('aria-pressed', String(!solo));
+  document.getElementById('ralph-control-hint').textContent = solo ? 'ANCHOR' : 'WASD';
+  document.getElementById('ralph-steps').textContent = solo ? 'corner' : '0 steps';
+  document.getElementById('lodri-control-hint').textContent = solo ? 'WASD / ↑↓←→' : '↑↓←→';
+  document.getElementById('ralph-instructions').innerHTML = solo
+    ? 'RALPH <span style="color:var(--muted)">(anchor)</span> — holds the corner'
+    : 'RALPH <span style="color:var(--muted)">(player 1)</span> — WASD / touch';
+  document.getElementById('lodri-instructions').innerHTML = solo
+    ? 'LODRI <span style="color:var(--muted)">(you)</span> — WASD, arrows, or touch'
+    : 'LODRI <span style="color:var(--muted)">(player 2)</span> — arrows / touch';
+}
 
 function canMove(p, dr, dc) {
   const nr = p.r+dr, nc = p.c+dc;
@@ -286,8 +313,9 @@ function checkWin(p) {
     document.getElementById('win-name').textContent = p.name;
     document.getElementById('win-name').style.color = P[p.key];
     const other = p===RALPH?LODRI:RALPH;
-    document.getElementById('win-msg').textContent =
-      `reached COSMOS in ${p.steps} steps · ${other.name} at ${other.steps} steps`;
+    document.getElementById('win-msg').textContent = playerMode === 1
+      ? `reached COSMOS in ${p.steps} steps · RALPH held the corner`
+      : `reached COSMOS in ${p.steps} steps · ${other.name} at ${other.steps} steps`;
     wo.style.display='flex';
     draw();
   }
@@ -299,10 +327,10 @@ window.addEventListener('keydown', e => {
   if(!running) return;
   if(['w','a','s','d','ArrowUp','ArrowDown','ArrowLeft','ArrowRight'].includes(e.key)) e.preventDefault();
   switch(e.key) {
-    case 'w': case 'W': move(RALPH,-1, 0); break;
-    case 's': case 'S': move(RALPH, 1, 0); break;
-    case 'a': case 'A': move(RALPH, 0,-1); break;
-    case 'd': case 'D': move(RALPH, 0, 1); break;
+    case 'w': case 'W': move(playerMode === 1 ? LODRI : RALPH,-1, 0); break;
+    case 's': case 'S': move(playerMode === 1 ? LODRI : RALPH, 1, 0); break;
+    case 'a': case 'A': move(playerMode === 1 ? LODRI : RALPH, 0,-1); break;
+    case 'd': case 'D': move(playerMode === 1 ? LODRI : RALPH, 0, 1); break;
     case 'ArrowUp':    move(LODRI,-1, 0); break;
     case 'ArrowDown':  move(LODRI, 1, 0); break;
     case 'ArrowLeft':  move(LODRI, 0,-1); break;
@@ -315,6 +343,7 @@ document.getElementById('touch-controls').addEventListener('pointerdown', e => {
   if(!button) return;
   e.preventDefault();
   const player = button.dataset.player === 'ralph' ? RALPH : LODRI;
+  if(playerMode === 1 && player === RALPH) return;
   move(player, Number(button.dataset.dr), Number(button.dataset.dc));
   if(navigator.vibrate) navigator.vibrate(8);
 });
@@ -402,7 +431,7 @@ function startGame() {
   genMaze();
   RALPH.r=1; RALPH.c=1; RALPH.steps=0; RALPH.won=false;
   LODRI.r=1; LODRI.c=3; LODRI.steps=0; LODRI.won=false;
-  document.getElementById('ralph-steps').textContent='0 steps';
+  document.getElementById('ralph-steps').textContent=playerMode === 1 ? 'corner' : '0 steps';
   document.getElementById('lodri-steps').textContent='0 steps';
   document.getElementById('overlay').style.display='none';
   document.getElementById('win-overlay').style.display='none';
@@ -420,6 +449,7 @@ function resetGame() {
 
 // Initial draw
 applyTheme();
+setMode(1);
 genMaze(); drawMaze();
 </script>
 </body>
