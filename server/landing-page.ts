@@ -8,7 +8,7 @@
 const TELEMETRY_URL = "https://github.com/peterlodri-sec/kompress-ultra/blob/main/TELEMETRY.md";
 
 export function version(): string {
-  return "14.0.0";
+  return "15.0.0";
 }
 
 export function telemetryUrl(): string {

@@ -24,7 +24,7 @@ more: []
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/version-14.0.0-0a0a14?style=for-the-badge&labelColor=141420&color=00d4ff" alt="Version">
+  <img src="https://img.shields.io/badge/version-15.0.0-0a0a14?style=for-the-badge&labelColor=141420&color=00d4ff" alt="Version">
   <img src="https://img.shields.io/badge/license-Apache%202.0-0a0a14?style=for-the-badge&labelColor=141420&color=00e660" alt="License">
   <img src="https://img.shields.io/badge/built%20with-Bun-0a0a14?style=for-the-badge&labelColor=141420&color=white&logo=bun" alt="Built with Bun">
   <img src="https://img.shields.io/badge/Rust-crates-0a0a14?style=for-the-badge&labelColor=141420&color=f74c00&logo=rust" alt="Rust">
