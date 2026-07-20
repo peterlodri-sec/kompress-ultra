@@ -5,6 +5,23 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+- `server/pond-page.ts` — pond.vaked.dev. The worker has imported and routed to it since the hub commit, but the module itself was never committed; typecheck and deploy were broken without it.
+- `.editorconfig` — 2-space TS/JSON, 4-space Rust/Python, LF, final newline
+- Tests: non-integer `maxMessagesKept` rejection; `cosineSimilarity` on opposite vectors
+
+### Fixed
+- `server/worker.ts` — `POST /v1/riva/prompt` error path passed `{ status: 400 }` where `json()` takes a numeric status, so malformed requests were answered with 200
+- `src/types.ts` — `validateOptions` now rejects non-integer `maxMessagesKept`, as its error message always claimed
+- Version drift: `package.json`, README badge, and the worker `X-Version` header still said 14.0.0 after the 15.0.0 release; all now 15.0.0
+
+### Changed
+- `src/types.ts` — `ConfigError` import hoisted to the top of the file (previously sat mid-file after its own use site)
+- `src/hash.ts` — `cosineSimilarity` docs corrected: range is [-1, 1] for arbitrary vectors, [0, 1] only for hash embeddings
+- `package.json` — dropped stale `milvus` npm keyword (`milvusUrl` is deprecated; local vector store replaced it)
+
 ## [15.0.0] — 2026-07-01 — RIVA
 
 ### Added
