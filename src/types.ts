@@ -1,3 +1,5 @@
+import { ConfigError } from "./errors.js";
+
 export type AgentType = "coder" | "researcher" | "reviewer" | "orchestrator";
 
 export type CompressionLevelName = "verbatim" | "lite" | "ultra" | "brain-backed";
@@ -55,8 +57,6 @@ export function validateOptions(options: Partial<KompressUltraOptions>): Require
 
   return merged;
 }
-
-import { ConfigError } from "./errors.js";
 
 export interface Message {
   role: string;
