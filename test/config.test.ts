@@ -25,6 +25,11 @@ describe("config validation", () => {
     expect(() => validateOptions({ maxMessagesKept: 0 })).toThrow("maxMessagesKept");
   });
 
+  it("rejects non-integer maxMessagesKept", () => {
+    expect(() => validateOptions({ maxMessagesKept: 1.5 })).toThrow("maxMessagesKept");
+    expect(() => validateOptions({ maxMessagesKept: NaN })).toThrow("maxMessagesKept");
+  });
+
   it("rejects aggression out of range", () => {
     expect(() => validateOptions({ aggression: 1.5 })).toThrow("aggression");
     expect(() => validateOptions({ aggression: -0.1 })).toThrow("aggression");

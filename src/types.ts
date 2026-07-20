@@ -41,7 +41,7 @@ export function validateOptions(options: Partial<KompressUltraOptions>): Require
   if (typeof merged.relevanceThreshold !== "number" || merged.relevanceThreshold < 0 || merged.relevanceThreshold > 1) {
     throw new ConfigError("relevanceThreshold must be a number between 0 and 1");
   }
-  if (typeof merged.maxMessagesKept !== "number" || merged.maxMessagesKept < 1) {
+  if (!Number.isInteger(merged.maxMessagesKept) || merged.maxMessagesKept < 1) {
     throw new ConfigError("maxMessagesKept must be a positive integer");
   }
   if (typeof merged.aggression !== "number" || merged.aggression < 0 || merged.aggression > 1) {
