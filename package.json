@@ -51,7 +51,6 @@
     "modernbert",
     "asymmetric-loss",
     "token-savings",
-    "milvus",
     "vector-memory",
     "headroom"
   ],
