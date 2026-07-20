@@ -7,7 +7,8 @@
  *   Each word maps to a vector bucket via hash → accumulated → unit-normalized.
  *   Captures keyword overlap, not semantics. Deterministic, zero-cost.
  *
- * cosineSimilarity: dot(a,b) / (|a| * |b|). Range [0, 1].
+ * cosineSimilarity: dot(a,b) / (|a| * |b|). Range [-1, 1] in general;
+ *   [0, 1] for hash embeddings, whose components are never negative.
  */
 
 const EMBED_DIM = 768;
@@ -35,7 +36,8 @@ export function hashEmbedding(text: string, dim: number = EMBED_DIM): number[] {
 }
 
 /**
- * Cosine similarity between two vectors. Range: 0 to 1.
+ * Cosine similarity between two vectors. Range: -1 to 1 for arbitrary
+ * vectors; 0 to 1 when both come from hashEmbedding (non-negative components).
  * Core operation for all embedding-based search.
  */
 export function cosineSimilarity(a: number[], b: number[]): number {

@@ -72,6 +72,10 @@ describe("cosineSimilarity", () => {
     expect(cosineSimilarity(a, b)).toBeGreaterThan(0);
   });
 
+  it("opposite vectors return -1 (range is [-1, 1] for arbitrary input)", () => {
+    expect(cosineSimilarity([1, 2, 3], [-1, -2, -3])).toBeCloseTo(-1, 6);
+  });
+
   it("completely different texts produce similarity < 1", () => {
     const a = hashEmbedding("apple banana cherry");
     const b = hashEmbedding("xray yoyo zebra");
