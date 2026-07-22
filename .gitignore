@@ -18,6 +18,10 @@ dist/
 
 # OS
 .DS_Store
+
+# Generated / live data files
+assets/geo-signal.json
+assets/mygraph-live.json
 Thumbs.db
 
 # Environment

@@ -1,0 +1,11 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(pip show *)",
+      "Bash(pip3 show *)",
+      "Bash(pip list *)",
+      "Bash(pip3 list *)",
+      "Bash(/usr/bin/find *)"
+    ]
+  }
+}

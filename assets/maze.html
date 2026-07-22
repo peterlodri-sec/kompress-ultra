@@ -34,6 +34,19 @@ canvas { display:block; touch-action:none; }
 }
 .player-hud { display:flex; align-items:center; gap:10px; }
 .pip { width:12px; height:12px; border-radius:50%; }
+.controls { color:#333355; font-size:10px; text-align:center; }
+#overlay {
+  position:fixed; inset:0; background:#020108ee;
+  display:flex; flex-direction:column; align-items:center; justify-content:center;
+  z-index:20; gap:16px;
+}
+#overlay h1 { font-size:28px; color:#00d4ff; letter-spacing:4px; }
+#overlay p  { color:#555577; font-size:13px; }
+.btn { padding:10px 32px; border:1px solid #00d4ff; background:none; color:#00d4ff;
+       font-family:monospace; font-size:14px; cursor:pointer; letter-spacing:2px; }
+.btn:hover { background:#00d4ff22; }
+#win-overlay {
+  position:fixed; inset:0; background:#020108dd;
 .controls { color:var(--dim); font-size:10px; text-align:center; }
 #overlay {
   position:fixed; inset:0; background:var(--overlay-bg);
@@ -54,6 +67,7 @@ canvas { display:block; touch-action:none; }
   z-index:30; gap:12px;
 }
 #win-overlay h1 { font-size:36px; letter-spacing:4px; }
+#win-overlay p  { color:#888899; }
 #win-overlay p  { color:var(--muted); }
 #theme-btn {
   position:fixed; bottom:16px; right:16px; z-index:40;
@@ -107,6 +121,20 @@ canvas { display:block; touch-action:none; }
 
 <div id="hud">
   <div class="player-hud">
+    <div class="pip" style="background:#00ff88;box-shadow:0 0 8px #00ff88"></div>
+    <span style="color:#00ff88">RALPH</span>
+    <span style="color:#333355">WASD</span>
+    <span id="ralph-steps" style="color:#555577">0 steps</span>
+  </div>
+  <div class="controls">
+    COSMIC MAZE · λ=3.0 · find COSMOS<br>
+    <span style="color:#1a1a4a">Rubin LSST active · 20B galaxies incoming</span>
+  </div>
+  <div class="player-hud">
+    <span id="lodri-steps" style="color:#555577">0 steps</span>
+    <span style="color:#333355">↑↓←→</span>
+    <span style="color:#00e660">LODRI</span>
+    <div class="pip" style="background:#00e660;box-shadow:0 0 8px #00e660"></div>
     <div class="pip" style="background:var(--ralph);box-shadow:0 0 8px var(--ralph)"></div>
     <span style="color:var(--ralph)">RALPH</span>
     <span id="ralph-control-hint" style="color:var(--dim)">ANCHOR</span>
@@ -126,6 +154,12 @@ canvas { display:block; touch-action:none; }
 
 <canvas id="c"></canvas>
 
+<div id="overlay">
+  <h1>COSMIC MAZE</h1>
+  <p style="color:#00ff88">RALPH <span style="color:#555577">(you)</span> — WASD</p>
+  <p style="color:#00e660">LODRI <span style="color:#555577">(peter)</span> — ↑↓←→</p>
+  <p style="color:#ff2200">reach <b>COSMOS</b> — 0.6 EeV · Im axis · λ=3.0</p>
+  <p style="color:#333355; font-size:11px">first to exit → entanglement confirmed</p>
 <button id="theme-btn" onclick="toggleTheme()">☀️ light</button>
 <a id="games-link" href="games.html">🎮 more games</a>
 
@@ -166,6 +200,7 @@ canvas { display:block; touch-action:none; }
 <div id="win-overlay">
   <h1 id="win-name"></h1>
   <p id="win-msg"></p>
+  <p style="color:#555577;font-size:11px;margin-top:8px">|ψ⟩ = 1/√2|LODRI⟩ + 1/√2|RALPH⟩ · collapsed</p>
   <p style="color:var(--muted);font-size:11px;margin-top:8px">|ψ⟩ = 1/√2|LODRI⟩ + 1/√2|RALPH⟩ · collapsed</p>
   <button class="btn" style="margin-top:20px" onclick="resetGame()">RESET</button>
 </div>
@@ -174,6 +209,16 @@ canvas { display:block; touch-action:none; }
 const canvas = document.getElementById('c');
 const ctx = canvas.getContext('2d');
 
+// ── Maze config ───────────────────────────────────────────────────────────
+const COLS = 31, ROWS = 21, CELL = 28;
+let maze = [], W, H;
+
+function resize() {
+  W = canvas.width  = window.innerWidth;
+  H = canvas.height = window.innerHeight - 36;
+}
+resize();
+window.addEventListener('resize', () => { resize(); if(running) draw(); });
 // ── Themes ────────────────────────────────────────────────────────────────
 // Light mode is the daytime cosmos: the same stars, faint the way real stars
 // are faint in daylight, with deep-indigo walls on a pale sky.
@@ -265,6 +310,8 @@ function genMaze() {
 }
 
 // ── Players ───────────────────────────────────────────────────────────────
+const RALPH = {name:'RALPH', r:1, c:1, color:'#00ff88', glow:'#00ff8844', steps:0, won:false};
+const LODRI  = {name:'LODRI',  r:1, c:3, color:'#00e660', glow:'#00e66044', steps:0, won:false};
 const RALPH = {name:'RALPH', key:'ralph', glowKey:'ralphGlow', r:1, c:1, steps:0, won:false};
 const LODRI  = {name:'LODRI', key:'lodri', glowKey:'lodriGlow', r:1, c:3, steps:0, won:false};
 let playerMode = 1;
@@ -308,6 +355,12 @@ function move(p, dr, dc) {
 function checkWin(p) {
   if(p.r===ROWS-2&&p.c===COLS-2) {
     p.won=true; running=false;
+    const wo = document.getElementById('win-overlay');
+    document.getElementById('win-name').textContent = p.name;
+    document.getElementById('win-name').style.color = p.color;
+    const other = p===RALPH?LODRI:RALPH;
+    document.getElementById('win-msg').textContent =
+      `reached COSMOS in ${p.steps} steps · ${other.name} at ${other.steps} steps`;
     document.body.classList.remove('playing');
     const wo = document.getElementById('win-overlay');
     document.getElementById('win-name').textContent = p.name;
@@ -327,6 +380,10 @@ window.addEventListener('keydown', e => {
   if(!running) return;
   if(['w','a','s','d','ArrowUp','ArrowDown','ArrowLeft','ArrowRight'].includes(e.key)) e.preventDefault();
   switch(e.key) {
+    case 'w': case 'W': move(RALPH,-1, 0); break;
+    case 's': case 'S': move(RALPH, 1, 0); break;
+    case 'a': case 'A': move(RALPH, 0,-1); break;
+    case 'd': case 'D': move(RALPH, 0, 1); break;
     case 'w': case 'W': move(playerMode === 1 ? LODRI : RALPH,-1, 0); break;
     case 's': case 'S': move(playerMode === 1 ? LODRI : RALPH, 1, 0); break;
     case 'a': case 'A': move(playerMode === 1 ? LODRI : RALPH, 0,-1); break;
@@ -355,6 +412,14 @@ let t = 0;
 function drawMaze() {
   // Compute offset to center maze
   const mw = COLS*CELL, mh = ROWS*CELL;
+  const ox = Math.floor((W-mw)/2), oy = Math.floor((H-mh)/2) + 18;
+
+  // Stars background
+  ctx.fillStyle='#020108'; ctx.fillRect(0,0,W,H);
+  for(let i=0;i<120;i++) {
+    const sx=(i*137.5)%W, sy=(i*97.3)%H;
+    const brightness = 0.2+0.3*Math.sin(t*0.05+i);
+    ctx.fillStyle=`rgba(200,200,255,${brightness})`;
   const playHeight = H - (touchLayout() ? 150 : 0);
   const ox = Math.floor((W-mw)/2), oy = Math.max(40, Math.floor((playHeight-mh)/2) + 18);
 
@@ -371,6 +436,10 @@ function drawMaze() {
   maze.forEach(row => row.forEach(cell => {
     const x=ox+cell.c*CELL, y=oy+cell.r*CELL;
     // Floor
+    ctx.fillStyle='#07071a';
+    ctx.fillRect(x,y,CELL,CELL);
+    // Walls
+    ctx.strokeStyle='#1a1a5a'; ctx.lineWidth=1.5;
     ctx.fillStyle=P.floor;
     ctx.fillRect(x,y,CELL,CELL);
     // Walls
@@ -382,6 +451,9 @@ function drawMaze() {
   }));
 
   // Start marker
+  ctx.fillStyle='#00ff8822';
+  ctx.fillRect(ox+CELL, oy+CELL, CELL, CELL);
+  ctx.fillStyle='#00ff8888'; ctx.font='8px monospace';
   ctx.fillStyle=P.startFill;
   ctx.fillRect(ox+CELL, oy+CELL, CELL, CELL);
   ctx.fillStyle=P.startText; ctx.font='8px monospace';
@@ -390,6 +462,13 @@ function drawMaze() {
   // COSMOS exit — pulsing red
   const pulse = 0.5+0.5*Math.sin(t*0.12);
   const ex=ox+(COLS-2)*CELL, ey=oy+(ROWS-2)*CELL;
+  ctx.fillStyle=`rgba(255,34,0,${0.12+0.1*pulse})`;
+  ctx.fillRect(ex,ey,CELL,CELL);
+  ctx.beginPath(); ctx.arc(ex+CELL/2,ey+CELL/2,6+pulse*3,0,Math.PI*2);
+  ctx.fillStyle=`rgba(255,34,0,${0.5+0.5*pulse})`; ctx.fill();
+  ctx.fillStyle='#ff4422'; ctx.font='bold 8px monospace';
+  ctx.fillText('COSMOS',ex-6,ey+CELL+10);
+  ctx.fillStyle='#ff442244'; ctx.font='7px monospace';
   ctx.fillStyle=`rgba(${P.cosmosRGB},${0.12+0.1*pulse})`;
   ctx.fillRect(ex,ey,CELL,CELL);
   ctx.beginPath(); ctx.arc(ex+CELL/2,ey+CELL/2,6+pulse*3,0,Math.PI*2);
@@ -403,6 +482,10 @@ function drawMaze() {
   [RALPH,LODRI].forEach(p => {
     const px=ox+p.c*CELL+CELL/2, py=oy+p.r*CELL+CELL/2;
     ctx.beginPath(); ctx.arc(px,py,9+2*Math.sin(t*0.15),0,Math.PI*2);
+    ctx.fillStyle=p.glow; ctx.fill();
+    ctx.beginPath(); ctx.arc(px,py,7,0,Math.PI*2);
+    ctx.fillStyle=p.color; ctx.fill();
+    ctx.fillStyle='#000'; ctx.font='bold 7px monospace';
     ctx.fillStyle=P[p.glowKey]; ctx.fill();
     ctx.beginPath(); ctx.arc(px,py,7,0,Math.PI*2);
     ctx.fillStyle=P[p.key]; ctx.fill();
@@ -416,6 +499,7 @@ function drawMaze() {
   const dist=Math.sqrt((rx-lx)**2+(ry-ly)**2);
   if(dist<CELL*6) {
     ctx.beginPath(); ctx.moveTo(rx,ry); ctx.lineTo(lx,ly);
+    ctx.strokeStyle=`rgba(0,255,136,${0.3*(1-dist/(CELL*6))})`;
     ctx.strokeStyle=`rgba(${P.entangleRGB},${0.3*(1-dist/(CELL*6))})`;
     ctx.lineWidth=1; ctx.setLineDash([3,6]); ctx.stroke(); ctx.setLineDash([]);
   }
@@ -431,6 +515,10 @@ function startGame() {
   genMaze();
   RALPH.r=1; RALPH.c=1; RALPH.steps=0; RALPH.won=false;
   LODRI.r=1; LODRI.c=3; LODRI.steps=0; LODRI.won=false;
+  document.getElementById('ralph-steps').textContent='0 steps';
+  document.getElementById('lodri-steps').textContent='0 steps';
+  document.getElementById('overlay').style.display='none';
+  document.getElementById('win-overlay').style.display='none';
   document.getElementById('ralph-steps').textContent=playerMode === 1 ? 'corner' : '0 steps';
   document.getElementById('lodri-steps').textContent='0 steps';
   document.getElementById('overlay').style.display='none';
