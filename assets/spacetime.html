@@ -1,0 +1,355 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>spacetime · Jupiter · causal</title>
+<style>
+* { margin:0; padding:0; box-sizing:border-box; }
+body { background:#f0f0f8; overflow:hidden; }
+canvas { display:block; }
+#hud {
+  position:fixed; bottom:24px; left:0; right:0;
+  text-align:center; font-family:'JetBrains Mono',monospace;
+  font-size:10px; color:#888899; letter-spacing:2px; pointer-events:none;
+}
+#hud span { color:#555577; }
+#top {
+  position:fixed; top:20px; left:24px;
+  font-family:'JetBrains Mono',monospace; font-size:11px;
+  color:#aaaacc; letter-spacing:2px; pointer-events:none;
+  line-height:1.8;
+}
+#top .hi { color:#0066aa; }
+#top .dim { color:#9999bb; }
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<div id="top">
+  <div class="hi">SPACETIME</div>
+  <div class="dim">Jupiter · M = 1.898×10²⁷ kg</div>
+  <div class="dim">causal · not correlational</div>
+  <div class="dim" style="margin-top:8px" id="cone-label">light cone · past ↓ · future ↑</div>
+  <div class="dim" id="geo-label">geodesics · null paths</div>
+</div>
+<div id="hud">
+  <span id="t-label">t = 0</span> &nbsp;·&nbsp;
+  ds² = −c²dt² + dx² + dy² + dz² &nbsp;·&nbsp;
+  <span>causal boundary = c</span>
+</div>
+
+<script>
+const canvas = document.getElementById('c');
+const ctx    = canvas.getContext('2d');
+let W, H;
+function resize() { W = canvas.width = window.innerWidth; H = canvas.height = window.innerHeight; }
+resize();
+window.addEventListener('resize', resize);
+
+let t = 0;
+
+// ── Constants ──────────────────────────────────────────────────────────────
+const GRID_N   = 28;       // grid lines per axis
+const GRID_SZ  = 38;       // spacing
+const GM       = 18000;    // gravitational well depth (visual)
+const SOFTENING = 120;     // prevent singularity
+
+// ── 3D → 2D perspective ────────────────────────────────────────────────────
+const CAM = { x:0, y:-200, z:420, fov:520 };
+
+function project(x, y, z) {
+  const dx = x - CAM.x;
+  const dy = y - CAM.y;
+  const dz = z - CAM.z;
+  // Rotate around X axis (tilt)
+  const cosA = Math.cos(0.52), sinA = Math.sin(0.52);
+  const ry = dy*cosA - dz*sinA;
+  const rz = dy*sinA + dz*cosA;
+  if(rz <= 0) return null;
+  const scale = CAM.fov / rz;
+  return { x: W/2 + dx*scale, y: H/2 + ry*scale, scale };
+}
+
+// ── Spacetime curvature (Schwarzschild-inspired 2D well) ──────────────────
+function warp(gx, gz) {
+  const r2 = gx*gx + gz*gz + SOFTENING*SOFTENING;
+  const r  = Math.sqrt(r2);
+  return -GM / r;  // y displacement (depth of well)
+}
+
+// ── Grid ───────────────────────────────────────────────────────────────────
+function drawGrid() {
+  const half = Math.floor(GRID_N/2);
+
+  // X lines (vary z)
+  for(let iz = -half; iz <= half; iz++) {
+    const pts = [];
+    for(let ix = -half; ix <= half; ix++) {
+      const gx = ix * GRID_SZ, gz = iz * GRID_SZ;
+      const gy = warp(gx, gz);
+      const p  = project(gx, gy, gz);
+      if(p) pts.push(p);
+    }
+    if(pts.length < 2) continue;
+    const depth = iz / half; // -1 to 1
+    const alpha = 0.06 + 0.10 * (1 - Math.abs(depth));
+    ctx.beginPath();
+    ctx.moveTo(pts[0].x, pts[0].y);
+    for(let i=1; i<pts.length; i++) ctx.lineTo(pts[i].x, pts[i].y);
+    ctx.strokeStyle = `rgba(80,100,200,${alpha * 1.8})`;
+    ctx.lineWidth = 0.7;
+    ctx.stroke();
+  }
+
+  // Z lines (vary x)
+  for(let ix = -half; ix <= half; ix++) {
+    const pts = [];
+    for(let iz = -half; iz <= half; iz++) {
+      const gx = ix * GRID_SZ, gz = iz * GRID_SZ;
+      const gy = warp(gx, gz);
+      const p  = project(gx, gy, gz);
+      if(p) pts.push(p);
+    }
+    if(pts.length < 2) continue;
+    const depth = ix / half;
+    const alpha = 0.06 + 0.10 * (1 - Math.abs(depth));
+    ctx.beginPath();
+    ctx.moveTo(pts[0].x, pts[0].y);
+    for(let i=1; i<pts.length; i++) ctx.lineTo(pts[i].x, pts[i].y);
+    ctx.strokeStyle = `rgba(80,100,200,${alpha * 1.8})`;
+    ctx.lineWidth = 0.7;
+    ctx.stroke();
+  }
+}
+
+// ── Jupiter ────────────────────────────────────────────────────────────────
+function drawJupiter() {
+  const gy = warp(0, 0);
+  const p  = project(0, gy, 0);
+  if(!p) return;
+
+  // Glow layers
+  for(let i=5;i>=1;i--) {
+    ctx.beginPath();
+    ctx.arc(p.x, p.y, (16+i*14)*p.scale, 0, Math.PI*2);
+    ctx.fillStyle = `rgba(200,140,60,${0.012*i})`;
+    ctx.fill();
+  }
+
+  // Surface
+  const r = 22 * p.scale;
+  const grad = ctx.createRadialGradient(p.x-r*0.3, p.y-r*0.3, 0, p.x, p.y, r);
+  grad.addColorStop(0,   'rgba(255,200,100,0.95)');
+  grad.addColorStop(0.3, 'rgba(210,140,60,0.9)');
+  grad.addColorStop(0.6, 'rgba(160,100,40,0.85)');
+  grad.addColorStop(1,   'rgba(80,40,10,0.8)');
+  ctx.beginPath();
+  ctx.arc(p.x, p.y, r, 0, Math.PI*2);
+  ctx.fillStyle = grad;
+  ctx.fill();
+
+  // Bands
+  for(let b=0;b<4;b++) {
+    const by = p.y + (b-1.5)*r*0.3;
+    ctx.beginPath();
+    ctx.ellipse(p.x, by, r, r*0.08, 0, 0, Math.PI*2);
+    ctx.fillStyle = `rgba(120,70,20,0.25)`;
+    ctx.fill();
+  }
+
+  // Label
+  ctx.font = `bold ${Math.floor(11*p.scale)}px monospace`;
+  ctx.fillStyle = 'rgba(255,200,100,0.6)';
+  ctx.textAlign = 'center';
+  ctx.fillText('JUPITER', p.x, p.y - r - 8);
+  ctx.fillText('M = 1.898×10²⁷ kg', p.x, p.y - r - 20);
+  ctx.textAlign = 'left';
+}
+
+// ── Light cone ─────────────────────────────────────────────────────────────
+let coneEvents = []; // { gx, gz, born }
+
+function drawLightCone(gx, gz, born) {
+  const age   = t - born;
+  const maxAge = 180;
+  if(age > maxAge) return false;
+  const fade  = 1 - age/maxAge;
+  const gy    = warp(gx, gz);
+
+  // Future cone (upward in spacetime = +y in world)
+  const steps = 20;
+  for(let s=1;s<=steps;s++) {
+    const frac  = s/steps;
+    const coneR = frac * age * 1.6; // radius grows at c
+    const coneY = gy - frac * age * 1.2; // rises in y
+    const pts   = [];
+    const N     = 32;
+    for(let i=0;i<N;i++) {
+      const a  = (i/N)*Math.PI*2;
+      const cx = gx + Math.cos(a)*coneR;
+      const cz = gz + Math.sin(a)*coneR;
+      const p  = project(cx, coneY, cz);
+      if(p) pts.push(p);
+    }
+    if(pts.length < 3) continue;
+    const alpha = fade * (1-frac) * 0.18;
+    ctx.beginPath();
+    ctx.moveTo(pts[0].x, pts[0].y);
+    pts.forEach(p => ctx.lineTo(p.x, p.y));
+    ctx.closePath();
+    ctx.strokeStyle = `rgba(0,100,200,${alpha * 2})`;
+    ctx.lineWidth = 0.5;
+    ctx.stroke();
+  }
+
+  // Past cone (downward)
+  for(let s=1;s<=steps;s++) {
+    const frac  = s/steps;
+    const coneR = frac * age * 1.6;
+    const coneY = gy + frac * age * 0.8;
+    const pts   = [];
+    const N     = 32;
+    for(let i=0;i<N;i++) {
+      const a  = (i/N)*Math.PI*2;
+      const cx = gx + Math.cos(a)*coneR;
+      const cz = gz + Math.sin(a)*coneR;
+      const p  = project(cx, coneY, cz);
+      if(p) pts.push(p);
+    }
+    if(pts.length < 3) continue;
+    const alpha = fade * (1-frac) * 0.10;
+    ctx.beginPath();
+    ctx.moveTo(pts[0].x, pts[0].y);
+    pts.forEach(p => ctx.lineTo(p.x, p.y));
+    ctx.closePath();
+    ctx.strokeStyle = `rgba(140,0,200,${alpha * 2})`;
+    ctx.lineWidth = 0.5;
+    ctx.stroke();
+  }
+
+  // Event point
+  const ep = project(gx, gy, gz);
+  if(ep) {
+    ctx.beginPath(); ctx.arc(ep.x, ep.y, 3, 0, Math.PI*2);
+    ctx.fillStyle = `rgba(0,100,200,${fade*0.9})`;
+    ctx.fill();
+  }
+  return true;
+}
+
+// ── Geodesic particles (null paths) ───────────────────────────────────────
+let geodesics = [];
+
+function spawnGeodesic() {
+  const half = Math.floor(GRID_N/2) * GRID_SZ * 0.6;
+  const angle = Math.random() * Math.PI * 2;
+  const r0    = half * (0.6 + Math.random()*0.4);
+  geodesics.push({
+    gx: Math.cos(angle)*r0,
+    gz: Math.sin(angle)*r0,
+    vx: -Math.cos(angle)*1.5 + (Math.random()-0.5)*1.0,
+    vz: -Math.sin(angle)*1.5 + (Math.random()-0.5)*1.0,
+    age: 0, maxAge: 220 + Math.random()*120,
+    trail: [],
+    hue: Math.random()*60 + 160  // blue-cyan-purple
+  });
+}
+
+function updateGeodesics() {
+  geodesics = geodesics.filter(g => g.age < g.maxAge);
+  geodesics.forEach(g => {
+    g.age++;
+    // Gravitational pull toward Jupiter (0,0)
+    const r2  = g.gx*g.gx + g.gz*g.gz + SOFTENING*SOFTENING;
+    const r   = Math.sqrt(r2);
+    const grav = 280 / (r2);
+    g.vx += (-g.gx/r) * grav;
+    g.vz += (-g.gz/r) * grav;
+
+    // Speed limit (c)
+    const spd = Math.sqrt(g.vx*g.vx + g.vz*g.vz);
+    if(spd > 4) { g.vx *= 4/spd; g.vz *= 4/spd; }
+
+    g.gx += g.vx;
+    g.gz += g.vz;
+
+    const gy = warp(g.gx, g.gz);
+    const p  = project(g.gx, gy, g.gz);
+    if(p) g.trail.push({...p, age: g.age});
+    if(g.trail.length > 60) g.trail.shift();
+
+    // Draw trail
+    if(g.trail.length > 1) {
+      for(let i=1;i<g.trail.length;i++) {
+        const a = i/g.trail.length;
+        const fade = 1 - g.age/g.maxAge;
+        ctx.beginPath();
+        ctx.moveTo(g.trail[i-1].x, g.trail[i-1].y);
+        ctx.lineTo(g.trail[i].x,   g.trail[i].y);
+        ctx.strokeStyle = `hsla(${g.hue},80%,70%,${a*fade*0.5})`;
+        ctx.lineWidth = 1;
+        ctx.stroke();
+      }
+    }
+    // Head
+    if(p) {
+      const fade = 1 - g.age/g.maxAge;
+      ctx.beginPath(); ctx.arc(p.x, p.y, 2, 0, Math.PI*2);
+      ctx.fillStyle = `hsla(${g.hue},90%,80%,${fade*0.9})`;
+      ctx.fill();
+    }
+  });
+
+  if(geodesics.length < 12 && Math.random() < 0.06) spawnGeodesic();
+}
+
+// ── Stars ──────────────────────────────────────────────────────────────────
+const STARS = Array.from({length:200}, (_,i) => ({
+  x: Math.random()*2000-1000, y: Math.random()*2000-1000,
+  z: Math.random()*800+200,   r: Math.random()*1.2+0.3
+}));
+
+function drawStars() {
+  STARS.forEach(s => {
+    const p = project(s.x, s.y, s.z);
+    if(!p || p.x<0||p.x>W||p.y<0||p.y>H) return;
+    const b = 0.2 + 0.3*Math.sin(t*0.02 + s.x);
+    ctx.beginPath(); ctx.arc(p.x, p.y, s.r*p.scale*0.4, 0, Math.PI*2);
+    ctx.fillStyle = `rgba(100,100,180,${b * 0.5})`;
+    ctx.fill();
+  });
+}
+
+// ── Main loop ──────────────────────────────────────────────────────────────
+function draw() {
+  t++;
+  ctx.fillStyle = 'rgba(240,240,248,0.35)';
+  ctx.fillRect(0,0,W,H);
+
+  drawStars();
+  drawGrid();
+  updateGeodesics();
+
+  // Light cones
+  if(t % 90 === 0) {
+    const half = Math.floor(GRID_N/2) * GRID_SZ * 0.5;
+    const a = Math.random()*Math.PI*2;
+    const r = half*(0.3+Math.random()*0.6);
+    coneEvents.push({ gx: Math.cos(a)*r, gz: Math.sin(a)*r, born: t });
+  }
+  coneEvents = coneEvents.filter(e => drawLightCone(e.gx, e.gz, e.born));
+
+  drawJupiter();
+
+  // HUD
+  document.getElementById('t-label').textContent = `t = ${(t/60).toFixed(1)}s`;
+
+  requestAnimationFrame(draw);
+}
+
+// Seed initial geodesics
+for(let i=0;i<8;i++) spawnGeodesic();
+draw();
+</script>
+</body>
+</html>

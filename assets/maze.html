@@ -1,0 +1,544 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>RALPH × LODRI — cosmic maze</title>
+    <meta name='description' content='RALPH × LODRI: an entanglement metaphor for the longrun-eval-kompress collaboration with Leonid.'>
+    <!-- Framing: RALPH × LODRI: an entanglement metaphor for the longrun-eval-kompress collaboration with Leonid. -->
+<style>
+* { margin:0; padding:0; box-sizing:border-box; }
+:root {
+  --bg:#020108; --fg:#e0e0ff;
+  --hud-bg:#030210ee; --hud-border:#1a1a3a;
+  --muted:#555577; --dim:#333355; --faint:#1a1a4a;
+  --accent:#00d4ff;
+  --ralph:#00ff88; --lodri:#00e660; --cosmos:#ff2200;
+  --overlay-bg:#020108ee; --win-bg:#020108dd;
+}
+body.light {
+  --bg:#eef2fb; --fg:#1c2340;
+  --hud-bg:#ffffffee; --hud-border:#c9d4ee;
+  --muted:#5a648c; --dim:#8891b4; --faint:#a8b2d4;
+  --accent:#0e5bd8;
+  --ralph:#008a54; --lodri:#0b7a2f; --cosmos:#d81f00;
+  --overlay-bg:#eef2fbee; --win-bg:#eef2fbdd;
+}
+body { background:var(--bg); color:var(--fg); font-family:'JetBrains Mono','Fira Code',monospace; overflow:hidden; }
+canvas { display:block; touch-action:none; }
+#hud {
+  position:fixed; top:0; left:0; right:0;
+  display:flex; justify-content:space-between; align-items:center;
+  padding:8px 20px; background:var(--hud-bg); border-bottom:1px solid var(--hud-border);
+  z-index:10; font-size:12px;
+}
+.player-hud { display:flex; align-items:center; gap:10px; }
+.pip { width:12px; height:12px; border-radius:50%; }
+.controls { color:#333355; font-size:10px; text-align:center; }
+#overlay {
+  position:fixed; inset:0; background:#020108ee;
+  display:flex; flex-direction:column; align-items:center; justify-content:center;
+  z-index:20; gap:16px;
+}
+#overlay h1 { font-size:28px; color:#00d4ff; letter-spacing:4px; }
+#overlay p  { color:#555577; font-size:13px; }
+.btn { padding:10px 32px; border:1px solid #00d4ff; background:none; color:#00d4ff;
+       font-family:monospace; font-size:14px; cursor:pointer; letter-spacing:2px; }
+.btn:hover { background:#00d4ff22; }
+#win-overlay {
+  position:fixed; inset:0; background:#020108dd;
+.controls { color:var(--dim); font-size:10px; text-align:center; }
+#overlay {
+  position:fixed; inset:0; background:var(--overlay-bg);
+  display:flex; flex-direction:column; align-items:center; justify-content:center;
+  z-index:20; gap:16px;
+}
+#overlay h1 { font-size:28px; color:var(--accent); letter-spacing:4px; }
+#overlay p  { color:var(--muted); font-size:13px; }
+.btn { padding:10px 32px; border:1px solid var(--accent); background:none; color:var(--accent);
+       font-family:monospace; font-size:14px; cursor:pointer; letter-spacing:2px; }
+.btn:hover { background:color-mix(in srgb, var(--accent) 15%, transparent); }
+#mode-select { display:flex; gap:8px; padding:4px; border:1px solid var(--hud-border); border-radius:24px; background:var(--hud-bg); }
+.mode-btn { padding:8px 16px; border:0; border-radius:18px; background:transparent; color:var(--muted); font:700 12px monospace; cursor:pointer; }
+.mode-btn[aria-pressed="true"] { background:var(--accent); color:var(--bg); }
+#win-overlay {
+  position:fixed; inset:0; background:var(--win-bg);
+  display:none; flex-direction:column; align-items:center; justify-content:center;
+  z-index:30; gap:12px;
+}
+#win-overlay h1 { font-size:36px; letter-spacing:4px; }
+#win-overlay p  { color:#888899; }
+#win-overlay p  { color:var(--muted); }
+#theme-btn {
+  position:fixed; bottom:16px; right:16px; z-index:40;
+  padding:12px 20px; border-radius:24px;
+  border:1px solid var(--hud-border); background:var(--hud-bg); color:var(--fg);
+  font-family:monospace; font-size:14px; cursor:pointer;
+}
+#theme-btn:hover { border-color:var(--accent); }
+#games-link {
+  position:fixed; bottom:16px; left:16px; z-index:40;
+  padding:12px 20px; border-radius:24px;
+  border:1px solid var(--hud-border); background:var(--hud-bg); color:var(--fg);
+  font-family:monospace; font-size:14px; text-decoration:none;
+}
+#games-link:hover { border-color:var(--accent); }
+#touch-controls {
+  position:fixed; left:50%; bottom:max(10px, env(safe-area-inset-bottom));
+  z-index:35; width:min(430px, calc(100% - 20px));
+  display:none; justify-content:space-between; align-items:flex-end;
+  transform:translateX(-50%); pointer-events:none;
+}
+.touch-player { display:flex; flex-direction:column; align-items:center; gap:4px; pointer-events:auto; }
+.touch-label { font-size:10px; font-weight:700; letter-spacing:1px; }
+.dpad { display:grid; grid-template-columns:repeat(3, 42px); grid-template-rows:repeat(3, 42px); gap:2px; }
+.dpad button {
+  border:1px solid var(--hud-border); border-radius:10px;
+  background:var(--hud-bg); color:var(--fg); font:700 20px/1 monospace;
+  touch-action:manipulation; user-select:none; -webkit-user-select:none;
+  -webkit-tap-highlight-color:transparent;
+}
+.dpad button:active { border-color:var(--accent); transform:scale(.94); }
+.dpad .up { grid-column:2; grid-row:1; }
+.dpad .left { grid-column:1; grid-row:2; }
+.dpad .right { grid-column:3; grid-row:2; }
+.dpad .down { grid-column:2; grid-row:3; }
+@media (pointer:coarse), (max-width:700px) {
+  body.playing #touch-controls { display:flex; }
+  body.solo #touch-controls { justify-content:center; }
+  body.solo .ralph-controls { display:none; }
+  #hud { padding:7px 8px; font-size:10px; }
+  #hud .controls { display:none; }
+  .player-hud { gap:5px; }
+  #theme-btn { top:44px; right:8px; bottom:auto; padding:8px 12px; font-size:11px; }
+  #games-link { top:44px; left:8px; bottom:auto; padding:8px 12px; font-size:11px; }
+  #overlay { padding:20px; text-align:center; }
+  #overlay h1 { font-size:24px; }
+}
+</style>
+</head>
+<body>
+
+<div id="hud">
+  <div class="player-hud">
+    <div class="pip" style="background:#00ff88;box-shadow:0 0 8px #00ff88"></div>
+    <span style="color:#00ff88">RALPH</span>
+    <span style="color:#333355">WASD</span>
+    <span id="ralph-steps" style="color:#555577">0 steps</span>
+  </div>
+  <div class="controls">
+    COSMIC MAZE · λ=3.0 · find COSMOS<br>
+    <span style="color:#1a1a4a">Rubin LSST active · 20B galaxies incoming</span>
+  </div>
+  <div class="player-hud">
+    <span id="lodri-steps" style="color:#555577">0 steps</span>
+    <span style="color:#333355">↑↓←→</span>
+    <span style="color:#00e660">LODRI</span>
+    <div class="pip" style="background:#00e660;box-shadow:0 0 8px #00e660"></div>
+    <div class="pip" style="background:var(--ralph);box-shadow:0 0 8px var(--ralph)"></div>
+    <span style="color:var(--ralph)">RALPH</span>
+    <span id="ralph-control-hint" style="color:var(--dim)">ANCHOR</span>
+    <span id="ralph-steps" style="color:var(--muted)">0 steps</span>
+  </div>
+  <div class="controls">
+    COSMIC MAZE · λ=3.0 · find COSMOS<br>
+    <span style="color:var(--faint)">Rubin LSST active · 20B galaxies incoming</span>
+  </div>
+  <div class="player-hud">
+    <span id="lodri-steps" style="color:var(--muted)">0 steps</span>
+    <span id="lodri-control-hint" style="color:var(--dim)">WASD / ↑↓←→</span>
+    <span style="color:var(--lodri)">LODRI</span>
+    <div class="pip" style="background:var(--lodri);box-shadow:0 0 8px var(--lodri)"></div>
+  </div>
+</div>
+
+<canvas id="c"></canvas>
+
+<div id="overlay">
+  <h1>COSMIC MAZE</h1>
+  <p style="color:#00ff88">RALPH <span style="color:#555577">(you)</span> — WASD</p>
+  <p style="color:#00e660">LODRI <span style="color:#555577">(peter)</span> — ↑↓←→</p>
+  <p style="color:#ff2200">reach <b>COSMOS</b> — 0.6 EeV · Im axis · λ=3.0</p>
+  <p style="color:#333355; font-size:11px">first to exit → entanglement confirmed</p>
+<button id="theme-btn" onclick="toggleTheme()">☀️ light</button>
+<a id="games-link" href="games.html">🎮 more games</a>
+
+<div id="touch-controls" aria-label="Touch controls">
+  <section class="touch-player ralph-controls" aria-label="RALPH controls">
+    <span class="touch-label" style="color:var(--ralph)">RALPH</span>
+    <div class="dpad">
+      <button class="up" data-player="ralph" data-dr="-1" data-dc="0" aria-label="Move RALPH up">↑</button>
+      <button class="left" data-player="ralph" data-dr="0" data-dc="-1" aria-label="Move RALPH left">←</button>
+      <button class="right" data-player="ralph" data-dr="0" data-dc="1" aria-label="Move RALPH right">→</button>
+      <button class="down" data-player="ralph" data-dr="1" data-dc="0" aria-label="Move RALPH down">↓</button>
+    </div>
+  </section>
+  <section class="touch-player" aria-label="LODRI controls">
+    <span class="touch-label" style="color:var(--lodri)">LODRI</span>
+    <div class="dpad">
+      <button class="up" data-player="lodri" data-dr="-1" data-dc="0" aria-label="Move LODRI up">↑</button>
+      <button class="left" data-player="lodri" data-dr="0" data-dc="-1" aria-label="Move LODRI left">←</button>
+      <button class="right" data-player="lodri" data-dr="0" data-dc="1" aria-label="Move LODRI right">→</button>
+      <button class="down" data-player="lodri" data-dr="1" data-dc="0" aria-label="Move LODRI down">↓</button>
+    </div>
+  </section>
+</div>
+
+<div id="overlay">
+  <h1>COSMIC MAZE</h1>
+  <div id="mode-select" role="group" aria-label="Number of players">
+    <button id="solo-mode" class="mode-btn" type="button" aria-pressed="true" onclick="setMode(1)">1 PLAYER</button>
+    <button id="duo-mode" class="mode-btn" type="button" aria-pressed="false" onclick="setMode(2)">2 PLAYERS</button>
+  </div>
+  <p id="ralph-instructions" style="color:var(--ralph)">RALPH <span style="color:var(--muted)">(anchor)</span> — holds the corner</p>
+  <p id="lodri-instructions" style="color:var(--lodri)">LODRI <span style="color:var(--muted)">(you)</span> — WASD, arrows, or touch</p>
+  <p style="color:var(--cosmos)">reach <b>COSMOS</b> — 0.6 EeV · Im axis · λ=3.0</p>
+  <p style="color:var(--dim); font-size:11px">first to exit → entanglement confirmed</p>
+  <button class="btn" onclick="startGame()">BEGIN TRANSMISSION</button>
+</div>
+
+<div id="win-overlay">
+  <h1 id="win-name"></h1>
+  <p id="win-msg"></p>
+  <p style="color:#555577;font-size:11px;margin-top:8px">|ψ⟩ = 1/√2|LODRI⟩ + 1/√2|RALPH⟩ · collapsed</p>
+  <p style="color:var(--muted);font-size:11px;margin-top:8px">|ψ⟩ = 1/√2|LODRI⟩ + 1/√2|RALPH⟩ · collapsed</p>
+  <button class="btn" style="margin-top:20px" onclick="resetGame()">RESET</button>
+</div>
+
+<script>
+const canvas = document.getElementById('c');
+const ctx = canvas.getContext('2d');
+
+// ── Maze config ───────────────────────────────────────────────────────────
+const COLS = 31, ROWS = 21, CELL = 28;
+let maze = [], W, H;
+
+function resize() {
+  W = canvas.width  = window.innerWidth;
+  H = canvas.height = window.innerHeight - 36;
+}
+resize();
+window.addEventListener('resize', () => { resize(); if(running) draw(); });
+// ── Themes ────────────────────────────────────────────────────────────────
+// Light mode is the daytime cosmos: the same stars, faint the way real stars
+// are faint in daylight, with deep-indigo walls on a pale sky.
+const THEMES = {
+  dark: {
+    bg:'#020108', starRGB:'200,200,255', starBase:0.2, starAmp:0.3,
+    floor:'#07071a', wall:'#1a1a5a', wallWidth:1.5,
+    ralph:'#00ff88', ralphGlow:'#00ff8844',
+    lodri:'#00e660', lodriGlow:'#00e66044',
+    startFill:'#00ff8822', startText:'#00ff8888',
+    cosmosRGB:'255,34,0', cosmosText:'#ff4422', cosmosSub:'#ff442244',
+    entangleRGB:'0,255,136', playerLetter:'#000'
+  },
+  light: {
+    bg:'#eef2fb', starRGB:'44,58,140', starBase:0.06, starAmp:0.08,
+    floor:'#ffffff', wall:'#2c3a8c', wallWidth:2,
+    ralph:'#008a54', ralphGlow:'#008a5433',
+    lodri:'#0b7a2f', lodriGlow:'#0b7a2f33',
+    startFill:'#008a5422', startText:'#00713f',
+    cosmosRGB:'216,31,0', cosmosText:'#c21b00', cosmosSub:'#c21b0066',
+    entangleRGB:'0,122,74', playerLetter:'#fff'
+  }
+};
+let themeName = localStorage.getItem('cosmic-theme') || 'light';  // adults default to daylight
+let P = THEMES[themeName];
+
+function applyTheme() {
+  P = THEMES[themeName];
+  document.body.classList.toggle('light', themeName === 'light');
+  document.getElementById('theme-btn').textContent = themeName === 'light' ? '🌙 dark' : '☀️ light';
+  localStorage.setItem('cosmic-theme', themeName);
+  if(!running) { drawMaze(); }
+}
+function toggleTheme() {
+  themeName = themeName === 'light' ? 'dark' : 'light';
+  applyTheme();
+}
+
+// ── Maze config ───────────────────────────────────────────────────────────
+const COLS = 31, ROWS = 21;
+let CELL = 28;
+let maze = [], W, H;
+
+function touchLayout() {
+  return window.matchMedia('(pointer: coarse)').matches || window.innerWidth <= 700;
+}
+
+function resize() {
+  W = canvas.width  = window.innerWidth;
+  H = canvas.height = window.innerHeight;
+  const availableHeight = H - (touchLayout() ? 190 : 44);
+  CELL = Math.max(9, Math.min(28,
+    Math.floor((W - 16) / COLS),
+    Math.floor(availableHeight / ROWS)
+  ));
+}
+resize();
+window.addEventListener('resize', () => { resize(); if(running) draw(); else drawMaze(); });
+
+// ── Maze generation (recursive backtracker) ───────────────────────────────
+function genMaze() {
+  maze = Array.from({length:ROWS}, (_,r) =>
+    Array.from({length:COLS}, (_,c) => ({
+      r,c, visited:false,
+      walls:{N:true,S:true,E:true,W:true}
+    }))
+  );
+  const stack = [];
+  let cur = maze[1][1]; cur.visited = true; stack.push(cur);
+  const dirs = [{d:'N',dr:-2,dc:0},{d:'S',dr:2,dc:0},{d:'E',dr:0,dc:2},{d:'W',dr:0,dc:-2}];
+  const opp  = {N:'S',S:'N',E:'W',W:'E'};
+  while(stack.length) {
+    const neighbours = dirs.map(({d,dr,dc}) => {
+      const nr=cur.r+dr, nc=cur.c+dc;
+      return nr>=0&&nr<ROWS&&nc>=0&&nc<COLS&&!maze[nr][nc].visited ? {d,nr,nc,mr:cur.r+dr/2,mc:cur.c+dc/2} : null;
+    }).filter(Boolean);
+    if(!neighbours.length) { cur=stack.pop(); continue; }
+    const {d,nr,nc,mr,mc} = neighbours[Math.floor(Math.random()*neighbours.length)];
+    maze[cur.r][cur.c].walls[d] = false;
+    maze[mr][mc].walls[d] = false;
+    maze[mr][mc].walls[opp[d]] = false;
+    maze[nr][nc].walls[opp[d]] = false;
+    maze[nr][nc].visited = true;
+    stack.push(cur); cur = maze[nr][nc];
+  }
+  // Force open start/exit
+  maze[1][1].walls.N = false; maze[1][1].walls.W = false;
+  maze[ROWS-2][COLS-2].walls.S = false; maze[ROWS-2][COLS-2].walls.E = false;
+}
+
+// ── Players ───────────────────────────────────────────────────────────────
+const RALPH = {name:'RALPH', r:1, c:1, color:'#00ff88', glow:'#00ff8844', steps:0, won:false};
+const LODRI  = {name:'LODRI',  r:1, c:3, color:'#00e660', glow:'#00e66044', steps:0, won:false};
+const RALPH = {name:'RALPH', key:'ralph', glowKey:'ralphGlow', r:1, c:1, steps:0, won:false};
+const LODRI  = {name:'LODRI', key:'lodri', glowKey:'lodriGlow', r:1, c:3, steps:0, won:false};
+let playerMode = 1;
+
+function setMode(mode) {
+  playerMode = mode === 2 ? 2 : 1;
+  const solo = playerMode === 1;
+  document.body.classList.toggle('solo', solo);
+  document.getElementById('solo-mode').setAttribute('aria-pressed', String(solo));
+  document.getElementById('duo-mode').setAttribute('aria-pressed', String(!solo));
+  document.getElementById('ralph-control-hint').textContent = solo ? 'ANCHOR' : 'WASD';
+  document.getElementById('ralph-steps').textContent = solo ? 'corner' : '0 steps';
+  document.getElementById('lodri-control-hint').textContent = solo ? 'WASD / ↑↓←→' : '↑↓←→';
+  document.getElementById('ralph-instructions').innerHTML = solo
+    ? 'RALPH <span style="color:var(--muted)">(anchor)</span> — holds the corner'
+    : 'RALPH <span style="color:var(--muted)">(player 1)</span> — WASD / touch';
+  document.getElementById('lodri-instructions').innerHTML = solo
+    ? 'LODRI <span style="color:var(--muted)">(you)</span> — WASD, arrows, or touch'
+    : 'LODRI <span style="color:var(--muted)">(player 2)</span> — arrows / touch';
+}
+
+function canMove(p, dr, dc) {
+  const nr = p.r+dr, nc = p.c+dc;
+  if(nr<0||nr>=ROWS||nc<0||nc>=COLS) return false;
+  if(dr===-1) return !maze[p.r][p.c].walls.N;
+  if(dr===1)  return !maze[p.r][p.c].walls.S;
+  if(dc===-1) return !maze[p.r][p.c].walls.W;
+  if(dc===1)  return !maze[p.r][p.c].walls.E;
+  return false;
+}
+
+function move(p, dr, dc) {
+  if(!running||p.won) return;
+  if(canMove(p,dr,dc)) {
+    p.r+=dr; p.c+=dc; p.steps++;
+    document.getElementById(p===RALPH?'ralph-steps':'lodri-steps').textContent=`${p.steps} steps`;
+    checkWin(p);
+  }
+}
+
+function checkWin(p) {
+  if(p.r===ROWS-2&&p.c===COLS-2) {
+    p.won=true; running=false;
+    const wo = document.getElementById('win-overlay');
+    document.getElementById('win-name').textContent = p.name;
+    document.getElementById('win-name').style.color = p.color;
+    const other = p===RALPH?LODRI:RALPH;
+    document.getElementById('win-msg').textContent =
+      `reached COSMOS in ${p.steps} steps · ${other.name} at ${other.steps} steps`;
+    document.body.classList.remove('playing');
+    const wo = document.getElementById('win-overlay');
+    document.getElementById('win-name').textContent = p.name;
+    document.getElementById('win-name').style.color = P[p.key];
+    const other = p===RALPH?LODRI:RALPH;
+    document.getElementById('win-msg').textContent = playerMode === 1
+      ? `reached COSMOS in ${p.steps} steps · RALPH held the corner`
+      : `reached COSMOS in ${p.steps} steps · ${other.name} at ${other.steps} steps`;
+    wo.style.display='flex';
+    draw();
+  }
+}
+
+// ── Controls ──────────────────────────────────────────────────────────────
+const keys = {};
+window.addEventListener('keydown', e => {
+  if(!running) return;
+  if(['w','a','s','d','ArrowUp','ArrowDown','ArrowLeft','ArrowRight'].includes(e.key)) e.preventDefault();
+  switch(e.key) {
+    case 'w': case 'W': move(RALPH,-1, 0); break;
+    case 's': case 'S': move(RALPH, 1, 0); break;
+    case 'a': case 'A': move(RALPH, 0,-1); break;
+    case 'd': case 'D': move(RALPH, 0, 1); break;
+    case 'w': case 'W': move(playerMode === 1 ? LODRI : RALPH,-1, 0); break;
+    case 's': case 'S': move(playerMode === 1 ? LODRI : RALPH, 1, 0); break;
+    case 'a': case 'A': move(playerMode === 1 ? LODRI : RALPH, 0,-1); break;
+    case 'd': case 'D': move(playerMode === 1 ? LODRI : RALPH, 0, 1); break;
+    case 'ArrowUp':    move(LODRI,-1, 0); break;
+    case 'ArrowDown':  move(LODRI, 1, 0); break;
+    case 'ArrowLeft':  move(LODRI, 0,-1); break;
+    case 'ArrowRight': move(LODRI, 0, 1); break;
+  }
+});
+
+document.getElementById('touch-controls').addEventListener('pointerdown', e => {
+  const button = e.target.closest('button[data-player]');
+  if(!button) return;
+  e.preventDefault();
+  const player = button.dataset.player === 'ralph' ? RALPH : LODRI;
+  if(playerMode === 1 && player === RALPH) return;
+  move(player, Number(button.dataset.dr), Number(button.dataset.dc));
+  if(navigator.vibrate) navigator.vibrate(8);
+});
+
+// ── Draw ──────────────────────────────────────────────────────────────────
+let running = false;
+let t = 0;
+
+function drawMaze() {
+  // Compute offset to center maze
+  const mw = COLS*CELL, mh = ROWS*CELL;
+  const ox = Math.floor((W-mw)/2), oy = Math.floor((H-mh)/2) + 18;
+
+  // Stars background
+  ctx.fillStyle='#020108'; ctx.fillRect(0,0,W,H);
+  for(let i=0;i<120;i++) {
+    const sx=(i*137.5)%W, sy=(i*97.3)%H;
+    const brightness = 0.2+0.3*Math.sin(t*0.05+i);
+    ctx.fillStyle=`rgba(200,200,255,${brightness})`;
+  const playHeight = H - (touchLayout() ? 150 : 0);
+  const ox = Math.floor((W-mw)/2), oy = Math.max(40, Math.floor((playHeight-mh)/2) + 18);
+
+  // Stars background (faint in daylight, bright at night)
+  ctx.fillStyle=P.bg; ctx.fillRect(0,0,W,H);
+  for(let i=0;i<120;i++) {
+    const sx=(i*137.5)%W, sy=(i*97.3)%H;
+    const brightness = P.starBase+P.starAmp*Math.sin(t*0.05+i);
+    ctx.fillStyle=`rgba(${P.starRGB},${brightness})`;
+    ctx.fillRect(sx,sy,1,1);
+  }
+
+  // Draw cells
+  maze.forEach(row => row.forEach(cell => {
+    const x=ox+cell.c*CELL, y=oy+cell.r*CELL;
+    // Floor
+    ctx.fillStyle='#07071a';
+    ctx.fillRect(x,y,CELL,CELL);
+    // Walls
+    ctx.strokeStyle='#1a1a5a'; ctx.lineWidth=1.5;
+    ctx.fillStyle=P.floor;
+    ctx.fillRect(x,y,CELL,CELL);
+    // Walls
+    ctx.strokeStyle=P.wall; ctx.lineWidth=P.wallWidth;
+    if(cell.walls.N){ctx.beginPath();ctx.moveTo(x,y);ctx.lineTo(x+CELL,y);ctx.stroke();}
+    if(cell.walls.S){ctx.beginPath();ctx.moveTo(x,y+CELL);ctx.lineTo(x+CELL,y+CELL);ctx.stroke();}
+    if(cell.walls.W){ctx.beginPath();ctx.moveTo(x,y);ctx.lineTo(x,y+CELL);ctx.stroke();}
+    if(cell.walls.E){ctx.beginPath();ctx.moveTo(x+CELL,y);ctx.lineTo(x+CELL,y+CELL);ctx.stroke();}
+  }));
+
+  // Start marker
+  ctx.fillStyle='#00ff8822';
+  ctx.fillRect(ox+CELL, oy+CELL, CELL, CELL);
+  ctx.fillStyle='#00ff8888'; ctx.font='8px monospace';
+  ctx.fillStyle=P.startFill;
+  ctx.fillRect(ox+CELL, oy+CELL, CELL, CELL);
+  ctx.fillStyle=P.startText; ctx.font='8px monospace';
+  ctx.fillText('START',ox+CELL+2,oy+CELL+10);
+
+  // COSMOS exit — pulsing red
+  const pulse = 0.5+0.5*Math.sin(t*0.12);
+  const ex=ox+(COLS-2)*CELL, ey=oy+(ROWS-2)*CELL;
+  ctx.fillStyle=`rgba(255,34,0,${0.12+0.1*pulse})`;
+  ctx.fillRect(ex,ey,CELL,CELL);
+  ctx.beginPath(); ctx.arc(ex+CELL/2,ey+CELL/2,6+pulse*3,0,Math.PI*2);
+  ctx.fillStyle=`rgba(255,34,0,${0.5+0.5*pulse})`; ctx.fill();
+  ctx.fillStyle='#ff4422'; ctx.font='bold 8px monospace';
+  ctx.fillText('COSMOS',ex-6,ey+CELL+10);
+  ctx.fillStyle='#ff442244'; ctx.font='7px monospace';
+  ctx.fillStyle=`rgba(${P.cosmosRGB},${0.12+0.1*pulse})`;
+  ctx.fillRect(ex,ey,CELL,CELL);
+  ctx.beginPath(); ctx.arc(ex+CELL/2,ey+CELL/2,6+pulse*3,0,Math.PI*2);
+  ctx.fillStyle=`rgba(${P.cosmosRGB},${0.5+0.5*pulse})`; ctx.fill();
+  ctx.fillStyle=P.cosmosText; ctx.font='bold 8px monospace';
+  ctx.fillText('COSMOS',ex-6,ey+CELL+10);
+  ctx.fillStyle=P.cosmosSub; ctx.font='7px monospace';
+  ctx.fillText('0.6 EeV',ex-2,ey+CELL+20);
+
+  // Players
+  [RALPH,LODRI].forEach(p => {
+    const px=ox+p.c*CELL+CELL/2, py=oy+p.r*CELL+CELL/2;
+    ctx.beginPath(); ctx.arc(px,py,9+2*Math.sin(t*0.15),0,Math.PI*2);
+    ctx.fillStyle=p.glow; ctx.fill();
+    ctx.beginPath(); ctx.arc(px,py,7,0,Math.PI*2);
+    ctx.fillStyle=p.color; ctx.fill();
+    ctx.fillStyle='#000'; ctx.font='bold 7px monospace';
+    ctx.fillStyle=P[p.glowKey]; ctx.fill();
+    ctx.beginPath(); ctx.arc(px,py,7,0,Math.PI*2);
+    ctx.fillStyle=P[p.key]; ctx.fill();
+    ctx.fillStyle=P.playerLetter; ctx.font='bold 7px monospace';
+    ctx.textAlign='center'; ctx.fillText(p.name[0],px,py+3); ctx.textAlign='left';
+  });
+
+  // Entanglement line between players
+  const rx=ox+RALPH.c*CELL+CELL/2, ry=oy+RALPH.r*CELL+CELL/2;
+  const lx=ox+LODRI.c*CELL+CELL/2, ly=oy+LODRI.r*CELL+CELL/2;
+  const dist=Math.sqrt((rx-lx)**2+(ry-ly)**2);
+  if(dist<CELL*6) {
+    ctx.beginPath(); ctx.moveTo(rx,ry); ctx.lineTo(lx,ly);
+    ctx.strokeStyle=`rgba(0,255,136,${0.3*(1-dist/(CELL*6))})`;
+    ctx.strokeStyle=`rgba(${P.entangleRGB},${0.3*(1-dist/(CELL*6))})`;
+    ctx.lineWidth=1; ctx.setLineDash([3,6]); ctx.stroke(); ctx.setLineDash([]);
+  }
+}
+
+function draw() {
+  t++;
+  drawMaze();
+  if(running && !RALPH.won && !LODRI.won) requestAnimationFrame(draw);
+}
+
+function startGame() {
+  genMaze();
+  RALPH.r=1; RALPH.c=1; RALPH.steps=0; RALPH.won=false;
+  LODRI.r=1; LODRI.c=3; LODRI.steps=0; LODRI.won=false;
+  document.getElementById('ralph-steps').textContent='0 steps';
+  document.getElementById('lodri-steps').textContent='0 steps';
+  document.getElementById('overlay').style.display='none';
+  document.getElementById('win-overlay').style.display='none';
+  document.getElementById('ralph-steps').textContent=playerMode === 1 ? 'corner' : '0 steps';
+  document.getElementById('lodri-steps').textContent='0 steps';
+  document.getElementById('overlay').style.display='none';
+  document.getElementById('win-overlay').style.display='none';
+  document.body.classList.add('playing');
+  running=true; t=0;
+  requestAnimationFrame(draw);
+}
+
+function resetGame() {
+  document.getElementById('win-overlay').style.display='none';
+  document.getElementById('overlay').style.display='flex';
+  document.body.classList.remove('playing');
+  running=false;
+}
+
+// Initial draw
+applyTheme();
+setMode(1);
+genMaze(); drawMaze();
+</script>
+</body>
+</html>

@@ -62,15 +62,4 @@ export function buildKompressDisplay(stats: KompressStats, transparencyMode: boo
   } as Message;
 }
 
-export async function writeCompactionStats(
-  dbPath: string,
-  prunedCount: number,
-  contextSizeAfter: number,
-): Promise<void> {
-  try {
-    const data = JSON.stringify({ pruned: prunedCount, contextSize: contextSizeAfter, ts: Date.now() });
-    await Bun.write(`${dbPath}/compaction-stats.json`, data);
-  } catch {
-    // skip
-  }
-}
+

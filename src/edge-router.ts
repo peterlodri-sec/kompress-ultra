@@ -1,10 +1,10 @@
 /**
- * EdgeRouter — Semantic edge routing with learned conductivity (v13.0.0)
+ * EdgeRouter — Keyword-aware edge routing with learned conductivity
  *
- * Routes requests through the brain graph based on semantic similarity
+ * Routes requests through the brain graph based on keyword similarity
  * and learned conductivity. Combines:
  *   - DIAD conductivity (learned from traversal success)
- *   - Semantic similarity (from Milvus embeddings)
+ *   - Keyword similarity (label/source/target matching)
  *   - Temporal recency (edges used recently get priority)
  *   - Layer awareness (same-layer edges preferred)
  *
@@ -14,8 +14,7 @@
  *   router.recordTraversal(bestPath.edgeId, true);
  */
 
-import type { Edge, Node } from "../src/types.js";
-import { searchSimilarEdges } from "./brain-embeddings.js";
+import type { Edge, Node } from "./types.js";
 
 export interface RoutingResult {
   edgeId: string;
@@ -67,10 +66,10 @@ export class EdgeRouter {
       score += avgConductivity * 0.4;
       if (avgConductivity > 0.7) reasons.push("high-conductivity");
 
-      // 2. Semantic similarity (if Milvus available)
-      const semScore = this.semanticScore(edge, sourceQuery, targetQuery);
-      score += semScore * 0.3;
-      if (semScore > 0.6) reasons.push("semantic-match");
+      // 2. Keyword similarity (label/source/target matching)
+      const kwScore = this.keywordScore(edge, sourceQuery, targetQuery);
+      score += kwScore * 0.3;
+      if (kwScore > 0.6) reasons.push("keyword-match");
 
       // 3. Temporal recency
       const lastUsed = this.lastTraversal.get(edge.id) ?? 0;
@@ -154,7 +153,7 @@ export class EdgeRouter {
     });
   }
 
-  private semanticScore(edge: Edge, sourceQuery?: string, targetQuery?: string): number {
+  private keywordScore(edge: Edge, sourceQuery?: string, targetQuery?: string): number {
     let score = 0;
     let matches = 0;
 
@@ -185,6 +184,6 @@ export class EdgeRouter {
       }
     }
 
-    return matches > 0 ? score / matches : score;
+    return score;
   }
 }

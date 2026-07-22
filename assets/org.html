@@ -1,0 +1,331 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>entropy.om — org pattern</title>
+<style>
+* { margin:0; padding:0; box-sizing:border-box; }
+body { background:#010008; color:#c0c0e0; font-family:'JetBrains Mono','Fira Code',monospace; overflow:hidden; }
+canvas { display:block; position:fixed; inset:0; }
+#ui {
+  position:fixed; inset:0; pointer-events:none;
+  display:flex; flex-direction:column; justify-content:space-between;
+  padding:24px;
+}
+#top { display:flex; justify-content:space-between; align-items:flex-start; }
+#title { }
+#title h1 { font-size:18px; color:#00d4ff; letter-spacing:3px; }
+#title .sub { font-size:10px; color:#333355; margin-top:4px; letter-spacing:2px; }
+#org-type {
+  text-align:right;
+  border:1px solid #1a1a3a;
+  padding:10px 16px;
+  background:#03020ecc;
+  max-width:280px;
+}
+#org-type .label { font-size:9px; color:#333355; letter-spacing:3px; margin-bottom:6px; }
+#org-type .type  { font-size:13px; color:#ffaa44; letter-spacing:1px; margin-bottom:8px; }
+#org-type .desc  { font-size:10px; color:#444466; line-height:1.6; }
+
+#legend {
+  display:flex; flex-direction:row; gap:0;
+  background:#03020ecc;
+  border-top:1px solid #0a0a1a;
+  overflow:hidden;
+}
+.leg {
+  display:flex; align-items:center; gap:8px;
+  padding:10px 18px;
+  border-right:1px solid #0a0a1a;
+  font-size:10px; color:#333355;
+  white-space:nowrap; flex-shrink:0;
+}
+.leg:last-child { border-right:none; }
+.leg-dot { width:8px; height:8px; border-radius:50%; flex-shrink:0; }
+
+#flows {
+  position:fixed; right:24px; top:50%;
+  transform:translateY(-50%);
+  border:1px solid #0a0a1a;
+  background:#02010acc;
+  padding:14px;
+  font-size:10px;
+  min-width:200px;
+}
+#flows .fl { font-size:9px; color:#333355; letter-spacing:2px; margin-bottom:8px; }
+.flow-row { display:flex; align-items:center; gap:6px; margin-bottom:5px; color:#444466; }
+.flow-bar { height:4px; background:#1a1a4a; flex-shrink:0; }
+.flow-val { color:#222244; }
+</style>
+</head>
+<body>
+
+<canvas id="c"></canvas>
+
+<div id="ui">
+  <div id="top">
+    <div id="title">
+      <h1>entropy.om</h1>
+      <div class="sub">545 nodes · 1161 edges · live graph topology</div>
+    </div>
+    <div id="org-type">
+      <div class="label">ORG TYPE</div>
+      <div class="type">Epistemic Lattice</div>
+      <div class="desc">
+        no hierarchy · evidence-first<br>
+        authority = edge count, not title<br>
+        ideas are the connective tissue<br>
+        sources are the constitution<br>
+        decisions crystallize from evidence
+      </div>
+    </div>
+  </div>
+
+  <div id="legend">
+    <div class="leg"><div class="leg-dot" style="background:#00d4ff"></div>Rahul / Rahul Brain (center)</div>
+    <div class="leg"><div class="leg-dot" style="background:#ffaa44"></div>idea (140)</div>
+    <div class="leg"><div class="leg-dot" style="background:#4488ff"></div>source (60) — constitution</div>
+    <div class="leg"><div class="leg-dot" style="background:#44aaff88"></div>topic (112)</div>
+    <div class="leg"><div class="leg-dot" style="background:#00ff88"></div>decision (44)</div>
+    <div class="leg"><div class="leg-dot" style="background:#ff4422"></div>question Im axis (41)</div>
+    <div class="leg"><div class="leg-dot" style="background:#888866"></div>reference / observation</div>
+    <div class="leg"><div class="leg-dot" style="background:#00aa55"></div>person</div>
+  </div>
+</div>
+
+<div id="flows">
+  <div class="fl">DOMINANT FLOWS</div>
+  <div class="flow-row"><span style="color:#ffaa44">idea</span><span style="color:#333355">→</span><span style="color:#4488ff">source</span><div class="flow-bar" style="width:80px"></div><span class="flow-val">143</span></div>
+  <div class="flow-row"><span style="color:#44aaff88">topic</span><span style="color:#333355">→</span><span style="color:#4488ff">source</span><div class="flow-bar" style="width:66px"></div><span class="flow-val">118</span></div>
+  <div class="flow-row"><span style="color:#ffaa44">idea</span><span style="color:#333355">↔</span><span style="color:#ffaa44">idea</span><div class="flow-bar" style="width:57px"></div><span class="flow-val">102</span></div>
+  <div class="flow-row"><span style="color:#00ff88">decision</span><span style="color:#333355">→</span><span style="color:#4488ff">source</span><div class="flow-bar" style="width:43px"></div><span class="flow-val">76</span></div>
+  <div class="flow-row"><span style="color:#ffaa44">idea</span><span style="color:#333355">→</span><span style="color:#44aaff88">topic</span><div class="flow-bar" style="width:41px"></div><span class="flow-val">74</span></div>
+  <div style="margin-top:10px;font-size:9px;color:#1a1a3a;line-height:1.6">
+    avg idea cross-links:<br>
+    <span style="color:#333355">2.94 types per idea</span><br>
+    82 ideas span 3+ domains<br>
+    <span style="color:#222244">→ lateral not vertical</span>
+  </div>
+</div>
+
+<script>
+const canvas = document.getElementById('c');
+const ctx = canvas.getContext('2d');
+let W, H;
+
+function resize() { W = canvas.width = window.innerWidth; H = canvas.height = window.innerHeight; }
+resize();
+window.addEventListener('resize', () => { resize(); init(); });
+
+// Node type definitions
+const TYPE_DEF = {
+  idea:        { color:'#ffaa44', r:4,  alpha:0.7,  count:140 },
+  source:      { color:'#4488ff', r:6,  alpha:0.9,  count:60  },
+  topic:       { color:'#4499ff', r:4,  alpha:0.4,  count:112 },
+  decision:    { color:'#00ff88', r:5,  alpha:0.8,  count:44  },
+  question:    { color:'#ff4422', r:4,  alpha:0.7,  count:41  },
+  reference:   { color:'#666655', r:3,  alpha:0.5,  count:74  },
+  observation: { color:'#776655', r:3,  alpha:0.5,  count:31  },
+  person:      { color:'#00aa55', r:7,  alpha:1.0,  count:14  },
+  goal:        { color:'#ffcc44', r:6,  alpha:0.9,  count:12  },
+  project:     { color:'#00aaff', r:8,  alpha:1.0,  count:15  },
+};
+
+// Flows (src_type → dst_type, count)
+const FLOWS = [
+  ['idea','source',143],['topic','source',118],['idea','idea',102],
+  ['decision','source',76],['idea','topic',74],['reference','source',82],
+  ['question','source',43],['decision','idea',41],
+  ['idea','reference',32],['project','topic',30],
+];
+
+// Layer positions (not hierarchy — epistemic layers)
+const LAYERS = {
+  source:      { y: 0.82, label:'EVIDENCE LAYER' },
+  reference:   { y: 0.72 },
+  observation: { y: 0.72 },
+  topic:       { y: 0.55 },
+  idea:        { y: 0.42 },
+  question:    { y: 0.28 },
+  decision:    { y: 0.20 },
+  goal:        { y: 0.12 },
+  person:      { y: 0.55 },
+  project:     { y: 0.50 },
+};
+
+let nodes = [];
+let particles = []; // flow particles along arcs
+let t = 0;
+
+function seededRand(seed) {
+  let s = seed;
+  return () => { s = (s * 1664525 + 1013904223) & 0xffffffff; return (s >>> 0) / 0xffffffff; };
+}
+
+function init() {
+  nodes = [];
+  const cx = W * 0.42; // center left of flows panel
+  const rng = seededRand(9371);
+
+  // Special nodes
+  nodes.push({ type:'project', label:'Rahul Brain', x:cx, y:H*0.48, r:14, vx:0, vy:0, deg:43, special:true });
+  nodes.push({ type:'person',  label:'Rahul',       x:cx + rng()*30-15, y:H*0.47, r:12, vx:0, vy:0, deg:42, special:true });
+
+  // Generate nodes per type
+  for(const [type, def] of Object.entries(TYPE_DEF)) {
+    const layerY = LAYERS[type]?.y ?? 0.5;
+    const count  = Math.min(def.count, type==='idea'?60:type==='topic'?40:type==='source'?25:def.count);
+    for(let i=0; i<count; i++) {
+      const spread = type==='idea' ? 0.5 : type==='topic' ? 0.4 : 0.35;
+      const x = cx + (rng()-0.5) * W * spread;
+      const y = H * layerY + (rng()-0.5) * 60;
+      const deg = Math.floor(rng()*8)+1;
+      nodes.push({ type, x, y, r: def.r + Math.sqrt(deg)*0.5, vx:(rng()-0.5)*0.3, vy:(rng()-0.5)*0.3, deg, color: def.color, alpha: def.alpha });
+    }
+  }
+}
+
+// Bezier point helper
+function bezierPt(t, x0,y0, cx0,cy0, cx1,cy1, x1,y1) {
+  const u=1-t;
+  return {
+    x: u*u*u*x0 + 3*u*u*t*cx0 + 3*u*t*t*cx1 + t*t*t*x1,
+    y: u*u*u*y0 + 3*u*u*t*cy0 + 3*u*t*t*cy1 + t*t*t*y1
+  };
+}
+
+function spawnParticle(flow, i) {
+  const [src, dst, count] = flow;
+  const cx = W * 0.42;
+  const srcY = H * (LAYERS[src]?.y ?? 0.5);
+  const dstY = H * (LAYERS[dst]?.y ?? 0.5);
+  const x0 = cx + (i%3-1)*80;
+  const srcDef = TYPE_DEF[src];
+  particles.push({
+    flow: i, t: 0,
+    speed: 0.003 + Math.random()*0.004,
+    x0, y0: srcY,
+    cx0: x0+50, cy0: srcY,
+    cx1: x0-50, cy1: dstY,
+    x1: x0,     y1: dstY,
+    color: srcDef ? srcDef.color : '#ffffff',
+    alpha: 0.4 + (count/143)*0.5,
+    r: 1.5 + (count/143)*2
+  });
+}
+
+function drawFlowArcs() {
+  const cx = W * 0.42;
+  FLOWS.slice(0,6).forEach(([src, dst, count], i) => {
+    const srcY = H * (LAYERS[src]?.y ?? 0.5);
+    const dstY = H * (LAYERS[dst]?.y ?? 0.5);
+    const x0 = cx + (i%3-1)*80;
+    const srcDef = TYPE_DEF[src];
+    const dstDef = TYPE_DEF[dst];
+    const grad = ctx.createLinearGradient(x0, srcY, x0, dstY);
+    grad.addColorStop(0, srcDef ? srcDef.color+'18' : '#ffffff11');
+    grad.addColorStop(1, dstDef ? dstDef.color+'0a' : '#ffffff08');
+    ctx.beginPath();
+    ctx.moveTo(x0, srcY);
+    ctx.bezierCurveTo(x0+50, srcY, x0-50, dstY, x0, dstY);
+    ctx.strokeStyle = grad;
+    ctx.lineWidth = 0.5 + (count/143)*1.5;
+    ctx.stroke();
+
+    // Spawn particles along arcs
+    if(Math.random() < 0.04 + (count/143)*0.06) spawnParticle([src,dst,count], i);
+  });
+
+  // Draw + age particles
+  particles = particles.filter(p => p.t <= 1);
+  particles.forEach(p => {
+    p.t += p.speed;
+    const pt = bezierPt(p.t, p.x0,p.y0, p.cx0,p.cy0, p.cx1,p.cy1, p.x1,p.y1);
+    const fade = p.t < 0.1 ? p.t/0.1 : p.t > 0.9 ? (1-p.t)/0.1 : 1;
+    ctx.beginPath();
+    ctx.arc(pt.x, pt.y, p.r, 0, Math.PI*2);
+    ctx.fillStyle = p.color + Math.floor(p.alpha * fade * 200).toString(16).padStart(2,'0');
+    ctx.fill();
+  });
+}
+
+function drawLayerLabels() {
+  ctx.font = '9px monospace';
+  ctx.fillStyle = 'rgba(30,30,60,0.8)';
+  // Evidence layer label
+  ctx.fillText('EVIDENCE LAYER — sources · references · observations', 20, H*0.82 - 20);
+  ctx.fillText('IDEA LAYER — lateral connections · 2.94 avg type-spread', 20, H*0.42 - 20);
+  ctx.fillText('DECISION LAYER — crystallized evidence', 20, H*0.20 - 12);
+  ctx.fillText('Im AXIS — questions · unresolved · generating', 20, H*0.28 - 12);
+}
+
+function draw() {
+  t++;
+  ctx.fillStyle = 'rgba(1,0,8,0.22)';
+  ctx.fillRect(0,0,W,H);
+
+  drawFlowArcs();
+  drawLayerLabels();
+
+  // Gentle physics
+  nodes.forEach((n,i) => {
+    // Continuous Perlin-style drift using sin/cos with unique phase per node
+    const phase = i * 2.399; // golden angle spread
+    n.x += Math.sin(t * 0.008 + phase) * 0.4;
+    n.y += Math.cos(t * 0.011 + phase * 1.3) * 0.25;
+
+    // Soft return to home layer
+    const homeY = H * (LAYERS[n.type]?.y ?? 0.5);
+    n.y += (homeY - n.y) * 0.003;
+
+    // Horizontal center gravity (weaker — lets them spread)
+    const cx = W * 0.42, spread = W * 0.26;
+    n.x += (cx - n.x) * 0.0008;
+    if(n.x < cx - spread) n.x += 1.2;
+    if(n.x > cx + spread) n.x -= 1.2;
+
+    // Special nodes pulse around center
+    if(n.special) {
+      n.x += (W*0.42 - n.x) * 0.04;
+      n.y += (H*0.48  - n.y) * 0.04;
+    }
+
+    // Draw
+    const def = TYPE_DEF[n.type] || {};
+    const color = n.color || def.color || '#ffffff';
+    const alpha = (n.alpha || def.alpha || 0.5) * (0.7 + 0.3*Math.sin(t*0.02 + i));
+    const pulse = n.special ? Math.sin(t*0.04)*3 : 0;
+    const r = n.r + pulse;
+
+    // Glow for special/high-degree
+    if(n.special || n.deg > 6) {
+      ctx.beginPath(); ctx.arc(n.x, n.y, r+4, 0, Math.PI*2);
+      ctx.fillStyle = color + '22'; ctx.fill();
+    }
+
+    ctx.beginPath(); ctx.arc(n.x, n.y, r, 0, Math.PI*2);
+    ctx.fillStyle = color + Math.floor(alpha*255).toString(16).padStart(2,'0');
+    ctx.fill();
+
+    // Label for special nodes
+    if(n.special) {
+      ctx.font = 'bold 10px monospace';
+      ctx.fillStyle = color;
+      ctx.fillText(n.label, n.x + r + 6, n.y + 4);
+    }
+  });
+
+  // "Provenance-or-bust" label at highest-idea position
+  ctx.font = '9px monospace';
+  ctx.fillStyle = '#ffaa4455';
+  ctx.fillText('provenance-or-bust ← highest degree idea', W*0.42 - 120, H*0.36);
+
+  requestAnimationFrame(draw);
+}
+
+init();
+draw();
+</script>
+<a href="brain-dist.html" style="position:fixed;bottom:16px;right:16px;z-index:40;font-family:monospace;font-size:11px;color:#555577;text-decoration:none;border:1px solid #1a1a3a;padding:6px 12px;border-radius:16px;background:#030210cc">same data, as distributions →</a>
+</body>
+</html>

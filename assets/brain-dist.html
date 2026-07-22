@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>brain graph · distribution</title>
+<style>
+* { margin:0; padding:0; box-sizing:border-box; }
+body { background:#020108; color:#c0c0e0; font-family:'JetBrains Mono','Fira Code',monospace; padding:32px; }
+h1 { color:#00d4ff; font-size:14px; letter-spacing:3px; margin-bottom:4px; }
+.sub { color:#333355; font-size:11px; margin-bottom:32px; }
+.grid { display:grid; grid-template-columns:1fr 1fr; gap:32px; }
+.panel { border:1px solid #1a1a3a; padding:20px; }
+.panel h2 { font-size:11px; color:#555577; letter-spacing:2px; margin-bottom:16px; }
+.bar-row { display:flex; align-items:center; gap:12px; margin-bottom:8px; font-size:11px; }
+.bar-label { width:90px; color:#888899; text-align:right; flex-shrink:0; }
+.bar-track { flex:1; height:12px; background:#0a0a1a; position:relative; }
+.bar-fill { height:100%; position:absolute; left:0; top:0; }
+.bar-val { width:40px; color:#555577; font-size:10px; }
+.axis-split { display:flex; gap:16px; margin-bottom:20px; }
+.axis-box { flex:1; border:1px solid; padding:12px; text-align:center; }
+.axis-box .num { font-size:28px; font-weight:bold; }
+.axis-box .lbl { font-size:10px; color:#555577; margin-top:4px; }
+.density-row { display:flex; gap:6px; align-items:flex-end; height:80px; margin-top:12px; }
+.density-bar { flex:1; display:flex; flex-direction:column; align-items:center; gap:4px; }
+.density-bar .col { width:100%; background:#1a1a5a; flex-shrink:0; }
+.density-bar .x  { font-size:9px; color:#333355; }
+.density-bar .n  { font-size:9px; color:#555577; }
+.note { font-size:10px; color:#222244; margin-top:24px; line-height:1.6; }
+.tag { display:inline-block; padding:2px 8px; border:1px solid #1a1a3a; color:#333355; font-size:10px; margin:2px; }
+.tag.re { border-color:#004420; color:#005522; }
+.tag.im { border-color:#440000; color:#660022; }
+</style>
+</head>
+<body>
+
+<h1>BRAIN GRAPH · STRUCTURAL DISTRIBUTION</h1>
+<p class="sub">545 nodes · 1161 edges · complex-plane model · anonymized</p>
+
+<div class="grid">
+
+  <!-- Complex plane split -->
+  <div class="panel">
+    <h2>COMPLEX PLANE AXES</h2>
+    <div class="axis-split">
+      <div class="axis-box" style="border-color:#004420">
+        <div class="num" style="color:#00ff88">503</div>
+        <div class="lbl">Re axis<br>resolved · t∈{-1,0,1}</div>
+      </div>
+      <div class="axis-box" style="border-color:#440000">
+        <div class="num" style="color:#ff4422">42</div>
+        <div class="lbl">Im axis<br>unresolved · questions + entities</div>
+      </div>
+    </div>
+    <div class="note">
+      Im/Re ratio: 0.083 · 8.3% of the graph is open wavefunctions.<br>
+      Collapse operator: feedback → Re axis resolution.<br>
+      λ=3.0 asymmetric loss protects high-signal Im nodes from pruning.
+    </div>
+  </div>
+
+  <!-- Node type distribution -->
+  <div class="panel">
+    <h2>NODE TYPE DISTRIBUTION</h2>
+    <div id="node-bars"></div>
+    <div style="margin-top:12px">
+      <span class="tag re">Re axis</span>
+      <span class="tag im">Im axis</span>
+      <span class="tag">structural</span>
+    </div>
+  </div>
+
+  <!-- Im axis density -->
+  <div class="panel">
+    <h2>Im AXIS · EDGE DENSITY</h2>
+    <p style="font-size:10px;color:#333355;margin-bottom:12px">how many edges each unresolved question has</p>
+    <div class="density-row" id="density-bars"></div>
+    <div class="note" style="margin-top:12px">
+      mean: 2.5 edges · max: 8 edges<br>
+      low-density questions are weakly connected — collapse candidates.<br>
+      high-density questions are entangled — collapse propagates.
+    </div>
+  </div>
+
+  <!-- Edge type distribution -->
+  <div class="panel">
+    <h2>EDGE TYPE DISTRIBUTION</h2>
+    <div id="edge-bars"></div>
+  </div>
+
+</div>
+
+<p class="note" style="margin-top:24px">
+  schema: open · content: private · structure: public<br>
+  kompress-ultra · knowledge-worker · complex-plane brain model · 2026
+</p>
+
+<script>
+const nodeData = [
+  {label:'idea',      count:140, axis:'re',  color:'#003322'},
+  {label:'topic',     count:112, axis:'re',  color:'#003322'},
+  {label:'reference', count:74,  axis:'re',  color:'#1a1a3a'},
+  {label:'source',    count:60,  axis:'re',  color:'#1a1a3a'},
+  {label:'decision',  count:44,  axis:'re',  color:'#003322'},
+  {label:'question',  count:41,  axis:'im',  color:'#330011'},
+  {label:'observation',count:31, axis:'re',  color:'#003322'},
+  {label:'project',   count:15,  axis:'re',  color:'#1a1a3a'},
+  {label:'person',    count:14,  axis:'re',  color:'#1a1a3a'},
+  {label:'goal',      count:12,  axis:'re',  color:'#1a1a3a'},
+  {label:'entity',    count:1,   axis:'im',  color:'#330011'},
+  {label:'quote',     count:1,   axis:'re',  color:'#1a1a3a'},
+];
+
+const edgeData = [
+  {label:'MENTIONED_IN', count:512},
+  {label:'RELATES_TO',   count:332},
+  {label:'ABOUT',        count:75},
+  {label:'SUPPORTED_BY', count:56},
+  {label:'INVOLVES',     count:51},
+  {label:'MADE_AT',      count:34},
+  {label:'ENABLED_BY',   count:31},
+  {label:'SERVES',       count:30},
+  {label:'CHALLENGES',   count:16},
+  {label:'HAS_IDEA',     count:12},
+];
+
+const densityData = [
+  {label:'1-2', count:28, color:'#1a1a4a'},
+  {label:'3-5', count:13, color:'#2a1a5a'},
+  {label:'6-10',count:1,  color:'#6a0022'},
+];
+
+function makeBars(containerId, data, maxVal) {
+  const container = document.getElementById(containerId);
+  const max = maxVal || Math.max(...data.map(d=>d.count));
+  data.forEach(d => {
+    const pct = (d.count/max*100).toFixed(1);
+    const textColor = d.axis==='im' ? '#ff4422' : d.axis==='re' ? '#00aa55' : '#888899';
+    container.innerHTML += `
+      <div class="bar-row">
+        <div class="bar-label" style="color:${textColor}">${d.label}</div>
+        <div class="bar-track">
+          <div class="bar-fill" style="width:${pct}%;background:${d.color||'#1a1a5a'}"></div>
+        </div>
+        <div class="bar-val">${d.count}</div>
+      </div>`;
+  });
+}
+
+function makeDensity(containerId, data) {
+  const container = document.getElementById(containerId);
+  const max = Math.max(...data.map(d=>d.count));
+  data.forEach(d => {
+    const h = Math.round((d.count/max)*60);
+    container.innerHTML += `
+      <div class="density-bar">
+        <div class="n">${d.count}</div>
+        <div class="col" style="height:${h}px;background:${d.color}"></div>
+        <div class="x">${d.label}</div>
+      </div>`;
+  });
+}
+
+makeBars('node-bars', nodeData);
+makeBars('edge-bars', edgeData);
+makeDensity('density-bars', densityData);
+</script>
+<a href="org.html" style="position:fixed;bottom:16px;right:16px;z-index:40;font-family:monospace;font-size:11px;color:#555577;text-decoration:none;border:1px solid #1a1a3a;padding:6px 12px;border-radius:16px;background:#030210cc">same data, as a lattice →</a>
+</body>
+</html>
