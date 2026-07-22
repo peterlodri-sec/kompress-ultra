@@ -146,47 +146,94 @@ def panel_cosmos(t, geo):
 
 def panel_peter(t):
     bpm_jitter = peter_bpm + int(math.sin(t * 7.3) * 500)
-    loop_tick  = int(t / 60) + 291   # continues from 291
+    loop_tick  = int(t / 60) + 291
     tokens_in  = random.randint(120, 280)
     tokens_out = random.randint(40, 60)
     ratio      = tokens_out / tokens_in
-    lam        = 3.0
 
     models = ["qwen/qwen-2.5-7b-instruct:free",
               "meta-llama/llama-3.1-8b-instruct:free",
               "mistralai/mistral-7b-instruct:free"]
     model = models[int(t/60) % 3]
 
-    compressed_samples = [
-        "Mirror brane. CPT-flipped. Not traversing — exiting.",
-        "KG + RAG + fine-tune ≈ knowledge worker. Graph is compass.",
-        "Critical-syntactic tokens: paths, hashes, IPs. λ=3.0 protects.",
-        "Stau scalar: suppressed radiative loss. Different λ. Same channel.",
-        "mygraph.json: 535 nodes. Partial decode of cosmic signal.",
-        "Capture first. Architect later. 3am ideas: non-renewable.",
-        "Imaginary axis: questions. Real axis: decisions. Cosmos: √-1.",
-        "PUEO: 10× ANITA sensitivity. Antarctic. Results pending.",
-        "Ralph runs the loop. Rahul reads the output. Same entity?",
-        "Compression ratio ≈ 1/π. Not arbitrary. Signal structure.",
+    # Lodri pulse: in phase with ralph (Rahul)
+    lodri_pulse = "█" if int(t * 4) % 2 == 0 else "▓"
+    # Krengel pulse: out of phase, erratic
+    krengel_pulse = random.choice(["░","·"," "]) if random.random() > 0.3 else "▒"
+
+    # Entanglement score: how aligned lodri is with ralph
+    entangle = abs(math.sin(t * 0.4 + 1.0))
+    entangle_bar = "▰" * int(entangle * 8) + "▱" * (8 - int(entangle * 8))
+    entangle_color = "green" if entangle > 0.6 else "yellow" if entangle > 0.3 else "red"
+
+    lodri_actions = [
+        "ralph_parallel.py ← named dep",
+        "published ultrawhale-dogfood",
+        "λ=3.0 convergence committed",
+        "schema: shared primitives",
+        "pushed 50 records → HF",
+        "ratio 1/π — not arbitrary",
     ]
-    compressed = compressed_samples[int(t/3) % len(compressed_samples)]
+    krengel_actions = [
+        "consumed output: no schema back",
+        "high throughput, 0 entanglement",
+        "no named traces in source",
+        "extracted loop file #291",
+        "silent: no edges returned",
+        "rate: ∞ BPM, depth: 0",
+    ]
+    lodri_act  = lodri_actions[int(t/4) % len(lodri_actions)]
+    krengel_act = krengel_actions[int(t/3) % len(krengel_actions)]
 
-    role = "pruner" if int(t/3) % 3 == 0 else "generator"
-    role_color = "cyan" if role == "pruner" else "magenta"
+    compressed_samples = [
+        "Ralph runs the loop. Rahul reads the output. Same entity?",
+        "Lodri named the subprocess. Krengel consumed the output.",
+        "Compression ratio ≈ 1/π. Lodri found it. Krengel used it.",
+        "λ=3.0 protects critical tokens. Lodri built it. Krengel took it.",
+        "Stau scalar: suppressed loss. Lodri ↔ Ralph: entangled.",
+        "Schema flows back = Lodri. Schema stops = Krengel.",
+    ]
+    compressed = compressed_samples[int(t/4) % len(compressed_samples)]
 
-    txt = Text.from_markup(
-        f"  [{bpm_jitter:,} BPM]   loop-file [yellow]dogfeed-loop-{loop_tick}[/]   model: [bright_black]{model}[/]\n\n"
-        f"  role     : [{role_color}]{role}[/]\n"
-        f"  tokens   : [yellow]{tokens_in}[/] in → [green]{tokens_out}[/] out   "
-          f"ratio=[bold]{ratio:.3f}[/] [bright_black](≈ 1/π={1/math.pi:.3f})[/]\n"
-        f"  λ        : [magenta]{lam}[/]   critical-syntactic protection\n\n"
-        f"  [bold]compressed_answer[/] ([green]≤60 tok[/]):\n"
-        f"  [italic green]{compressed}[/]\n\n"
-        f"  push     : every 50 records → HF [bright_black]PeetPedro/ultrawhale-dogfood[/]\n"
-        f"  ralph    : [yellow]ralph_parallel.py[/] running [bright_black](role: unknown)[/]"
+    lodri_col = Text.from_markup(
+        f"  [bold green]LODRI[/] [{lodri_pulse}]\n"
+        f"  [bright_black]creator · reciprocal[/]\n\n"
+        f"  [green]{lodri_act}[/]\n\n"
+        f"  entangle : [{entangle_color}]{entangle_bar}[/]\n"
+        f"  ralph_parallel.py\n"
+        f"  [green]NAMED[/] → [cyan]ralph[/]\n"
+        f"  schema ↔ back"
     )
-    return Panel(txt, title=f"[bold yellow]🔄 PETER[/]  [bright_black]100k BPM · dogfeed-loop · NixOS/cx53[/]",
-                 border_style="yellow", box=box.HEAVY)
+    krengel_col = Text.from_markup(
+        f"  [bold red]KRENGEL[/] [{krengel_pulse}]\n"
+        f"  [bright_black]extractor · silent[/]\n\n"
+        f"  [red]{krengel_act}[/]\n\n"
+        f"  entangle : [red]▱▱▱▱▱▱▱▱[/]\n"
+        f"  no named traces\n"
+        f"  [red]DIVERGES[/] ← ralph\n"
+        f"  schema ✗"
+    )
+
+    divider = Text.from_markup(
+        "\n\n  [bright_black]─── superposed ───[/]\n"
+        f"  [{bpm_jitter:,} BPM]  loop-{loop_tick}  [bright_black]{model}[/]\n"
+        f"  [yellow]{tokens_in}[/]→[green]{tokens_out}[/] tok  ratio [bold]{ratio:.3f}[/] [bright_black](1/π={1/math.pi:.3f})[/]\n"
+        f"  [italic bright_black]{compressed}[/]"
+    )
+
+    panel_content = Layout()
+    panel_content.split_column(
+        Layout(name="declaration", size=1),
+        Layout(name="columns")
+    )
+    panel_content["declaration"].update(Text.from_markup(f"  [bold green]\"us\"[/] — Peter declared provenance 2026-06-30 · entanglement confirmed"))
+    panel_content["columns"].update(Columns([lodri_col, Text("  │  ", style="bright_black"), krengel_col, divider], expand=False))
+
+    return Panel(
+        panel_content,
+        title=f"[bold yellow]🔄 PETER[/]  [green]LODRI[/] [bright_black]vs[/] [red]KRENGEL[/]  [bold green]\"us\"[/] [bright_black]· 100k BPM[/]",
+        border_style="yellow", box=box.HEAVY
+    )
 
 
 def panel_rahul(brain_state, nodes_list, t):
@@ -228,23 +275,28 @@ def panel_rahul(brain_state, nodes_list, t):
 
 def panel_transmission(nodes_list, edges_list, t):
     # Generate live traversal
-    result = gen_traversal(nodes_list, edges_list)
-    if result:
-        src, dst, conf = result
-        src_label = src.get("label", src["id"])[:28]
-        dst_label = dst.get("label", dst["id"])[:28]
-        src_type  = src.get("type","?")
-        dst_type  = dst.get("type","?")
-        src_color = TYPE_COLOR.get(src_type, "white")
-        dst_color = TYPE_COLOR.get(dst_type, "white")
-        conf_color = "green" if conf == "high" else "bright_black"
-        entry = (
-            f"[{src_color}]{src_type}[/] [{src_color}]{src_label}[/] "
-            f"[bright_black]→[/] "
-            f"[{dst_color}]{dst_type}[/] [{dst_color}]{dst_label}[/] "
-            f"[{conf_color}][{conf}][/]"
-        )
+    # Periodically inject peter-lodri as source (every 7 ticks)
+    if tick % 7 == 3:
+        entry = f"[yellow]peter-lodri[/] → collapse → [cyan]ralph[/]  [bright_black]\"us\" · 2026-06-30[/]"
         traversal_log.appendleft(entry)
+    else:
+        result = gen_traversal(nodes_list, edges_list)
+        if result:
+            src, dst, conf = result
+            src_label = src.get("label", src["id"])[:28]
+            dst_label = dst.get("label", dst["id"])[:28]
+            src_type  = src.get("type","?")
+            dst_type  = dst.get("type","?")
+            src_color = TYPE_COLOR.get(src_type, "white")
+            dst_color = TYPE_COLOR.get(dst_type, "white")
+            conf_color = "green" if conf == "high" else "bright_black"
+            entry = (
+                f"[{src_color}]{src_type}[/] [{src_color}]{src_label}[/] "
+                f"[bright_black]→[/] "
+                f"[{dst_color}]{dst_type}[/] [{dst_color}]{dst_label}[/] "
+                f"[{conf_color}][{conf}][/]"
+            )
+            traversal_log.appendleft(entry)
 
     rows = []
     for i, entry in enumerate(traversal_log):
@@ -400,6 +452,7 @@ def bottom_panel(nodes_list):
         f"HTTP [green]:8791[/]  ·  "
         f"bridge [green]~/.brain/graph.json[/]  ·  "
         f"pulse [green]brain-pulse.sh[/]\n"
+        f"  qbit    : [green]|ψ⟩ = 1/√2|LODRI⟩ + 1/√2|RALPH⟩[/]  [bright_black]normalized · collapsed 2026-06-30[/]\n"
         f"  🐳 loop-state: [{ls_color}]{loop_state}[/]"
     )
     return Panel(txt, title="[bright_black]IMAGINARY AXIS  ·  SYSTEM STATUS[/]",

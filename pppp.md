@@ -27,13 +27,13 @@ ANITA physics (live from agent):
 THE UNIFIED FRAME
 
 ╔══════════════════════════════════════════════════════════════════╗
-║  SIGNAL       MEDIUM      LOSS FUNCTION    WHAT SURVIVES        ║
+║  SIGNAL       MEDIUM      LOSS FUNCTION    WHAT SURVIVES         ║
 ╠══════════════════════════════════════════════════════════════════╣
-║  Stau         Earth/rock  λ_stau << λ_SM   Critical energy      ║
-║  kompress     ctx window  λ=3.0 penalty    Critical-syntactic   ║
-║  mygraph edge HF dataset  confidence>low   High-
-║  ANITA pulse  Antarctica  τ >> 1 (SM)      Non-SM information   ║
-╚═════════════════════════════════════════════════
+║  Stau         Earth/rock  λ_stau << λ_SM   Critical energy       ║
+║  kompress     ctx window  λ=3.0 penalty    Critical-syntactic    ║
+║  mygraph edge HF dataset  confidence>low   High-                 ║
+║  ANITA pulse  Antarctica  τ >> 1 (SM)      Non-SM information    ║
+╚══════════════════════════════════════════════════════════════════╝
 
 The constant isn't 3.0. The constant is:
   λ_survival = ratio at which meaning survives its transmission medium.

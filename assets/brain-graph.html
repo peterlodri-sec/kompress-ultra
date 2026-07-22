@@ -152,8 +152,17 @@ function render() {
 
   // Nodes
   for (const n of nodes) {
-    const r = Math.max(6, Math.min(16, 8 + (edges.filter(e => e.source === n.id || e.target === n.id).length * 1.5)));
-    const color = TYPE_COLORS[n.type] || '#64748b';
+    let r = Math.max(6, Math.min(16, 8 + (edges.filter(e => e.source === n.id || e.target === n.id).length * 1.5)));
+    // Special radius for person:lodri
+    if (n.id === 'person:lodri') r += 4;
+
+    let color = TYPE_COLORS[n.type] || '#64748b';
+    // Special colors for key entities
+    if (n.id === 'person:lodri') color = '#00e660';
+    else if (n.id === 'person:krengel') color = '#ff4444';
+    else if (n.id === 'person:peter-lodri') color = '#ffaa00';
+    else if (n.id === 'entity:cosmos') color = '#ef4444';
+
     const isHov = hovered && hovered.id === n.id;
     const glow = isHov ? 20 : 4;
 
@@ -172,6 +181,24 @@ function render() {
     ctx.lineWidth = isHov ? 2 : 1;
     ctx.stroke();
 
+    // Dashed ring for person:krengel
+    if (n.id === 'person:krengel') {
+      ctx.beginPath(); ctx.arc(n.x, n.y, r + 3, 0, Math.PI*2);
+      ctx.strokeStyle = '#ff4444';
+      ctx.lineWidth = 1.5;
+      ctx.setLineDash([3, 3]);
+      ctx.stroke();
+      ctx.setLineDash([]);
+    }
+
+    // Green glow ring for person:rahul
+    if (n.id === 'person:rahul') {
+      ctx.beginPath(); ctx.arc(n.x, n.y, r + 1, 0, Math.PI*2);
+      ctx.strokeStyle = '#00e660';
+      ctx.lineWidth = 3;
+      ctx.stroke();
+    }
+
     // Icon
     const icon = EMOJI[n.id] || TYPE_ICONS[n.type] || '●';
     ctx.fillStyle = isHov ? color : color + 'cc';
@@ -180,11 +207,20 @@ function render() {
     ctx.fillText(icon, n.x, n.y + 0.5);
 
     // Label
-    if (isHov || r > 10) {
+    let showLabel = isHov || r > 10;
+    let customLabel = null;
+
+    // Custom labels for key entities
+    if (n.id === 'person:lodri') { showLabel = true; customLabel = 'LODRI'; }
+    else if (n.id === 'person:krengel') { showLabel = true; customLabel = 'KRENGEL'; }
+    else if (n.id === 'person:peter-lodri') { showLabel = true; customLabel = 'PETER ⊕'; }
+    else if (n.id === 'entity:cosmos') { showLabel = true; customLabel = 'COSMOS 0.6 EeV'; }
+
+    if (showLabel) {
       ctx.fillStyle = isHov ? '#e2e8f0' : '#64748b';
       ctx.font = `${isHov ? 10 : 9}px system-ui, sans-serif`;
       ctx.textAlign = 'center';
-      const label = n.label || n.id;
+      const label = customLabel || n.label || n.id;
       ctx.fillText(label, n.x, n.y + r + 14);
     }
   }
