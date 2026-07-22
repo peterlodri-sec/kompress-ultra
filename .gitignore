@@ -18,6 +18,10 @@ dist/
 
 # OS
 .DS_Store
+
+# Generated / live data files
+assets/geo-signal.json
+assets/mygraph-live.json
 Thumbs.db
 
 # Environment
@@ -44,3 +48,4 @@ verdaccio/htpasswd
 ultramesh-mem/brain-state.json
 dream-cdn/dream-cdn.key
 .tokensave
+resume/
