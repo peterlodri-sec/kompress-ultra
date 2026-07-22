@@ -5,6 +5,7 @@ export type CompressionLevelName = "verbatim" | "lite" | "ultra" | "brain-backed
 export interface KompressUltraOptions {
   relevanceThreshold?: number;
   maxMessagesKept?: number;
+  /** @deprecated Milvus removed in favor of local vector store */
   milvusUrl?: string;
   mempalaceDb?: string;
   pollIntervalMs?: number;

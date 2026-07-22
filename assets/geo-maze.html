@@ -3,6 +3,8 @@
 <head>
 <meta charset="UTF-8">
 <title>GEO-MAZE · live signal · LODRI autonomous</title>
+    <meta name='description' content='Live-signal variant of the maze — same thesis, spatial instead of quantum framing.'>
+    <!-- Framing: Live-signal variant of the maze — same thesis, spatial instead of quantum framing. -->
 <style>
 * { margin:0; padding:0; box-sizing:border-box; }
 body { background:#020108; color:#c0c0e0; font-family:'JetBrains Mono','Fira Code',monospace; overflow:hidden; }
@@ -56,8 +58,7 @@ canvas { display:block; }
 <div id="status-bar">
   <span id="ts-val">—</span>
   <span>RALPH = WASD · <span style="color:#00e660">LODRI = autonomous</span> · maze morphs with geo signal</span>
-  <span id="lodri-status" style="color:#555577">LODRI paused</span>
-  <button onclick="lodriPaused=!lodriPaused;if(!lodriPaused)lodriThink();document.getElementById('lodri-status').textContent=lodriPaused?'LODRI paused':'LODRI pathfinding…';document.getElementById('lodri-status').style.color=lodriPaused?'#555577':'#00e660';" style="background:none;border:1px solid #333355;color:#555577;font-family:monospace;font-size:9px;padding:2px 8px;cursor:pointer;pointer-events:all">resume</button>
+  <span id="lodri-status" style="color:#00e660">LODRI pathfinding…</span>
   <span id="msg-val" style="color:#555577">loading geo feed…</span>
 </div>
 
@@ -269,13 +270,11 @@ function draw() {
   }
 
   // Lodri autonomous move
-  if(!lodriPaused) {
-    lodriMoveTimer++;
-    if(lodriMoveTimer >= LODRI_SPEED) {
-      lodriMoveTimer = 0;
-      if(lodriPath.length === 0 && !LODRI.won) lodriThink();
-      lodriStep();
-    }
+  lodriMoveTimer++;
+  if(lodriMoveTimer >= LODRI_SPEED) {
+    lodriMoveTimer = 0;
+    if(lodriPath.length === 0 && !LODRI.won) lodriThink();
+    lodriStep();
   }
 
   requestAnimationFrame(draw);
@@ -285,7 +284,6 @@ function draw() {
 let lodriPath = [];
 let lodriMoveTimer = 0;
 const LODRI_SPEED = 18; // frames between moves (lower = faster)
-let lodriPaused = true;
 
 function bfs(startR, startC, goalR, goalC) {
   const visited = Array.from({length:ROWS}, () => Array(COLS).fill(false));

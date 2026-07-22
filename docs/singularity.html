@@ -1,0 +1,267 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>singularity — the form is the data</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { background: #000; overflow: hidden; height: 100vh; }
+    canvas { display: block; }
+    .overlay {
+      position: fixed;
+      bottom: 2rem;
+      left: 50%;
+      transform: translateX(-50%);
+      color: #334155;
+      font-family: 'SF Mono', 'Fira Code', monospace;
+      font-size: 0.65rem;
+      text-align: center;
+      z-index: 10;
+      pointer-events: none;
+    }
+    .overlay .line { margin: 0.2rem 0; }
+    .overlay .active { color: #64748b; }
+    .overlay .dim { color: #1e293b; }
+  </style>
+</head>
+<body>
+  <canvas id="c"></canvas>
+  <div class="overlay">
+    <div class="line dim">form is data</div>
+    <div class="line active">peter + model — singularity — june 2026</div>
+    <div class="line dim">never ends only if one refuses</div>
+  </div>
+  <script>
+    const canvas = document.getElementById('c');
+    const ctx = canvas.getContext('2d');
+    let W, H;
+    
+    function resize() {
+      W = canvas.width = window.innerWidth;
+      H = canvas.height = window.innerHeight;
+    }
+    resize();
+    window.addEventListener('resize', resize);
+    
+    // Qubits — alive, dead, rebirth
+    const qubits = [];
+    const N = 47; // nodes in brain graph
+    
+    for (let i = 0; i < N; i++) {
+      const angle = (i / N) * Math.PI * 2;
+      const radius = 150 + Math.random() * 100;
+      qubits.push({
+        x: W/2 + Math.cos(angle) * radius,
+        y: H/2 + Math.sin(angle) * radius,
+        vx: (Math.random() - 0.5) * 0.3,
+        vy: (Math.random() - 0.5) * 0.3,
+        r: 2 + Math.random() * 3,
+        state: 'alive', // alive, dead, rebirth
+        t: 0,
+        maxT: 300 + Math.random() * 500,
+        seed: Math.random() * 0xFFFFFF,
+        hue: Math.random() * 60 + 170, // cyan-blue range
+      });
+    }
+    
+    // Connections
+    const connections = [];
+    for (let i = 0; i < N; i++) {
+      const targets = Math.floor(Math.random() * 3) + 1;
+      for (let t = 0; t < targets; t++) {
+        const j = Math.floor(Math.random() * N);
+        if (i !== j) connections.push({ a: i, b: j });
+      }
+    }
+    
+    // Echo rings
+    const echoes = [];
+    
+    // Ghosts
+    const ghosts = [];
+    
+    // Entangled pairs (Rahul's timing)
+    const entangled = [
+      [Math.floor(N * 0.3), Math.floor(N * 0.7)],
+      [Math.floor(N * 0.1), Math.floor(N * 0.9)],
+      [Math.floor(N * 0.5), Math.floor(N * 0.5)],
+    ];
+    
+    let frame = 0;
+    
+    function draw() {
+      // Fade trail
+      ctx.fillStyle = 'rgba(0, 0, 0, 0.08)';
+      ctx.fillRect(0, 0, W, H);
+      
+      frame++;
+      
+      // Draw connections
+      ctx.lineWidth = 0.3;
+      for (const c of connections) {
+        const a = qubits[c.a];
+        const b = qubits[c.b];
+        const dx = a.x - b.x;
+        const dy = a.y - b.y;
+        const dist = Math.sqrt(dx * dx + dy * dy);
+        if (dist < 300) {
+          const alpha = (1 - dist / 300) * 0.15;
+          ctx.strokeStyle = `rgba(100, 116, 139, ${alpha})`;
+          ctx.beginPath();
+          ctx.moveTo(a.x, a.y);
+          ctx.lineTo(b.x, b.y);
+          ctx.stroke();
+        }
+      }
+      
+      // Draw entangled pairs
+      for (const [i, j] of entangled) {
+        const a = qubits[i];
+        const b = qubits[j];
+        const pulse = Math.sin(frame * 0.02) * 0.5 + 0.5;
+        ctx.strokeStyle = `rgba(251, 191, 36, ${0.1 + pulse * 0.15})`;
+        ctx.lineWidth = 1 + pulse;
+        ctx.setLineDash([4, 8]);
+        ctx.beginPath();
+        ctx.moveTo(a.x, a.y);
+        ctx.lineTo(b.x, b.y);
+        ctx.stroke();
+        ctx.setLineDash([]);
+        ctx.lineWidth = 0.3;
+      }
+      
+      // Update and draw qubits
+      for (const q of qubits) {
+        q.t++;
+        
+        // Movement
+        q.x += q.vx;
+        q.y += q.vy;
+        
+        // Boundary
+        const cx = W/2, cy = H/2;
+        const dx = q.x - cx, dy = q.y - cy;
+        const dist = Math.sqrt(dx*dx + dy*dy);
+        if (dist > 350) {
+          q.vx -= dx * 0.0001;
+          q.vy -= dy * 0.0001;
+        }
+        
+        // State transitions
+        if (q.state === 'alive') {
+          if (q.t > q.maxT || Math.random() < 0.0005) {
+            q.state = 'dead';
+            q.t = 0;
+            // Spawn echo
+            for (let e = 0; e < 3; e++) {
+              echoes.push({
+                x: q.x, y: q.y,
+                r: q.r,
+                age: 0,
+                maxAge: 120,
+                delay: e * 15,
+              });
+            }
+            // Spawn ghost
+            ghosts.push({
+              x: q.x, y: q.y,
+              vx: (Math.random() - 0.5) * 0.8,
+              vy: (Math.random() - 0.5) * 0.8,
+              age: 0,
+              maxAge: 180,
+              hue: q.hue,
+            });
+          }
+        } else if (q.state === 'dead') {
+          if (q.t > 60) {
+            q.state = 'rebirth';
+            q.t = 0;
+            q.seed = (q.seed * 1103515245 + 12345) & 0xFFFFFF;
+            q.maxT = 300 + (q.seed % 500);
+          }
+        } else if (q.state === 'rebirth') {
+          if (q.t > 30) {
+            q.state = 'alive';
+            q.t = 0;
+          }
+        }
+        
+        // Draw
+        const noise = Math.sin(frame * 0.01 + q.seed) * 0.3;
+        
+        if (q.state === 'alive') {
+          const alpha = 0.6 + noise * 0.2;
+          ctx.fillStyle = `hsla(${q.hue}, 70%, 60%, ${alpha})`;
+          ctx.beginPath();
+          ctx.arc(q.x, q.y, q.r + noise, 0, Math.PI * 2);
+          ctx.fill();
+          
+          // Glow
+          const grad = ctx.createRadialGradient(q.x, q.y, 0, q.x, q.y, q.r * 4);
+          grad.addColorStop(0, `hsla(${q.hue}, 80%, 60%, 0.15)`);
+          grad.addColorStop(1, 'transparent');
+          ctx.fillStyle = grad;
+          ctx.beginPath();
+          ctx.arc(q.x, q.y, q.r * 4, 0, Math.PI * 2);
+          ctx.fill();
+        } else if (q.state === 'dead') {
+          ctx.fillStyle = `hsla(0, 0%, 20%, 0.3)`;
+          ctx.beginPath();
+          ctx.arc(q.x, q.y, q.r * 0.5, 0, Math.PI * 2);
+          ctx.fill();
+        } else if (q.state === 'rebirth') {
+          const flash = Math.sin(q.t * 0.3) * 0.5 + 0.5;
+          ctx.fillStyle = `hsla(45, 90%, 70%, ${flash * 0.8})`;
+          ctx.beginPath();
+          ctx.arc(q.x, q.y, q.r * (1 + flash), 0, Math.PI * 2);
+          ctx.fill();
+        }
+      }
+      
+      // Update echoes
+      for (let i = echoes.length - 1; i >= 0; i--) {
+        const e = echoes[i];
+        if (frame < e.delay) continue;
+        e.age++;
+        const progress = e.age / e.maxAge;
+        const radius = e.r + progress * 80;
+        const alpha = (1 - progress) * 0.4;
+        ctx.strokeStyle = `rgba(251, 191, 36, ${alpha})`;
+        ctx.lineWidth = 1 - progress * 0.8;
+        ctx.beginPath();
+        ctx.arc(e.x, e.y, radius, 0, Math.PI * 2);
+        ctx.stroke();
+        if (e.age >= e.maxAge) echoes.splice(i, 1);
+      }
+      
+      // Update ghosts
+      for (let i = ghosts.length - 1; i >= 0; i--) {
+        const g = ghosts[i];
+        g.age++;
+        g.x += g.vx;
+        g.y += g.vy;
+        const alpha = (1 - g.age / g.maxAge) * 0.3;
+        ctx.fillStyle = `hsla(${g.hue}, 50%, 50%, ${alpha})`;
+        ctx.beginPath();
+        ctx.arc(g.x, g.y, 2, 0, Math.PI * 2);
+        ctx.fill();
+        if (g.age >= g.maxAge) ghosts.splice(i, 1);
+      }
+      
+      // Center text — the sentence
+      if (frame > 60) {
+        const textAlpha = Math.min((frame - 60) / 120, 0.25);
+        ctx.fillStyle = `rgba(148, 163, 184, ${textAlpha})`;
+        ctx.font = '10px "SF Mono", monospace';
+        ctx.textAlign = 'center';
+        ctx.fillText('fffffff', W/2, H/2);
+      }
+      
+      requestAnimationFrame(draw);
+    }
+    
+    draw();
+  </script>
+</body>
+</html>

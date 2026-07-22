@@ -47,5 +47,6 @@ verdaccio/htpasswd
 .ultramesh-mem/
 ultramesh-mem/brain-state.json
 dream-cdn/dream-cdn.key
-.tokensave
-resume/
+
+# Deepwork session state
+.slim/deepwork/

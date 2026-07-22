@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Star Catcher</title>
+<meta name="description" content="Catch the falling stars with your rocket — a game in the daytime cosmos.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600&display=swap" rel="stylesheet">
+<style>
+* { margin:0; padding:0; box-sizing:border-box; }
+html, body { height:100%; overflow:hidden; }
+body { font-family:'Fredoka', system-ui, sans-serif; background:#0a0d2a; touch-action:none; }
+canvas { display:block; }
+.overlay {
+  position:fixed; inset:0; background:#0a0d2aee;
+  display:flex; flex-direction:column; align-items:center; justify-content:center; gap:12px;
+  text-align:center; z-index:10; padding:20px;
+}
+.overlay h1 { font-size:clamp(30px, 8vw, 48px); color:#aee3ff; font-weight:600; }
+.overlay p { color:#8891b4; font-size:17px; max-width:340px; }
+.big-btn {
+  margin-top:12px; padding:16px 44px; border:none; border-radius:30px;
+  background:#0e5bd8; color:#fff; font-family:inherit; font-size:20px; font-weight:600;
+  cursor:pointer; box-shadow:0 4px 0 #0a41a0;
+}
+.big-btn:active { transform:translateY(3px); box-shadow:0 1px 0 #0a41a0; }
+.home {
+  font-size:15px; color:#8891b4; text-decoration:none;
+  padding:8px 16px; border-radius:20px; background:#ffffff14; margin-top:10px;
+}
+.home:hover { color:#cfe4ff; }
+#hud {
+  position:fixed; top:12px; left:0; right:0; display:flex; justify-content:center; gap:28px;
+  font-size:clamp(18px, 5vw, 24px); font-weight:600; color:#cfe4ff; z-index:5;
+  pointer-events:none;
+}
+#end { display:none; }
+</style>
+</head>
+<body>
+
+<canvas id="c"></canvas>
+<div id="hud"><span id="score">⭐ 0</span><span id="time">⏱ 45</span></div>
+
+<div class="overlay" id="start">
+  <h1>STAR CATCHER</h1>
+  <p>Catch the falling stars with your rocket!<br>
+     ⭐ = 1 point · 🌟 = 5 points</p>
+  <p style="font-size:14px">move with ← → keys, or drag your finger</p>
+  <button class="big-btn" onclick="startGame()">PLAY</button>
+  <a class="home" href="games.html">🏠 all games</a>
+</div>
+
+<div class="overlay" id="end">
+  <h1 id="end-title">Time's up!</h1>
+  <p id="end-score"></p>
+  <p id="end-best" style="font-size:14px"></p>
+  <button class="big-btn" onclick="startGame()">Play again</button>
+  <a class="home" href="games.html">🏠 all games</a>
+</div>
+
+<script>
+const canvas = document.getElementById('c');
+const ctx = canvas.getContext('2d');
+let W, H;
+function resize(){ W = canvas.width = innerWidth; H = canvas.height = innerHeight; }
+resize(); addEventListener('resize', resize);
+
+const GAME_SECS = 45;
+let running = false, score = 0, timeLeft = GAME_SECS;
+let rocketX = W/2, stars = [], pops = [], lastSpawn = 0, startedAt = 0;
+const keys = {};
+
+addEventListener('keydown', e => {
+  if(['ArrowLeft','ArrowRight'].includes(e.key)) { keys[e.key]=true; e.preventDefault(); }
+});
+addEventListener('keyup', e => { keys[e.key]=false; });
+addEventListener('pointermove', e => { if(running) rocketX = e.clientX; });
+addEventListener('pointerdown', e => { if(running) rocketX = e.clientX; });
+
+function spawnStar(now) {
+  const progress = (now - startedAt) / (GAME_SECS*1000);   // 0→1 over the game
+  const interval = 900 - 500*progress;                     // spawn faster over time
+  if(now - lastSpawn < interval) return;
+  lastSpawn = now;
+  const golden = Math.random() < 0.12;
+  stars.push({
+    x: 40 + Math.random()*(W-80), y: -30,
+    v: (2.2 + 3*progress) * (0.8 + Math.random()*0.5),
+    golden, size: golden ? 40 : 32
+  });
+}
+
+function drawSky() {
+  const g = ctx.createLinearGradient(0,0,0,H);
+  g.addColorStop(0,'#0a0d2a'); g.addColorStop(0.6,'#141838'); g.addColorStop(1,'#2c1a4a');
+  ctx.fillStyle = g; ctx.fillRect(0,0,W,H);
+  // Twinkling background stars
+  const now = performance.now();
+  for(let i=0;i<60;i++){
+    const sx = (i*137.5) % W, sy = (i*89.7) % (H*0.85);
+    const tw = 0.25 + 0.35*Math.sin(now*0.002 + i*1.7);
+    ctx.fillStyle = `rgba(220,230,255,${tw})`;
+    ctx.fillRect(sx, sy, i%7===0 ? 2.5 : 1.5, i%7===0 ? 2.5 : 1.5);
+  }
+  // Crescent moon glow, top-left
+  const mg = ctx.createRadialGradient(70,80,0,70,80,90);
+  mg.addColorStop(0,'rgba(232,242,255,0.25)'); mg.addColorStop(1,'transparent');
+  ctx.fillStyle = mg; ctx.beginPath(); ctx.arc(70,80,90,0,Math.PI*2); ctx.fill();
+  ctx.font='40px serif'; ctx.textAlign='center'; ctx.textBaseline='middle';
+  ctx.fillText('🌙', 70, 80);
+}
+
+function frame(now) {
+  drawSky();
+
+  if(running) {
+    spawnStar(now);
+    if(keys.ArrowLeft)  rocketX -= 9;
+    if(keys.ArrowRight) rocketX += 9;
+    rocketX = Math.max(30, Math.min(W-30, rocketX));
+
+    const ry = H - 60;
+    stars = stars.filter(s => {
+      s.y += s.v;
+      // Catch check
+      if(Math.abs(s.x-rocketX) < 42 && Math.abs(s.y-ry) < 44) {
+        const pts = s.golden ? 5 : 1;
+        score += pts;
+        document.getElementById('score').textContent = `⭐ ${score}`;
+        pops.push({x:s.x, y:s.y, t:now, text:`+${pts}`, golden:s.golden});
+        return false;
+      }
+      return s.y < H + 40;
+    });
+
+    timeLeft = Math.max(0, GAME_SECS - (now - startedAt)/1000);
+    document.getElementById('time').textContent = `⏱ ${Math.ceil(timeLeft)}`;
+    if(timeLeft <= 0) endGame();
+  }
+
+  // Stars
+  ctx.textAlign='center'; ctx.textBaseline='middle';
+  stars.forEach(s => {
+    ctx.font = `${s.size}px serif`;
+    ctx.fillText(s.golden ? '🌟' : '⭐', s.x, s.y);
+  });
+
+  // Score pops
+  pops = pops.filter(p => now - p.t < 700);
+  pops.forEach(p => {
+    const a = 1 - (now-p.t)/700;
+    ctx.font = 'bold 22px Fredoka, sans-serif';
+    ctx.fillStyle = p.golden ? `rgba(255,210,90,${a})` : `rgba(140,190,255,${a})`;
+    ctx.fillText(p.text, p.x, p.y - (now-p.t)*0.05);
+  });
+
+  // Rocket
+  ctx.font='48px serif';
+  ctx.fillText('🚀', rocketX, H-60);
+
+  requestAnimationFrame(frame);
+}
+
+function startGame() {
+  document.getElementById('start').style.display='none';
+  document.getElementById('end').style.display='none';
+  score = 0; stars = []; pops = []; timeLeft = GAME_SECS;
+  startedAt = performance.now(); lastSpawn = 0;
+  document.getElementById('score').textContent='⭐ 0';
+  running = true;
+}
+
+function endGame() {
+  running = false;
+  const best = Math.max(score, +(localStorage.getItem('star-best')||0));
+  localStorage.setItem('star-best', best);
+  document.getElementById('end-score').textContent = `You caught ${score} points of starlight!`;
+  document.getElementById('end-best').textContent = `Best: ${best}`;
+  document.getElementById('end-title').textContent = score >= best && score > 0 ? 'New record! 🎉' : "Time's up!";
+  document.getElementById('end').style.display='flex';
+}
+
+requestAnimationFrame(frame);
+</script>
+</body>
+</html>

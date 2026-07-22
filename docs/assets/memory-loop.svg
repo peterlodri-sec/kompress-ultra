@@ -1,0 +1,132 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 900" fill="none">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#1a1412"/>
+      <stop offset="100%" stop-color="#14110e"/>
+    </linearGradient>
+    <linearGradient id="amberG" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#f59e0b"/>
+      <stop offset="100%" stop-color="#d97706"/>
+    </linearGradient>
+    <linearGradient id="tealG" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#2dd4bf"/>
+      <stop offset="100%" stop-color="#0f766e"/>
+    </linearGradient>
+    <linearGradient id="sageG" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#a3e635"/>
+      <stop offset="100%" stop-color="#4d7c0f"/>
+    </linearGradient>
+    <linearGradient id="roseG" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#fb7185"/>
+      <stop offset="100%" stop-color="#be123c"/>
+    </linearGradient>
+    <filter id="glow">
+      <feGaussianBlur stdDeviation="3" result="blur"/>
+      <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+  </defs>
+
+  <rect width="800" height="900" fill="url(#bg)" rx="16"/>
+
+  <!-- Title -->
+  <text x="400" y="50" text-anchor="middle" font-family="monospace" font-size="14" fill="#9e9284" letter-spacing="4">CROSS-SESSION MEMORY LOOP</text>
+
+  <!-- 1. Message Stream -->
+  <rect x="275" y="80" width="250" height="52" rx="26" fill="#fef3c7" stroke="#d97706" stroke-width="1.5"/>
+  <text x="400" y="111" text-anchor="middle" font-family="sans-serif" font-size="16" font-weight="bold" fill="#1e1814">message stream</text>
+
+  <!-- arrow down -->
+  <line x1="400" y1="132" x2="400" y2="180" stroke="#78716c" stroke-width="1.5" marker-end="url(#arrow)"/>
+
+  <!-- 2. Score + Prune -->
+  <rect x="275" y="180" width="250" height="52" rx="8" fill="#1c1815" stroke="#78716c" stroke-width="1.2"/>
+  <text x="400" y="207" text-anchor="middle" font-family="monospace" font-size="12" fill="#9e9284">score + prune</text>
+  <text x="400" y="222" text-anchor="middle" font-family="sans-serif" font-size="13" fill="#e8e0d8">relevance + structure</text>
+
+  <!-- arrow down split -->
+  <line x1="400" y1="232" x2="400" y2="270" stroke="#78716c" stroke-width="1.2"/>
+  <line x1="400" y1="270" x2="200" y2="270" stroke="#78716c" stroke-width="1.2"/>
+  <line x1="400" y1="270" x2="600" y2="270" stroke="#78716c" stroke-width="1.2"/>
+
+  <!-- 3a. Keep (right) -->
+  <line x1="600" y1="270" x2="600" y2="310" stroke="#78716c" stroke-width="1.2" marker-end="url(#arrow)"/>
+  <rect x="520" y="310" width="160" height="52" rx="8" fill="#1c1815" stroke="#a3e635" stroke-width="1.2"/>
+  <text x="600" y="337" text-anchor="middle" font-family="monospace" font-size="12" fill="#a3e635">→ keep</text>
+  <text x="600" y="352" text-anchor="middle" font-family="sans-serif" font-size="12" fill="#e8e0d8">protected messages</text>
+
+  <!-- 3b. Drop (left) -->
+  <line x1="200" y1="270" x2="200" y2="310" stroke="#78716c" stroke-width="1.2" marker-end="url(#arrow)"/>
+  <rect x="120" y="310" width="160" height="52" rx="8" fill="#1c1815" stroke="#fb7185" stroke-width="1.2"/>
+  <text x="200" y="337" text-anchor="middle" font-family="monospace" font-size="12" fill="#fb7185">→ drop</text>
+  <text x="200" y="352" text-anchor="middle" font-family="sans-serif" font-size="12" fill="#e8e0d8">low-signal</text>
+
+  <!-- Drop flow down -->
+  <line x1="200" y1="362" x2="200" y2="410" stroke="#fb7185" stroke-width="1.2" marker-end="url(#arrow-r)"/>
+
+  <!-- 4. hashEmbedding -->
+  <rect x="100" y="410" width="200" height="52" rx="8" fill="#1c1815" stroke="#2dd4bf" stroke-width="1.2"/>
+  <text x="200" y="437" text-anchor="middle" font-family="monospace" font-size="12" fill="#2dd4bf">hashEmbedding()</text>
+  <text x="200" y="452" text-anchor="middle" font-family="sans-serif" font-size="11" fill="#9e9284">word hash → 768-dim vector</text>
+
+  <line x1="200" y1="462" x2="200" y2="500" stroke="#2dd4bf" stroke-width="1.2" marker-end="url(#arrow-r)"/>
+
+  <!-- 5. LocalStore -->
+  <rect x="100" y="500" width="200" height="52" rx="8" fill="#1c1815" stroke="#2dd4bf" stroke-width="1.2"/>
+  <text x="200" y="527" text-anchor="middle" font-family="monospace" font-size="12" fill="#2dd4bf">addToStore()</text>
+  <text x="200" y="542" text-anchor="middle" font-family="sans-serif" font-size="11" fill="#9e9284">in-memory Map</text>
+
+  <line x1="200" y1="552" x2="200" y2="590" stroke="#2dd4bf" stroke-width="1.2" marker-end="url(#arrow-r)"/>
+
+  <!-- 6. JSONL persist -->
+  <rect x="100" y="590" width="200" height="52" rx="8" fill="#1c1815" stroke="#d97706" stroke-width="1.2"/>
+  <text x="200" y="617" text-anchor="middle" font-family="monospace" font-size="12" fill="#d97706">persistStore()</text>
+  <text x="200" y="632" text-anchor="middle" font-family="sans-serif" font-size="11" fill="#9e9284">→ vector-store.jsonl</text>
+
+  <!-- DISK label -->
+  <rect x="130" y="660" width="140" height="28" rx="14" fill="#24201c" stroke="#78716c" stroke-width="1" stroke-dasharray="4 3"/>
+  <text x="200" y="678" text-anchor="middle" font-family="monospace" font-size="11" fill="#78716c">DISK</text>
+
+  <!-- Return arrow from DISK going right then up to queryMemory -->
+  <line x1="270" y1="674" x2="550" y2="674" stroke="#78716c" stroke-width="1.2"/>
+  <line x1="550" y1="674" x2="550" y2="750" stroke="#78716c" stroke-width="1.2"/>
+
+  <!-- 7. Next session load -->
+  <line x1="550" y1="750" x2="500" y2="750" stroke="#78716c" stroke-width="1.2" marker-end="url(#arrow)"/>
+  <rect x="420" y="720" width="180" height="52" rx="8" fill="#1c1815" stroke="#f59e0b" stroke-width="1.2"/>
+  <text x="510" y="747" text-anchor="middle" font-family="monospace" font-size="12" fill="#f59e0b">loadStore()</text>
+  <text x="510" y="762" text-anchor="middle" font-family="sans-serif" font-size="11" fill="#9e9284">auto on first query</text>
+
+  <line x1="510" y1="772" x2="510" y2="810" stroke="#f59e0b" stroke-width="1.2" marker-end="url(#arrow)"/>
+
+  <!-- 8. queryMemory -->
+  <rect x="410" y="810" width="200" height="52" rx="8" fill="#1c1815" stroke="#f59e0b" stroke-width="1.2"/>
+  <text x="510" y="837" text-anchor="middle" font-family="monospace" font-size="12" fill="#f59e0b">queryMemory(topic)</text>
+  <text x="510" y="852" text-anchor="middle" font-family="sans-serif" font-size="11" fill="#9e9284">cosine search → top-K</text>
+
+  <!-- Inject arrow going back up to top -->
+  <line x1="410" y1="836" x2="50" y2="836" stroke="#78716c" stroke-width="1.2"/>
+  <line x1="50" y1="836" x2="50" y2="106" stroke="#78716c" stroke-width="1.2"/>
+  <line x1="50" y1="106" x2="275" y2="106" stroke="#78716c" stroke-width="1.2" marker-end="url(#arrow)"/>
+
+  <!-- Inject label -->
+  <rect x="10" y="460" width="80" height="28" rx="14" fill="#1c1815" stroke="#a3e635" stroke-width="1"/>
+  <text x="50" y="478" text-anchor="middle" font-family="monospace" font-size="10" fill="#a3e635">inject</text>
+
+  <!-- Right side: arrow from keep up to top -->
+  <line x1="680" y1="336" x2="720" y2="336" stroke="#a3e635" stroke-width="1.2"/>
+  <line x1="720" y1="336" x2="720" y2="106" stroke="#a3e635" stroke-width="1.2"/>
+  <line x1="720" y1="106" x2="525" y2="106" stroke="#a3e635" stroke-width="1.2" marker-end="url(#arrow)"/>
+
+  <rect x="695" y="200" width="50" height="28" rx="14" fill="#1c1815" stroke="#a3e635" stroke-width="1"/>
+  <text x="720" y="218" text-anchor="middle" font-family="monospace" font-size="10" fill="#a3e635">keep</text>
+
+  <!-- Arrow markers -->
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="10" refY="5" markerWidth="6" markerHeight="6" orient="auto">
+      <path d="M0,0 L10,5 L0,10" fill="#78716c"/>
+    </marker>
+    <marker id="arrow-r" viewBox="0 0 10 10" refX="10" refY="5" markerWidth="6" markerHeight="6" orient="auto">
+      <path d="M0,0 L10,5 L0,10" fill="#2dd4bf"/>
+    </marker>
+  </defs>
+</svg>

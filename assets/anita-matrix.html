@@ -1,0 +1,573 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ANITA · Matrix Plane</title>
+    <meta name='description' content='Raw numbers before they resolve into proof — Re axis settled, Im axis still in flight.'>
+    <!-- Framing: Raw numbers before they resolve into proof — Re axis settled, Im axis still in flight. -->
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+html, body { width: 100%; height: 100%; overflow: hidden; background: #1b1e2e; }
+canvas { display: block; position: absolute; top: 0; left: 0; }
+#overlay {
+  position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+  pointer-events: none;
+}
+#hud {
+  position: absolute; top: 18px; left: 22px;
+  font-family: 'Courier New', monospace; font-size: 11px;
+  color: #3a5070; line-height: 1.8; letter-spacing: 0.5px;
+}
+#caption {
+  position: absolute; top: 18px; right: 22px;
+  text-align: right;
+  font-family: 'Georgia', 'CMU Serif', serif;
+}
+#caption .title { color: #58c4dd; font-size: 15px; letter-spacing: 2px; }
+#caption .sub   { color: #3a4a60; font-size: 10px; margin-top: 3px; letter-spacing: 1px; font-family: monospace; }
+#legend {
+  position: absolute; bottom: 18px; left: 22px;
+  font-family: monospace; font-size: 10px; color: #3a4a60; line-height: 2;
+}
+.dot-re { display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: #58c4dd; margin-right: 6px; }
+.dot-im { display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: #f8cd37; margin-right: 6px; }
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<div id="hud" id="hud"></div>
+<div id="caption">
+  <div class="title">ANITA · ℂ MATRIX PLANE</div>
+  <div class="sub">Re ↔ Im · raw numbers dancing</div>
+</div>
+<div id="legend">
+  <div><span class="dot-re"></span>real</div>
+  <div><span class="dot-im"></span>imaginary</div>
+</div>
+
+<script>
+// ── 3Blue1Brown palette ───────────────────────────────────────────────────────
+const C = {
+  bg:      '#1b1e2e',
+  grid:    '#22253a',
+  gridBrt: '#2d3050',
+  axisRe:  '#58c4dd',
+  axisIm:  '#f8cd37',
+  blue:    '#58c4dd',
+  blue2:   '#5b97db',
+  yellow:  '#f8cd37',
+  red:     '#fc6255',
+  green:   '#83c167',
+  magenta: '#c880f0',
+  white:   '#fffafa',
+  dim:     '#2a3040',
+  dimText: '#3a4a60',
+};
+
+const cv = document.getElementById('c');
+const cx = cv.getContext('2d');
+let W, H, OX, OY, U;
+
+function resize() {
+  W = cv.width  = window.innerWidth;
+  H = cv.height = window.innerHeight;
+  OX = W / 2;
+  OY = H / 2;
+  U  = Math.min(W, H) / 9;
+}
+resize();
+window.addEventListener('resize', resize);
+
+// ── Coordinate helpers ────────────────────────────────────────────────────────
+function sc(x, y) { return [OX + x * U, OY - y * U]; }
+function lerp(a, b, x) { return a + (b - a) * x; }
+function ease(t) { return t < .5 ? 2*t*t : -1 + (4 - 2*t)*t; }
+function smooth(t) { return t*t*(3-2*t); }
+
+// ── Grid (distorted by active matrix) ────────────────────────────────────────
+function drawTransformedGrid(m, alpha) {
+  // m = [a,b,c,d] → col1=[a,b] col2=[c,d]
+  const [a,b,c,d] = m;
+  const R = 6;
+  cx.save();
+  cx.globalAlpha = alpha;
+
+  // Horizontal lines (Im = const)
+  cx.strokeStyle = C.grid;
+  cx.lineWidth   = 0.5;
+  for (let j = -R; j <= R; j++) {
+    cx.beginPath();
+    for (let i = -R; i <= R; i++) {
+      const tx = i*a + j*c, ty = i*b + j*d;
+      const [sx, sy] = sc(tx, ty);
+      i === -R ? cx.moveTo(sx, sy) : cx.lineTo(sx, sy);
+    }
+    cx.stroke();
+  }
+  // Vertical lines
+  for (let i = -R; i <= R; i++) {
+    cx.beginPath();
+    for (let j = -R; j <= R; j++) {
+      const tx = i*a + j*c, ty = i*b + j*d;
+      const [sx, sy] = sc(tx, ty);
+      j === -R ? cx.moveTo(sx, sy) : cx.lineTo(sx, sy);
+    }
+    cx.stroke();
+  }
+
+  cx.restore();
+}
+
+function drawBaseGrid(alpha) {
+  const R = 6;
+  cx.save();
+  cx.globalAlpha = alpha;
+  cx.strokeStyle = C.grid;
+  cx.lineWidth = 0.4;
+  for (let i = -R; i <= R; i++) {
+    cx.beginPath();
+    const [x0,y0] = sc(i,-R), [x1,y1] = sc(i,R);
+    cx.moveTo(x0,y0); cx.lineTo(x1,y1); cx.stroke();
+    cx.beginPath();
+    const [x2,y2] = sc(-R,i), [x3,y3] = sc(R,i);
+    cx.moveTo(x2,y2); cx.lineTo(x3,y3); cx.stroke();
+  }
+  cx.restore();
+}
+
+// ── Axes (always fixed) ───────────────────────────────────────────────────────
+function drawAxes() {
+  const R = 6;
+  cx.save();
+  cx.lineWidth = 1.5;
+
+  // Real axis
+  cx.strokeStyle = C.axisRe;
+  cx.globalAlpha = 0.65;
+  cx.beginPath();
+  const [rx0,ry0] = sc(-R,0), [rx1,ry1] = sc(R,0);
+  cx.moveTo(rx0,ry0); cx.lineTo(rx1,ry1); cx.stroke();
+  // arrow
+  drawArrow(cx, rx1, ry1, Math.PI, C.axisRe, 0.65);
+
+  // Imaginary axis
+  cx.strokeStyle = C.axisIm;
+  cx.globalAlpha = 0.65;
+  cx.beginPath();
+  const [ix0,iy0] = sc(0,-R), [ix1,iy1] = sc(0,R);
+  cx.moveTo(ix0,iy0); cx.lineTo(ix1,iy1); cx.stroke();
+  drawArrow(cx, ix1, iy1, -Math.PI/2, C.axisIm, 0.65);
+
+  // Tick marks
+  cx.lineWidth = 0.8;
+  for (let i = -5; i <= 5; i++) {
+    if (i === 0) continue;
+    cx.globalAlpha = 0.3;
+    cx.strokeStyle = C.axisRe;
+    cx.beginPath();
+    const [tx,ty] = sc(i,0);
+    cx.moveTo(tx, ty-5); cx.lineTo(tx, ty+5); cx.stroke();
+
+    cx.strokeStyle = C.axisIm;
+    cx.beginPath();
+    const [ux,uy] = sc(0,i);
+    cx.moveTo(ux-5, uy); cx.lineTo(ux+5, uy); cx.stroke();
+  }
+
+  // Axis labels
+  cx.font = 'bold 13px monospace';
+  cx.globalAlpha = 0.85;
+  cx.fillStyle = C.axisRe;
+  const [lrx,lry] = sc(R-0.25,0.25); cx.fillText('Re', lrx, lry);
+  cx.fillStyle = C.axisIm;
+  const [lix,liy] = sc(0.15,R-0.25); cx.fillText('Im', lix, liy);
+
+  // Tick number labels
+  cx.font = '9px monospace';
+  for (let i = -5; i <= 5; i++) {
+    if (i === 0) continue;
+    cx.globalAlpha = 0.28;
+    cx.fillStyle = C.axisRe;
+    const [tx,ty] = sc(i,-0.4);
+    cx.fillText(i.toString(), tx-4, ty);
+    cx.fillStyle = C.axisIm;
+    const [ux,uy] = sc(-0.55, i);
+    cx.fillText(i+'i', ux-8, uy+4);
+  }
+
+  cx.restore();
+}
+
+function drawArrow(ctx2, x, y, angle, color, alpha) {
+  ctx2.save();
+  ctx2.globalAlpha = alpha;
+  ctx2.fillStyle = color;
+  ctx2.translate(x, y);
+  ctx2.rotate(angle);
+  ctx2.beginPath();
+  ctx2.moveTo(0,0);
+  ctx2.lineTo(-10, -5);
+  ctx2.lineTo(-10,  5);
+  ctx2.closePath();
+  ctx2.fill();
+  ctx2.restore();
+}
+
+// ── Basis vectors from active matrix ─────────────────────────────────────────
+function drawBasisVectors(m) {
+  const [a,b,c,d] = m;
+  // col1 → [a,b] in blue, col2 → [c,d] in green
+  drawVec(0,0, a, b, C.blue, 'î');
+  drawVec(0,0, c, d, C.green, 'ĵ');
+}
+
+function drawVec(x0,y0, x1,y1, color, label) {
+  const [sx0,sy0] = sc(x0,y0);
+  const [sx1,sy1] = sc(x1,y1);
+  const angle = Math.atan2(sy0-sy1, sx1-sx0);
+
+  cx.save();
+  cx.strokeStyle = color;
+  cx.lineWidth = 2.5;
+  cx.globalAlpha = 0.85;
+  cx.shadowBlur = 12;
+  cx.shadowColor = color;
+  cx.beginPath();
+  cx.moveTo(sx0,sy0); cx.lineTo(sx1,sy1); cx.stroke();
+  // arrowhead
+  cx.fillStyle = color;
+  cx.translate(sx1,sy1);
+  cx.rotate(-angle);
+  cx.beginPath();
+  cx.moveTo(0,0); cx.lineTo(-12,-5); cx.lineTo(-12,5); cx.closePath();
+  cx.fill();
+  cx.rotate(angle);
+  cx.translate(-sx1,-sy1);
+
+  cx.shadowBlur = 0;
+  cx.font = 'bold 12px serif';
+  const [lx,ly] = sc(x1+0.12,y1+0.12);
+  cx.fillStyle = color;
+  cx.globalAlpha = 0.9;
+  cx.fillText(label, lx, ly);
+  cx.restore();
+}
+
+// ── Floating matrix cards ─────────────────────────────────────────────────────
+// Each card: label, 2D array of {re, im}, color, fixed canvas position
+const CARD_DEFS = [
+  // top-left: rotation matrix
+  { label: 'ROTATION',    color: C.blue,    size: 2, pos: [-3.2, 2.4], id: 0 },
+  // top-right: complex reflection
+  { label: 'COMPLEX',     color: C.yellow,  size: 2, pos: [ 2.8, 2.4], id: 1 },
+  // bottom-left: shear 3x3
+  { label: 'SHEAR',       color: C.magenta, size: 3, pos: [-3.2,-2.2], id: 2 },
+  // bottom-right: identity+ε
+  { label: 'IDENTITY+ε',  color: C.green,   size: 3, pos: [ 2.8,-2.2], id: 3 },
+];
+
+function getMatrixValues(id, t) {
+  const s  = Math.sin(t * 0.8);
+  const cs = Math.cos(t * 0.8);
+  const s2 = Math.sin(t * 0.5 + 1.3);
+  const c2 = Math.cos(t * 0.5 + 1.3);
+  const ph = Math.sin(t * 0.35) * 0.6;
+  const eps = Math.sin(t * 0.2) * 0.12;
+
+  if (id === 0) return [
+    [{re: cs,  im: 0   }, {re: -s,  im: 0   }],
+    [{re: s,   im: 0   }, {re: cs,  im: 0   }],
+  ];
+  if (id === 1) return [
+    [{re: c2, im: s2  }, {re: -s2, im: c2  }],
+    [{re: s2, im: -c2 }, {re: c2,  im: -s2 }],
+  ];
+  if (id === 2) return [
+    [{re: 1,  im: 0   }, {re: ph,  im: 0  }, {re: 0,   im: s2 *0.3}],
+    [{re: 0,  im: ph*s}, {re: 1,   im: 0  }, {re: ph,  im: 0      }],
+    [{re: 0,  im: s2*0.2},{re:0,   im: 0  }, {re: 1,   im: 0      }],
+  ];
+  if (id === 3) return [
+    [{re: 1+eps*0.8, im: 0      }, {re: eps*0.4, im: s*0.05  }, {re: 0,      im: c2*0.04}],
+    [{re: eps*0.3,   im: cs*0.04}, {re: 1+eps,   im: 0       }, {re: eps*0.5,im: 0      }],
+    [{re: 0,         im: s2*0.04}, {re: eps*0.4, im: s2*0.03 }, {re: 1+eps*.6,im:0      }],
+  ];
+  return [[{re:1,im:0}]];
+}
+
+function drawMatrixCard(def, t) {
+  const { label, color, size, pos, id } = def;
+  const rows = getMatrixValues(id, t);
+
+  // Canvas position
+  const [bx, by] = sc(pos[0], pos[1]);
+
+  const cellW  = 78;
+  const cellH  = 24;
+  const brkW   = 10;
+  const padX   = 8;
+  const padY   = 6;
+  const totalW = size * cellW;
+  const totalH = size * cellH;
+  const ox = bx - totalW / 2;
+  const oy = by - totalH / 2;
+
+  cx.save();
+
+  // Glow background
+  const grd = cx.createRadialGradient(bx, by, 0, bx, by, Math.max(totalW, totalH) * 0.8);
+  grd.addColorStop(0, color + '18');
+  grd.addColorStop(1, 'transparent');
+  cx.globalAlpha = 1;
+  cx.fillStyle = grd;
+  cx.fillRect(ox - brkW - padX - 4, oy - padY - 20, totalW + (brkW + padX)*2 + 8, totalH + padY*2 + 28);
+
+  // Label
+  cx.globalAlpha = 0.7;
+  cx.fillStyle = color;
+  cx.font = 'bold 8.5px monospace';
+  cx.letterSpacing = '2px';
+  cx.fillText(label, ox - brkW - padX, oy - padY - 6);
+
+  // Brackets
+  cx.globalAlpha = 0.85;
+  cx.strokeStyle = color;
+  cx.lineWidth = 2;
+  bracket(ox - brkW - padX,       oy - padY, totalH + padY*2, 'L');
+  bracket(ox + totalW + padX + 2, oy - padY, totalH + padY*2, 'R');
+
+  // Cells
+  for (let r = 0; r < size; r++) {
+    for (let c2 = 0; c2 < size; c2++) {
+      const { re, im } = rows[r][c2];
+      const ccx = ox + c2 * cellW + cellW / 2;
+      const ccy = oy + r * cellH + cellH * 0.7;
+
+      const reS = fmtNum(re);
+      const imS = (im >= 0 ? '+' : '') + fmtNum(im) + 'i';
+      const hasIm = Math.abs(im) > 0.0005;
+
+      if (hasIm) {
+        cx.font = '10px monospace';
+        const rw = cx.measureText(reS).width;
+        const iw = cx.measureText(imS).width;
+        const totalTW = rw + iw + 2;
+        cx.globalAlpha = 0.92;
+        cx.fillStyle = C.axisRe;
+        cx.fillText(reS, ccx - totalTW/2, ccy);
+        cx.fillStyle = C.axisIm;
+        cx.fillText(imS, ccx - totalTW/2 + rw + 2, ccy);
+      } else {
+        cx.font = '10.5px monospace';
+        cx.globalAlpha = 0.92;
+        cx.fillStyle = C.axisRe;
+        const rw = cx.measureText(reS).width;
+        cx.fillText(reS, ccx - rw/2, ccy);
+      }
+    }
+  }
+
+  cx.restore();
+}
+
+function bracket(x, y, h, side) {
+  const arm = 7;
+  cx.beginPath();
+  if (side === 'L') {
+    cx.moveTo(x+arm, y); cx.lineTo(x, y); cx.lineTo(x, y+h); cx.lineTo(x+arm, y+h);
+  } else {
+    cx.moveTo(x-arm, y); cx.lineTo(x, y); cx.lineTo(x, y+h); cx.lineTo(x-arm, y+h);
+  }
+  cx.stroke();
+}
+
+function fmtNum(v) {
+  if (Math.abs(v) < 0.0005) return ' 0.00';
+  return (v >= 0 ? ' ' : '') + v.toFixed(2);
+}
+
+// ── ANITA pulse particle on complex plane ─────────────────────────────────────
+const TRAIL_LEN = 30;
+const trail = [];
+
+function updateANITA(t) {
+  // Spiral with phase jitter (like upward-going cosmic ray ANITA detects)
+  const r   = 1.6 + Math.sin(t * 0.55) * 0.55;
+  const ang = t * 0.7 + Math.sin(t * 0.25) * 0.9;
+  const re  = r * Math.cos(ang);
+  const im  = r * Math.sin(ang);
+  trail.unshift({ re, im });
+  if (trail.length > TRAIL_LEN) trail.pop();
+}
+
+function drawANITA(t) {
+  if (!trail.length) return;
+
+  // Trail
+  for (let i = 1; i < trail.length; i++) {
+    const a = 1 - i / TRAIL_LEN;
+    const p = trail[i-1], q = trail[i];
+    const [px,py] = sc(p.re, p.im);
+    const [qx,qy] = sc(q.re, q.im);
+    cx.save();
+    cx.globalAlpha = a * 0.5;
+    cx.strokeStyle = C.red;
+    cx.lineWidth   = lerp(3, 0.3, i / TRAIL_LEN);
+    cx.shadowBlur  = 8 * a;
+    cx.shadowColor = C.red;
+    cx.beginPath();
+    cx.moveTo(px,py); cx.lineTo(qx,qy);
+    cx.stroke();
+    cx.restore();
+  }
+
+  // Main dot
+  const { re, im } = trail[0];
+  const [sx, sy] = sc(re, im);
+  cx.save();
+  cx.globalAlpha = 1;
+  cx.shadowBlur  = 22;
+  cx.shadowColor = C.red;
+  cx.fillStyle   = C.red;
+  cx.beginPath();
+  cx.arc(sx, sy, 5.5, 0, Math.PI*2);
+  cx.fill();
+
+  // Label near dot
+  cx.shadowBlur = 0;
+  cx.globalAlpha = 0.85;
+  cx.fillStyle = C.red;
+  cx.font = '9.5px monospace';
+  cx.fillText(
+    `(${re.toFixed(2)}, ${im.toFixed(2)}i)`,
+    sx + 10, sy - 8
+  );
+  cx.fillStyle = '#fc625566';
+  cx.font = 'bold 8px monospace';
+  cx.fillText('ANITA 0.6 EeV', sx + 10, sy + 4);
+  cx.restore();
+}
+
+// ── Floating raw number particles ─────────────────────────────────────────────
+// Sparse numbers that drift across the plane
+const NUM_FLOATS = 40;
+const floats = [];
+for (let i = 0; i < NUM_FLOATS; i++) {
+  floats.push({
+    x:   (Math.random() - 0.5) * 11,
+    y:   (Math.random() - 0.5) * 11,
+    vx:  (Math.random() - 0.5) * 0.008,
+    vy:  (Math.random() - 0.5) * 0.008,
+    val: (Math.random() * 4 - 2),
+    isIm: Math.random() > 0.6,
+    phase: Math.random() * Math.PI * 2,
+    size:  8 + Math.random() * 3,
+    alpha: 0.08 + Math.random() * 0.14,
+  });
+}
+
+function updateFloats(dt) {
+  floats.forEach(f => {
+    f.x += f.vx;
+    f.y += f.vy;
+    // gently morph the value
+    f.val += Math.sin(performance.now()*0.001 + f.phase) * 0.002;
+    // wrap
+    if (f.x > 6) f.x = -6;
+    if (f.x < -6) f.x = 6;
+    if (f.y > 6) f.y = -6;
+    if (f.y < -6) f.y = 6;
+  });
+}
+
+function drawFloats() {
+  floats.forEach(f => {
+    const [sx, sy] = sc(f.x, f.y);
+    const label = f.isIm
+      ? ((f.val >= 0 ? '' : '') + f.val.toFixed(3) + 'i')
+      : f.val.toFixed(3);
+    cx.save();
+    cx.globalAlpha = f.alpha;
+    cx.fillStyle   = f.isIm ? C.axisIm : C.axisRe;
+    cx.font        = `${f.size}px monospace`;
+    cx.fillText(label, sx, sy);
+    cx.restore();
+  });
+}
+
+// ── Active transform matrix for grid ─────────────────────────────────────────
+function getActiveTransform(t) {
+  const ang   = t * 0.35;
+  const shear = Math.sin(t * 0.28) * 0.35;
+  const scale = 0.85 + Math.sin(t * 0.18) * 0.15;
+  const a = scale * Math.cos(ang);
+  const b = scale * Math.sin(ang);
+  const c = -scale * Math.sin(ang) + shear * Math.cos(ang);
+  const d =  scale * Math.cos(ang) + shear * Math.sin(ang);
+  return [a, b, c, d];
+}
+
+// ── HUD ───────────────────────────────────────────────────────────────────────
+function updateHUD(t, m) {
+  const el = document.getElementById('hud');
+  if (!el) return;
+  const [a,b,c,d] = m;
+  el.innerHTML =
+    `t = ${t.toFixed(2)}s<br>` +
+    `det = ${(a*d - b*c).toFixed(3)}<br>` +
+    `‖col₁‖ = ${Math.hypot(a,b).toFixed(3)}<br>` +
+    `‖col₂‖ = ${Math.hypot(c,d).toFixed(3)}<br>` +
+    `<br>` +
+    `<span style="color:#58c4dd">Re</span> · ` +
+    `<span style="color:#f8cd37">Im</span> · ` +
+    `<span style="color:#fc6255">ANITA</span>`;
+}
+
+// ── Main loop ─────────────────────────────────────────────────────────────────
+let lastT = 0;
+const T0  = performance.now();
+
+function frame(now) {
+  const t  = (now - T0) / 1000;
+  const dt = t - lastT;
+  lastT    = t;
+
+  // Clear
+  cx.fillStyle = C.bg;
+  cx.fillRect(0, 0, W, H);
+
+  const m = getActiveTransform(t);
+
+  // Transformed grid (faint ghost)
+  drawTransformedGrid(m, 0.25);
+  // Base grid (even fainter)
+  drawBaseGrid(0.18);
+
+  // Floating raw numbers (behind everything)
+  updateFloats(dt);
+  drawFloats();
+
+  // Axes (always fixed, on top of grid)
+  drawAxes();
+
+  // Basis vectors
+  drawBasisVectors(m);
+
+  // ANITA particle
+  updateANITA(t);
+  drawANITA(t);
+
+  // Matrix cards
+  CARD_DEFS.forEach(def => drawMatrixCard(def, t));
+
+  // HUD
+  updateHUD(t, m);
+
+  requestAnimationFrame(frame);
+}
+
+requestAnimationFrame(frame);
+</script>
+</body>
+</html>

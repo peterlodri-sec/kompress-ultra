@@ -1,0 +1,49 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 300 300" fill="none">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#1a1412"/>
+      <stop offset="100%" stop-color="#14110e"/>
+    </linearGradient>
+    <linearGradient id="amberG" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#f59e0b"/>
+      <stop offset="100%" stop-color="#d97706"/>
+    </linearGradient>
+  </defs>
+
+  <rect width="300" height="300" fill="url(#bg)" rx="16"/>
+
+  <!-- Outer ring (seal border) -->
+  <circle cx="150" cy="140" r="85" fill="none" stroke="url(#amberG)" stroke-width="2"/>
+
+  <!-- Outer ring dots -->
+  <circle cx="150" cy="55" r="3" fill="#d97706"/>
+  <circle cx="150" cy="225" r="3" fill="#d97706"/>
+  <circle cx="65" cy="140" r="3" fill="#d97706"/>
+  <circle cx="235" cy="140" r="3" fill="#d97706"/>
+  <circle cx="90" cy="80" r="2.5" fill="#d97706"/>
+  <circle cx="210" cy="80" r="2.5" fill="#d97706"/>
+  <circle cx="90" cy="200" r="2.5" fill="#d97706"/>
+  <circle cx="210" cy="200" r="2.5" fill="#d97706"/>
+
+  <!-- Inner loop icon (simplified memory loop) -->
+  <!-- Circle nodes -->
+  <circle cx="150" cy="120" r="4" fill="#2dd4bf"/>
+  <circle cx="120" cy="155" r="4" fill="#2dd4bf"/>
+  <circle cx="180" cy="155" r="4" fill="#2dd4bf"/>
+
+  <!-- Arrows between nodes -->
+  <line x1="150" y1="124" x2="124" y2="151" stroke="#2dd4bf" stroke-width="1.5" marker-end="url(#tarrow)"/>
+  <line x1="124" y1="159" x2="176" y2="159" stroke="#2dd4bf" stroke-width="1.5" marker-end="url(#tarrow)"/>
+  <line x1="176" y1="151" x2="154" y2="124" stroke="#2dd4bf" stroke-width="1.5" marker-end="url(#tarrow)"/>
+
+  <!-- Genesis hash -->
+  <text x="150" y="260" text-anchor="middle" font-family="monospace" font-size="8" fill="#9e9284" letter-spacing="1">GENESIS</text>
+  <text x="150" y="275" text-anchor="middle" font-family="monospace" font-size="7" fill="#78716c" letter-spacing="0.5">62d2c533899e5042834ab1738874</text>
+  <text x="150" y="286" text-anchor="middle" font-family="monospace" font-size="7" fill="#78716c" letter-spacing="0.5">d2ca45361d460d0eb5e9cd00e27e</text>
+
+  <defs>
+    <marker id="tarrow" viewBox="0 0 8 8" refX="8" refY="4" markerWidth="4" markerHeight="4" orient="auto">
+      <path d="M0,0 L8,4 L0,8" fill="#2dd4bf"/>
+    </marker>
+  </defs>
+</svg>

@@ -3,6 +3,8 @@
 <head>
 <meta charset="UTF-8">
 <title>ॐ</title>
+    <meta name='description' content='Signal before noise. The constant underneath the compression work.'>
+    <!-- Framing: Signal before noise. The constant underneath the compression work. -->
 <style>
 * { margin:0; padding:0; box-sizing:border-box; }
 html, body {
@@ -82,7 +84,7 @@ function begin() {
   gain.gain.linearRampToValueAtTime(0.18, ac.currentTime + 6);
   gain.connect(ac.destination);
 
-  // OM drone: 136.1 Hz (Earth/Schumann resonance harmonic — traditional AUM)
+  // OM drone: 136.1 Hz (Earth year tone, cosmic octave — traditional AUM tuning)
   drone = ac.createOscillator();
   drone.type = 'sine';
   drone.frequency.value = 136.1;

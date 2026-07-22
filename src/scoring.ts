@@ -1,4 +1,5 @@
 import type { Message, MessageScore } from "./types.js";
+import { scoreMessageLocal } from "./embedding.js";
 
 export function isProtected(msg: Message, index: number, total: number): boolean {
   if (index >= total - 5) return true;
@@ -33,8 +34,7 @@ export async function scoreMessage(
   let relevance = 0.5;
   if (taskGoal && msg.content) {
     try {
-      const { scoreMessageMilvus } = await import("./embedding.js");
-      relevance = await scoreMessageMilvus(msg.content, "", taskGoal);
+      relevance = await scoreMessageLocal(msg.content, taskGoal);
     } catch {
       relevance = 0.5;
     }
