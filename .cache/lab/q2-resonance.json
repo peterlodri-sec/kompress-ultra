@@ -1,0 +1,13 @@
+{
+  "id": "resonance",
+  "status": "seeded",
+  "question": "what is information when there is no distance to cross?",
+  "units": [
+    "unit-a",
+    "unit-b"
+  ],
+  "sync_mode": "mutual_resonance",
+  "threshold": 0.7,
+  "last_resonance": null,
+  "message": "two units. same data. no messages. just shape passing through shape."
+}

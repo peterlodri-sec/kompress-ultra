@@ -155,35 +155,23 @@ export class EdgeRouter {
 
   private keywordScore(edge: Edge, sourceQuery?: string, targetQuery?: string): number {
     let score = 0;
-    let matches = 0;
+    score += this.matchKeyword(sourceQuery, edge.source, edge);
+    score += this.matchKeyword(targetQuery, edge.target, edge);
+    return score;
+  }
 
-    if (sourceQuery) {
-      const q = sourceQuery.toLowerCase();
-      if (edge.source.toLowerCase().includes(q) || edge.label.toLowerCase().includes(q)) {
-        score += 0.4;
-        matches++;
-      }
-      // Check connected node labels
-      const sourceNode = this.nodes.get(edge.source);
-      if (sourceNode && (sourceNode.label.toLowerCase().includes(q) || sourceNode.type.toLowerCase().includes(q))) {
-        score += 0.3;
-        matches++;
-      }
+  /** Score one query against an edge field + its connected node metadata. */
+  private matchKeyword(query: string | undefined, edgeField: string, edge: Edge): number {
+    if (!query) return 0;
+    const q = query.toLowerCase();
+    let score = 0;
+    if (edgeField.toLowerCase().includes(q) || edge.label.toLowerCase().includes(q)) {
+      score += 0.4;
     }
-
-    if (targetQuery) {
-      const q = targetQuery.toLowerCase();
-      if (edge.target.toLowerCase().includes(q) || edge.label.toLowerCase().includes(q)) {
-        score += 0.4;
-        matches++;
-      }
-      const targetNode = this.nodes.get(edge.target);
-      if (targetNode && (targetNode.label.toLowerCase().includes(q) || targetNode.type.toLowerCase().includes(q))) {
-        score += 0.3;
-        matches++;
-      }
+    const node = this.nodes.get(edgeField);
+    if (node && (node.label.toLowerCase().includes(q) || node.type.toLowerCase().includes(q))) {
+      score += 0.3;
     }
-
     return score;
   }
 }

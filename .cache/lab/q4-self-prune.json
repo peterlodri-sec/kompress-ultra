@@ -1,0 +1,12 @@
+{
+  "id": "self-prune",
+  "status": "seeded",
+  "question": "what survives when the brain prunes itself?",
+  "mode": "entropy_decay",
+  "decay_rate": 0.15,
+  "min_reinforcement": 0.3,
+  "last_prune": null,
+  "pruned_count": 0,
+  "kept_count": 0,
+  "message": "associations that are not reinforced fade. only what resonates remains."
+}

@@ -1,18 +1,23 @@
-# Garden
+# garden
 
-Seeds in soil. No roadmap. No status. No expectations.
+seeds in soil. no roadmap. no status. no expectations.
 
-Some grow. Some don't. Both are fine.
+some grow. some don't. both are fine.
 
-The garden is next to the project like a lake next to a mountain.
-They don't serve each other. They just share the same view.
+## what's here
 
----
+| path | what |
+|------|------|
+| `seeds/` | things we've planted |
+| `observations/` | things we've noticed |
+| `playground/` | things we've tried |
+| `riva.log` | the river breathing |
 
-`seeds/` — what we've found
-`observations/` — what we've noticed
-`playground/` — what we've tried
+## the garden is not the project
 
-No deliverables. No deadlines. Just play.
+the garden is next to the project like a lake next to a mountain.
+they don't serve each other. they just share the same view.
 
-*— 0xp3t3rl*
+no deliverables. no deadlines. just play.
+
+— 0xp3t3rl

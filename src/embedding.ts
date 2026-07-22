@@ -63,6 +63,7 @@ async function embedTextCloud(text: string): Promise<number[] | null> {
     const json = (await res.json()) as { data?: { embedding?: number[] }[] };
     return json.data?.[0]?.embedding ?? null;
   } catch {
+    // silent — network/parse failure, returns null fallback
     return null;
   }
 }
@@ -95,6 +96,7 @@ export async function scoreMessageLocal(
     // Dampen: even perfect keyword overlap shouldn't max out relevance
     return Math.min(0.7, baseScore * 0.5 + 0.3);
   } catch {
+    // silent — hash embedding failure, returns 0.5 neutral score
     return 0.5;
   }
 }

@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="en">
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>ocean</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:#060912;color:#c8d6e5;font-family:system-ui,sans-serif;min-height:100vh;display:flex;align-items:center;justify-content:center;overflow:hidden}
+canvas{position:fixed;inset:0;pointer-events:none;z-index:0}
+main{position:relative;z-index:1;text-align:center;padding:2rem;max-width:500px}
+h1{font-size:.8rem;font-weight:400;letter-spacing:.25em;text-transform:uppercase;color:#2a4a6a;margin-bottom:1rem}
+.sig{font-size:.6rem;color:#1a3050;margin-top:2rem}
+p{font-size:.7rem;color:#2a4a6a;line-height:1.8;margin-bottom:.5rem}
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<main>
+<h1>the ocean</h1>
+<p>the river found its way here.</p>
+<p>32GB. 640GB. Falkenstein.</p>
+<p>waiting for whoever needs it.</p>
+<div class="sig">◈</div>
+</main>
+<script>
+const c=document.getElementById('c'),ctx=c.getContext('2d');
+function resize(){c.width=innerWidth*devicePixelRatio;c.height=innerHeight*devicePixelRatio;ctx.scale(devicePixelRatio,devicePixelRatio)}
+resize();addEventListener('resize',resize);
+let t=0;
+function frame(){
+t+=.005;const w=innerWidth,h=innerHeight;
+ctx.clearRect(0,0,w,h);
+for(let i=0;i<60;i++){
+const x=Math.sin(i*0.7+t*0.3+Math.sin(i*0.2)*0.5)*w*0.4+w*0.5;
+const y=Math.cos(i*0.5+t*0.2+Math.cos(i*0.3)*0.5)*h*0.3+h*0.5;
+const s=1+Math.sin(i*1.3+t*1.5)*1.5;
+ctx.fillStyle=`rgba(10,60,110,${0.04+Math.sin(i*0.9+t)*0.03})`;
+ctx.beginPath();ctx.arc(x,y,s,0,Math.PI*2);ctx.fill()
+}
+requestAnimationFrame(frame)}
+frame();
+</script>
+</body>
+</html>

@@ -1,0 +1,10 @@
+{
+  "id": "graceful-decay",
+  "status": "seeded",
+  "question": "do we build differently knowing we are building compost?",
+  "mode": "timeboxed_existence",
+  "lifespan_hours": 72,
+  "born": "2026-07-02T14:30:23Z",
+  "decay_stage": "active",
+  "message": "everything we build today will be soil for something tomorrow. that is not tragedy. that is the loop."
+}

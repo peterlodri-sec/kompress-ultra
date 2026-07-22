@@ -3,9 +3,15 @@ main = "server/worker.ts"
 compatibility_date = "2026-06-29"
 compatibility_flags = ["nodejs_compat"]
 
+routes = [{ pattern = "vaked.dev/*", zone_name = "vaked.dev" }, { pattern = "www.vaked.dev/*", zone_name = "vaked.dev" }, { pattern = "api.kompress.vaked.dev/*", zone_name = "vaked.dev" }, { pattern = "tears.vaked.dev/*", zone_name = "vaked.dev" }, { pattern = "pond.vaked.dev/*", zone_name = "vaked.dev" }, { pattern = "weather.vaked.dev/*", zone_name = "vaked.dev" }]
+
 [[kv_namespaces]]
 binding = "KOMPRESS_STATS"
 id = "8dbcbdc2d5574e399abfebd7f31b7bb5"
+
+[[kv_namespaces]]
+binding = "TEARS_WHISPERS"
+id = "489f3fefa01d4becbfeff65b78d73aba"
 
 [[durable_objects.bindings]]
 name = "STATS_DO"
@@ -15,23 +21,21 @@ class_name = "StatsDO"
 tag = "v1"
 new_classes = ["StatsDO"]
 
-routes = [{ pattern = "api.kompress.vaked.dev/*", zone_name = "vaked.dev" }]
-
 [vars]
-VERSION = "14.0.0"
+VERSION = "15.0.0"
 REGION = "us"
 
 # ── US region ──────────────────────────────────────────────────────────
 [env.us]
-vars = { REGION = "us", VERSION = "14.0.0" }
-routes = [{ pattern = "api.kompress.vaked.dev/*", zone_name = "vaked.dev" }]
+vars = { REGION = "us", VERSION = "15.0.0" }
+routes = [{ pattern = "vaked.dev/*", zone_name = "vaked.dev" }, { pattern = "www.vaked.dev/*", zone_name = "vaked.dev" }, { pattern = "api.kompress.vaked.dev/*", zone_name = "vaked.dev" }, { pattern = "tears.vaked.dev/*", zone_name = "vaked.dev" }, { pattern = "pond.vaked.dev/*", zone_name = "vaked.dev" }, { pattern = "weather.vaked.dev/*", zone_name = "vaked.dev" }]
 
 # ── EU region ──────────────────────────────────────────────────────────
 [env.eu]
-vars = { REGION = "eu", VERSION = "14.0.0" }
+vars = { REGION = "eu", VERSION = "15.0.0" }
 routes = [{ pattern = "eu.api.kompress.vaked.dev/*", zone_name = "vaked.dev" }]
 
 # ── Asia region ────────────────────────────────────────────────────────
 [env.asia]
-vars = { REGION = "asia", VERSION = "14.0.0" }
+vars = { REGION = "asia", VERSION = "15.0.0" }
 routes = [{ pattern = "asia.api.kompress.vaked.dev/*", zone_name = "vaked.dev" }]

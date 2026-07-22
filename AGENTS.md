@@ -31,7 +31,7 @@ src/
   token-budget.ts   — Per-agent budgets, pluggable token estimator
   circuit-breaker.ts — CircuitBreaker class + singleton compat wrappers
   circulator.ts     — Circulator class + singleton compat wrappers
-  local-store.ts    — Self-hosted vector store (in-memory + JSONL persist)
+  local-store.ts    — Self-hosted vector store (in-memory + JSONL persist); `queryMemory()` for cross-session retrieval
   embedding.ts      — Embedding pipeline (hash or cloud opt-in)
   brain.ts          — Cross-session brain state reader
   brain-embeddings.ts — Graph node/edge embedding + local store sync
@@ -44,11 +44,13 @@ server/
   brain-grpc.ts     — Brain graph gRPC-style REST API
   cloudrun.ts       — Google Cloud Run entry point (optional)
   stats-do.ts       — Durable Object for aggregated stats
+  landing-page.ts   — HTML + inline JS templates for status/badge/telemetry pages
 test/
   scoring.test.ts, rewriter.test.ts, compression.test.ts,
   circuit-breaker.test.ts, circulator.test.ts, token-budget.test.ts,
   config.test.ts, pipeline.test.ts, errors.test.ts,
-  brain.test.ts, embedding.test.ts, local-store.test.ts
+  brain.test.ts, embedding.test.ts, local-store.test.ts,
+  topology-healer.test.ts
 scripts/
   run-ultra.mjs     — CLI: compress file with Ultra, write output
   deploy-ovh.sh     — One-shot OVH Verdaccio deploy script
@@ -196,7 +198,7 @@ with emoji-rich compression report. The message has `_kompress: true` and
 
 ### Circulator Overflow Path
 
-When queue exceeds cap or flush to Milvus fails, entries spill to
+When queue exceeds cap or store persist fails, entries spill to
 `~/.cache/ultrameshai/overflow-circulator.jsonl` via `Bun.write()`.
 
 ### Test Patterns

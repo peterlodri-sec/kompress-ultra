@@ -1,0 +1,10 @@
+{
+  "id": "recursive-question",
+  "status": "seeded",
+  "question": "can a question survive its answer?",
+  "seed_question": "what is the shape of a question that does not dissolve?",
+  "iterations": 0,
+  "max_iterations": 10,
+  "last_answer": null,
+  "message": "each answer becomes the next question. the loop does not close \u2014 it spirals."
+}

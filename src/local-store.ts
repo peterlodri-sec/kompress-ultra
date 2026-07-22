@@ -15,7 +15,7 @@
  * Data survives restarts. Write + persist in session N → read in session N+1.
  */
 
-import { cosineSimilarity } from "./hash.js";
+import { cosineSimilarity, hashEmbedding } from "./hash.js";
 import { existsSync, mkdirSync } from "fs";
 
 export interface StoreEntry {
@@ -124,7 +124,7 @@ export class LocalStore {
         }
       }
     } catch {
-      // silent
+      // silent — in-memory entries unaffected; retry on next load
     }
   }
 }
@@ -209,7 +209,6 @@ export function createLocalStore(): LocalStore {
  *   systemPrompt += "\n" + memory;
  */
 export async function queryMemory(topic: string, topK = 3): Promise<string> {
-  const { hashEmbedding } = await import("./hash.js");
   const queryEmb = hashEmbedding(topic);
   const results = await searchStore(queryEmb, topK);
   if (results.length === 0) return "";

@@ -49,10 +49,24 @@ resource "cloudflare_worker_route" "api" {
   script  = cloudflare_worker_script.api.name
 }
 
+resource "cloudflare_worker_route" "garden" {
+  zone_id = var.cloudflare_zone_id
+  pattern = "garden.vaked.dev/*"
+  script  = cloudflare_worker_script.api.name
+}
+
 # ── DNS records ─────────────────────────────────────────────────────────
 resource "cloudflare_record" "api" {
   zone_id = var.cloudflare_zone_id
   name    = "api.kompress"
+  type    = "CNAME"
+  value   = "kompress-ultra-api.cabotage.workers.dev"
+  proxied = true
+}
+
+resource "cloudflare_record" "garden" {
+  zone_id = var.cloudflare_zone_id
+  name    = "garden"
   type    = "CNAME"
   value   = "kompress-ultra-api.cabotage.workers.dev"
   proxied = true

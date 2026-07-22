@@ -12,6 +12,21 @@ export function adaptiveThreshold(density: number, base: number): number {
   return Math.max(0.4, Math.min(0.8, base + offset));
 }
 
+function compactLines(lines: string[]): Message {
+  return {
+    role: "system",
+    content: lines.join("\n"),
+    _kompress: true,
+    _kompressPruneEvent: true,
+  };
+}
+
+function pctReduction(pruned: number, kept: number): string {
+  if (pruned <= 0) return "0%";
+  const saved = pruned - kept;
+  return `${Math.round(Math.max(0, (saved / pruned) * 100))}%`;
+}
+
 export function buildKompressDisplay(stats: KompressStats, transparencyMode: boolean = false): Message {
   const saved = stats.tokensPruned - stats.tokensKept;
 
@@ -20,7 +35,7 @@ export function buildKompressDisplay(stats: KompressStats, transparencyMode: boo
       `🗜️  kompress: context optimized`,
       `   • Removed ${stats.pruned} low-signal messages (below threshold ${stats.threshold.toFixed(2)})`,
       `   • Kept ${stats.kept} messages (last 5 + user/code/errors + high-relevance)`,
-      `   • Saved ~${saved.toLocaleString()} tokens (${Math.round((saved / stats.tokensPruned) * 100)}% reduction)`,
+      `   • Saved ~${saved.toLocaleString()} tokens (${pctReduction(stats.tokensPruned, stats.tokensKept)} reduction)`,
       `   • Pruned content sent to brain for future retrieval`,
     ];
 
@@ -30,13 +45,7 @@ export function buildKompressDisplay(stats: KompressStats, transparencyMode: boo
     }
 
     lines.push("─");
-
-    return {
-      role: "system",
-      content: lines.join("\n"),
-      _kompress: true,
-      _kompressPruneEvent: true,
-    } as Message;
+    return compactLines(lines);
   }
 
   const lines = [
@@ -53,13 +62,7 @@ export function buildKompressDisplay(stats: KompressStats, transparencyMode: boo
   }
 
   lines.push("──");
-
-  return {
-    role: "system",
-    content: lines.join("\n"),
-    _kompress: true,
-    _kompressPruneEvent: true,
-  } as Message;
+  return compactLines(lines);
 }
 
 

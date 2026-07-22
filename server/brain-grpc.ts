@@ -13,7 +13,7 @@
  * Service: kompress.v1.BrainService
  */
 
-import { Node, Edge, BrainSnapshot } from "../src/types.js";
+import type { Node, Edge, BrainSnapshot } from "../src/types.js";
 
 // ── In-memory brain graph (loaded from ~/.brain/graph.json at deploy) ──
 interface BrainGraph {
@@ -40,42 +40,42 @@ function getBrain(): BrainGraph {
 }
 
 // ── Load brain from request context ──────────────────────────────────
-export function loadBrain(json: any): void {
+export function loadBrain(json: Record<string, unknown>): void {
   brainGraph = {
-    version: json.version ?? "v1",
-    schema: json.schema ?? "brain-graph-v1",
-    nodes: (json.nodes ?? []).map(normalizeNode),
-    edges: (json.edges ?? []).map(normalizeEdge),
-    meta: json.meta ?? {},
+    version: (json.version as string) ?? "v1",
+    schema: (json.schema as string) ?? "brain-graph-v1",
+    nodes: ((json.nodes as unknown[]) ?? []).map((n) => normalizeNode(n as Record<string, unknown>)),
+    edges: ((json.edges as unknown[]) ?? []).map((e) => normalizeEdge(e as Record<string, unknown>)),
+    meta: (json.meta as Record<string, string>) ?? {},
   };
 }
 
-function normalizeNode(n: any): Node {
+function normalizeNode(n: Record<string, unknown>): Node {
   return {
-    id: n.id ?? n.name ?? `node-${Date.now()}`,
-    label: n.label ?? n.name ?? "unknown",
-    type: n.type ?? "component",
-    layer: n.layer ?? "0",
-    metadata: n.metadata ?? {},
+    id: (n.id as string) ?? (n.name as string) ?? `node-${Date.now()}`,
+    label: (n.label as string) ?? (n.name as string) ?? "unknown",
+    type: (n.type as string) ?? "component",
+    layer: (n.layer as string) ?? "0",
+    metadata: (n.metadata as Record<string, string>) ?? {},
     score: typeof n.score === "number" ? n.score : 0.5,
-    createdAtMs: n.created_at_ms ?? n.createdAt ?? Date.now(),
-    lastActiveMs: n.last_active_ms ?? n.lastActive ?? Date.now(),
-    state: n.state ?? "alive",
+    createdAtMs: (n.created_at_ms as number) ?? (n.createdAt as number) ?? Date.now(),
+    lastActiveMs: (n.last_active_ms as number) ?? (n.lastActive as number) ?? Date.now(),
+    state: (n.state as string) ?? "alive",
   };
 }
 
-function normalizeEdge(e: any): Edge {
+function normalizeEdge(e: Record<string, unknown>): Edge {
   return {
-    id: e.id ?? `${e.source}→${e.target}`,
-    source: e.source ?? "",
-    target: e.target ?? "",
-    type: e.type ?? "unknown",
-    label: e.label ?? "",
+    id: (e.id as string) ?? `${e.source}→${e.target}`,
+    source: (e.source as string) ?? "",
+    target: (e.target as string) ?? "",
+    type: (e.type as string) ?? "unknown",
+    label: (e.label as string) ?? "",
     weight: typeof e.weight === "number" ? e.weight : typeof e.conductivity === "number" ? e.conductivity : 0.5,
     conductivity: typeof e.conductivity === "number" ? e.conductivity : typeof e.weight === "number" ? e.weight : 0.5,
-    direction: e.direction ?? "forward",
-    createdAtMs: e.created_at_ms ?? e.createdAt ?? Date.now(),
-    lastTraversedMs: e.last_traversed_ms ?? e.lastTraversed ?? 0,
+    direction: (e.direction as string) ?? "forward",
+    createdAtMs: (e.created_at_ms as number) ?? (e.createdAt as number) ?? Date.now(),
+    lastTraversedMs: (e.last_traversed_ms as number) ?? (e.lastTraversed as number) ?? 0,
   };
 }
 
@@ -223,7 +223,7 @@ export function createEdgeStream(typeFilter?: string): ReadableStream {
       }, 30000);
 
       // Cleanup on cancel
-      (controller as any)._cleanup = () => clearInterval(interval);
+      (controller as unknown as { _cleanup: () => void })._cleanup = () => clearInterval(interval);
     },
     cancel() {
       // Stream cancelled by client

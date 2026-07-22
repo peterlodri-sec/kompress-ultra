@@ -18,65 +18,63 @@ interface EmbeddingResult {
   text: string;
 }
 
+function embed(id: string, text: string): EmbeddingResult {
+  return { id, embedding: hashEmbedding(text), text };
+}
+
 export function embedNode(node: Node): EmbeddingResult {
-  const text = `${node.id} ${node.label} ${node.type} layer:${node.layer} state:${node.state}`;
-  return {
-    id: node.id,
-    embedding: hashEmbedding(text),
-    text,
-  };
+  return embed(node.id, `${node.id} ${node.label} ${node.type} layer:${node.layer} state:${node.state}`);
 }
 
 export function embedEdge(edge: Edge): EmbeddingResult {
-  const text = `${edge.source} → ${edge.target} type:${edge.type} label:${edge.label} dir:${edge.direction}`;
-  return {
-    id: edge.id,
-    embedding: hashEmbedding(text),
-    text,
-  };
+  return embed(edge.id, `${edge.source} → ${edge.target} type:${edge.type} label:${edge.label} dir:${edge.direction}`);
+}
+
+async function syncToStore(
+  storeId: string,
+  embedding: number[],
+  text: string,
+  metadata: Record<string, unknown>,
+): Promise<boolean> {
+  await addToStore(storeId, embedding, { summary: text.slice(0, 8192), ...metadata });
+  await persistStore();
+  return true;
 }
 
 export async function syncNodeToStore(node: Node): Promise<boolean> {
   const { id, embedding, text } = embedNode(node);
-  await addToStore(`brain-node-${id}`, embedding, {
-    summary: text.slice(0, 8192),
+  return syncToStore(`brain-node-${id}`, embedding, text, {
     type: node.type,
     layer: node.layer,
     state: node.state,
     confidence: node.score,
     source: "brain-node",
   });
-  await persistStore();
-  return true;
 }
 
 export async function syncEdgeToStore(edge: Edge): Promise<boolean> {
   const { id, embedding, text } = embedEdge(edge);
-  await addToStore(`brain-edge-${id}`, embedding, {
-    summary: text.slice(0, 8192),
+  return syncToStore(`brain-edge-${id}`, embedding, text, {
     type: edge.type,
     direction: edge.direction,
     confidence: edge.conductivity,
     source: "brain-edge",
   });
-  await persistStore();
-  return true;
+}
+
+async function searchBySource(query: string, sourcePrefix: string, topK = 5): Promise<string[]> {
+  const queryEmb = hashEmbedding(query);
+  const results = await searchStore(queryEmb, topK);
+  return results
+    .filter((r) => String(r.metadata.source ?? "").startsWith(sourcePrefix))
+    .map((r) => String(r.metadata.summary ?? "") || r.id)
+    .filter(Boolean);
 }
 
 export async function searchSimilarNodes(query: string, topK = 5): Promise<string[]> {
-  const queryEmb = hashEmbedding(query);
-  const results = await searchStore(queryEmb, topK);
-  return results
-    .filter((r) => (r.metadata.source as string)?.startsWith("brain-node"))
-    .map((r) => (r.metadata.summary as string) ?? r.id)
-    .filter(Boolean);
+  return searchBySource(query, "brain-node", topK);
 }
 
 export async function searchSimilarEdges(query: string, topK = 5): Promise<string[]> {
-  const queryEmb = hashEmbedding(query);
-  const results = await searchStore(queryEmb, topK);
-  return results
-    .filter((r) => (r.metadata.source as string)?.startsWith("brain-edge"))
-    .map((r) => (r.metadata.summary as string) ?? r.id)
-    .filter(Boolean);
+  return searchBySource(query, "brain-edge", topK);
 }

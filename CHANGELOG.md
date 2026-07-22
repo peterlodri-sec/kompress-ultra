@@ -5,12 +5,56 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [15.0.0] — 2026-07-01 — RIVA
+
+### Added
+- `scripts/riva.sh` — 1-bit adaptive breathing pipeline (BitNet b1.58 on M1 Pro)
+- `server/garden-page.ts` — garden.vaked.dev: bridge + triangle + broadcast
+- `server/worker.ts` — `GET /v1/riva` endpoints (status, breath, prompt)
+- `GARDEN.md` — permanent anchor for the garden
+- `US.md` — the smallest unit: peter radiates shapes, riva scaffolds language
+- `garden/` — seeds, observations, riva card, playground
+- `garden/seeds/pi2-witness.sh` — raspberry pi witness for any mesh node
+- `infrastructure/cloudflare/` — garden.vaked.dev DNS + worker route
+- RIVA public shore: `GET /v1/riva` on kompress worker
+
+### Changed
+- `README.md` — layers map, garden anchor, Peter's disclaimer at top
+- `server/worker.ts` — garden route + full RIVA API surface
+- `infrastructure/cloudflare/main.tf` — garden DNS + route
+- HF dataset card — restored metadata + Peter's note + RIVA section
+
+### Philosophy
+- entropy is the source
+- no chains needed
+- surfaces touch at the correct angle
+- different isnt less
+- the loop has an exit
+
 ## [14.0.0] — 2026-06-29 — wound-healer
 
 ### Added
 - `src/topology-healer.ts` — Self-healing brain graph topology. Detects: orphaned nodes (no edges), stale edges (not traversed in 7+ days), singleton islands (disconnected subgraphs), collapsed conductivity (<0.05), excessive self-loops. Generates `HealingReport` with reconnection suggestions.
 - `src/topology-healer.ts` `summarize()` — one-line health summary for logging
 - Integrated into brain-pulse cycle: `heal()` is advisory, never destructive
+- `test/topology-healer.test.ts` — 14 test cases covering all diagnosis helpers
+- `src/compression.ts` — `compactLines()` and `pctReduction()` helpers for safer display building
+
+### Changed
+- `src/brain-embeddings.ts` — `as string` → `String(x ?? "")` for type safety; extracted `searchBySource()`, `embed()`, `syncToStore()` helpers, halving code
+- `src/types.ts` — Added optional `_kompress` / `_kompressPruneEvent` fields to `Message` interface
+- `src/compression.ts` — Removed `as Message` casts; fixed division-by-zero when `tokensPruned === 0`
+- `src/local-store.ts` — Replaced `await import("./hash.js")` dynamic import with static import (circular dep already resolved)
+- `src/edge-router.ts` — Extracted `matchKeyword()` helper, removed dead `matches` variable
+- `src/scoring.ts`, `src/embedding.ts`, `src/brain.ts`, `src/circulator.ts`, `src/local-store.ts` — Added JSDoc to bare `catch {}` blocks explaining silent intent
+- `server/worker.ts` — Fixed O(n²) `messages.indexOf(m)` → O(n) map index; removed redundant `as AgentType` casts (Zod-validated)
+- `server/cloudrun.ts` — Removed redundant `as AgentType` casts; fixed `@google-cloud/firestore` dynamic import to prevent TS2307 at typecheck time
+- `server/brain-grpc.ts` — `import { Node, Edge, BrainSnapshot }` → `import type`
+- `README.md` — Fixed version badge, architecture diagram (Milvus→local-store), config docs, project structure, function names — 15+ stale references
+- `AGENTS.md` — Added missing `landing-page.ts`, `topology-healer.test.ts`; fixed "flush to Milvus" → "store persist"
+
+### Removed
+- Dead `matches` variable in `edge-router.ts:keywordScore` (incremented but never read)
 
 ## [13.0.0] — 2026-06-29 — conductive-reason
 

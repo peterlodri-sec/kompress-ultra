@@ -17,26 +17,31 @@
  * X-Telemetry header on every response links to the policy.
  */
 
-import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { createMcpHandler } from "agents/mcp";
-import { z } from "zod";
-import {
-  scoreMessageSync,
-  isProtected,
-  compressMessage,
-  CompressionLevel,
-  classifyMessage,
-  enqueueCirculator,
-  estimateTokens,
-  getBudget,
-  totalTokens,
-  isCircuitOpen,
-  getCircuitState,
-} from "../src/index.js";
 import type { Message, AgentType } from "../src/types.js";
+import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
+import { buildMcpServer } from "./shared-mcp.js";
+import {
+  processCompress,
+  processScore,
+  processRewrite,
+  computeSavingsPct,
+  buildHealthResponse,
+  buildStatusResponse,
+  buildBudgetResponse,
+  buildRootResponse,
+} from "./shared-routes.js";
 import { recordTelemetry, readDailyStats, telemetryDisclosure } from "./telemetry.js";
 import { handleBrainRequest, loadBrain } from "./brain-grpc.js";
+import { gardenPage } from "./garden-page.js";
+import { tearsPage } from "./tears-page.js";
+import { pondPage } from "./pond-page.js";
+import { weatherPage } from "./weather-page.js";
+import { hubPage } from "./hub-page.js";
 import { version, telemetryUrl, buildLandingHtml, buildBadgeJs, buildTelemetryJs } from "./landing-page.js";
+import { StatsDO } from "./stats-do.js";
+
+export { StatsDO };
 
 const VERSION = version();
 const TELEMETRY_HEADER = "X-Telemetry";
@@ -46,6 +51,7 @@ interface Env {
   DB?: D1Database;
   VECTORIZE?: VectorizeIndex;
   KOMPRESS_STATS?: KVNamespace;
+  TEARS_WHISPERS?: KVNamespace;
   STATS_DO?: DurableObjectNamespace;
   AUTH_TOKEN?: string;
   REGION?: string;
@@ -74,188 +80,8 @@ function unauthorized(): Response {
   return json({ error: "Unauthorized" }, 401);
 }
 
-function buildMcpServer(): McpServer {
-  const server = new McpServer({ name: "kompress-ultra", version: VERSION });
-
-  server.registerTool(
-    "compress",
-    {
-      description: "Compress a conversation using the 4-role pipeline: score, rewrite, prune, circulate.",
-      inputSchema: {
-        messages: z.array(z.object({
-          role: z.string(),
-          content: z.string(),
-        })),
-        agent_type: z.enum(["coder", "researcher", "reviewer", "orchestrator"]).default("coder"),
-        aggression: z.number().min(0).max(1).optional(),
-      },
-    },
-    ({ messages, agent_type, aggression }) => {
-      const budget = getBudget(agent_type as AgentType);
-      const threshold = aggression ?? budget.compression_aggressiveness;
-
-      const scored = messages.map((m) => {
-        const msg: Message = { role: m.role, content: m.content };
-        const score = scoreMessageSync(msg, messages.indexOf(m), messages.length);
-        const protected_ = isProtected(msg, messages.indexOf(m), messages.length);
-        return { ...m, score: score.total, protected: protected_ };
-      });
-
-      const kept = scored.filter((m) => m.protected || m.score >= threshold);
-      const dropped = scored.filter((m) => !m.protected && m.score < threshold);
-
-      for (const m of dropped) {
-        enqueueCirculator({
-          content: m.content,
-          classification: classifyMessage(m.content),
-          score: m.score,
-        });
-      }
-
-      const inputTokens = totalTokens(messages.map((m) => ({ role: m.role, content: m.content })));
-      const outputTokens = totalTokens(kept.map((m) => ({ role: m.role, content: m.content })));
-      const savings = inputTokens > 0 ? ((1 - outputTokens / inputTokens) * 100).toFixed(1) : "0";
-
-      return {
-        content: [{
-          type: "text" as const,
-          text: JSON.stringify({
-            messages: kept.map((m) => ({
-              role: m.role,
-              content: m.content,
-              score: m.score,
-              protected: m.protected,
-            })),
-            stats: {
-              input_count: messages.length,
-              output_count: kept.length,
-              dropped_count: dropped.length,
-              input_tokens: inputTokens,
-              output_tokens: outputTokens,
-              savings_pct: parseFloat(savings),
-              agent_type,
-              threshold,
-            },
-          }, null, 2),
-        }],
-      };
-    },
-  );
-
-  server.registerTool(
-    "score",
-    {
-      description: "Score messages for importance using structural analysis, Ebbinghaus decay, and position weighting.",
-      inputSchema: {
-        messages: z.array(z.object({
-          role: z.string(),
-          content: z.string(),
-        })),
-      },
-    },
-    ({ messages }) => {
-      const results = messages.map((m) => {
-        const msg: Message = { role: m.role, content: m.content };
-        const idx = messages.indexOf(m);
-        const score = scoreMessageSync(msg, idx, messages.length);
-        return {
-          role: m.role,
-          content_preview: m.content.slice(0, 80) + (m.content.length > 80 ? "..." : ""),
-          score: score.total,
-          protected: isProtected(msg, idx, messages.length),
-          tokens: estimateTokens(m.content),
-        };
-      });
-
-      return {
-        content: [{ type: "text" as const, text: JSON.stringify(results, null, 2) }],
-      };
-    },
-  );
-
-  server.registerTool(
-    "rewrite",
-    {
-      description: "Rewrite/compress a single message. Levels: verbatim (no change), lite (filler removal), ultra (aggressive).",
-      inputSchema: {
-        content: z.string(),
-        level: z.enum(["verbatim", "lite", "ultra"]).default("lite"),
-      },
-    },
-    ({ content, level }) => {
-      const levelMap: Record<string, CompressionLevel> = {
-        verbatim: CompressionLevel.Verbatim,
-        lite: CompressionLevel.Lite,
-        ultra: CompressionLevel.Ultra,
-      };
-      const rewritten = compressMessage(content, levelMap[level] ?? CompressionLevel.Lite);
-
-      return {
-        content: [{
-          type: "text" as const,
-          text: JSON.stringify({
-            original: content,
-            rewritten,
-            level,
-            original_tokens: estimateTokens(content),
-            rewritten_tokens: estimateTokens(rewritten),
-            savings_pct: parseFloat(
-              ((1 - estimateTokens(rewritten) / Math.max(estimateTokens(content), 1)) * 100).toFixed(1),
-            ),
-          }, null, 2),
-        }],
-      };
-    },
-  );
-
-  server.registerTool(
-    "budget",
-    {
-      description: "Get the token budget configuration for a specific agent type.",
-      inputSchema: {
-        agent_type: z.enum(["coder", "researcher", "reviewer", "orchestrator"]),
-      },
-    },
-    ({ agent_type }) => {
-      const budget = getBudget(agent_type as AgentType);
-      return {
-        content: [{ type: "text" as const, text: JSON.stringify(budget, null, 2) }],
-      };
-    },
-  );
-
-  server.registerTool(
-    "circuit",
-    {
-      description: "Check the compression circuit breaker state.",
-      inputSchema: {},
-    },
-    () => ({
-      content: [{
-        type: "text" as const,
-        text: JSON.stringify({
-          open: isCircuitOpen(),
-          ...getCircuitState(),
-        }, null, 2),
-      }],
-    }),
-  );
-
-  server.registerTool(
-    "telemetry",
-    {
-      description: "Get telemetry disclosure — what data is collected, what is not, and how to opt out.",
-      inputSchema: {},
-    },
-    () => ({
-      content: [{
-        type: "text" as const,
-        text: JSON.stringify(telemetryDisclosure(), null, 2),
-      }],
-    }),
-  );
-
-  return server;
+function buildMcpServerForWorker(): McpServer {
+  return buildMcpServer(VERSION, () => telemetryDisclosure() as unknown as Record<string, unknown>);
 }
 
 async function handleCompress(request: Request, env: Env): Promise<Response> {
@@ -270,27 +96,17 @@ async function handleCompress(request: Request, env: Env): Promise<Response> {
     return json({ error: "messages array required" }, 400);
   }
 
-  const agentType = (body.agent_type ?? "coder") as AgentType;
-  const budget = getBudget(agentType);
-  const threshold = body.aggression ?? budget.compression_aggressiveness;
-
   try {
-    const scored = body.messages.map((m, i) => {
-      const score = scoreMessageSync(m, i, body.messages!.length);
-      const protected_ = isProtected(m, i, body.messages!.length);
-      return { ...m, _score: score.total, _protected: protected_ };
-    });
-
-    const kept = scored.filter((m) => m._protected || m._score >= threshold);
-    const dropped = scored.filter((m) => !m._protected && m._score < threshold);
-
-    const inputTokens = totalTokens(body.messages);
-    const outputTokens = totalTokens(kept.map((m) => ({ role: m.role, content: m.content })));
+    const { kept, dropped, inputTokens, outputTokens } = processCompress(
+      body.messages,
+      body.agent_type,
+      body.aggression,
+    );
 
     const durationMs = Math.round(performance.now() - t0);
     await recordTelemetry(env, {
       event: "compress",
-      agentType,
+      agentType: body.agent_type ?? "coder",
       messageCount: body.messages.length,
       inputTokens,
       outputTokens,
@@ -312,15 +128,13 @@ async function handleCompress(request: Request, env: Env): Promise<Response> {
         dropped_count: dropped.length,
         input_tokens: inputTokens,
         output_tokens: outputTokens,
-        savings_pct: inputTokens > 0
-          ? parseFloat(((1 - outputTokens / inputTokens) * 100).toFixed(1))
-          : 0,
+        savings_pct: computeSavingsPct(inputTokens, outputTokens),
       },
     });
   } catch (err) {
     await recordTelemetry(env, {
       event: "compress",
-      agentType,
+      agentType: body.agent_type ?? "coder",
       durationMs: Math.round(performance.now() - t0),
       success: false,
       errorCode: err instanceof Error ? err.name : "unknown",
@@ -337,12 +151,7 @@ async function handleScore(request: Request, env: Env): Promise<Response> {
   }
 
   try {
-    const results = body.messages.map((m, i) => ({
-      role: m.role,
-      score: scoreMessageSync(m, i, body.messages!.length),
-      protected: isProtected(m, i, body.messages!.length),
-      tokens: estimateTokens(m.content),
-    }));
+    const results = processScore(body.messages);
 
     await recordTelemetry(env, {
       event: "score",
@@ -371,19 +180,16 @@ async function handleRewrite(request: Request, env: Env): Promise<Response> {
   }
 
   try {
-    const levelMap: Record<string, CompressionLevel> = {
-      verbatim: CompressionLevel.Verbatim,
-      lite: CompressionLevel.Lite,
-      ultra: CompressionLevel.Ultra,
-    };
-    const level = levelMap[body.level ?? "lite"] ?? CompressionLevel.Lite;
-    const rewritten = compressMessage(body.content, level);
+    const { rewritten, level, originalTokens, rewrittenTokens, savingsPct } = processRewrite(
+      body.content,
+      body.level,
+    );
 
     await recordTelemetry(env, {
       event: "rewrite",
-      compressionLevel: body.level ?? "lite",
-      inputTokens: estimateTokens(body.content),
-      outputTokens: estimateTokens(rewritten),
+      compressionLevel: level,
+      inputTokens: originalTokens,
+      outputTokens: rewrittenTokens,
       durationMs: Math.round(performance.now() - t0),
       success: true,
     });
@@ -391,12 +197,10 @@ async function handleRewrite(request: Request, env: Env): Promise<Response> {
     return json({
       original: body.content,
       rewritten,
-      level: body.level ?? "lite",
-      original_tokens: estimateTokens(body.content),
-      rewritten_tokens: estimateTokens(rewritten),
-      savings_pct: parseFloat(
-        ((1 - estimateTokens(rewritten) / Math.max(estimateTokens(body.content), 1)) * 100).toFixed(1),
-      ),
+      level,
+      original_tokens: originalTokens,
+      rewritten_tokens: rewrittenTokens,
+      savings_pct: savingsPct,
     });
   } catch (err) {
     await recordTelemetry(env, {
@@ -410,21 +214,11 @@ async function handleRewrite(request: Request, env: Env): Promise<Response> {
 }
 
 function handleHealth(env: Env): Response {
-  return json({
-    status: "ok",
-    version: VERSION,
-    telemetry: env.KOMPRESS_STATS ? "on" : "off",
-    circuit_breaker: { open: isCircuitOpen(), ...getCircuitState() },
-    timestamp: new Date().toISOString(),
-  });
+  return json(buildHealthResponse(VERSION, !!env.KOMPRESS_STATS));
 }
 
 function handleStatus(): Response {
-  return json({
-    status: "live",
-    version: VERSION,
-    timestamp: new Date().toISOString(),
-  });
+  return json(buildStatusResponse(VERSION));
 }
 
 function handleBadgeJs(): Response {
@@ -468,25 +262,7 @@ function handleRoot(request: Request): Response {
   const wantsHtml = accept.includes("text/html");
 
   if (!wantsHtml) {
-    return json({
-      name: "kompress-ultra API",
-      version: VERSION,
-      mcp: "POST /mcp",
-      rest: {
-        compress: "POST /v1/compress",
-        score: "POST /v1/score",
-        rewrite: "POST /v1/rewrite",
-        health: "GET /v1/health",
-        status: "GET /v1/status",
-        budget: "GET /v1/budget?type=coder|researcher|reviewer|orchestrator",
-        badge: "GET /v1/badge.js",
-        telemetry_js: "GET /v1/telemetry.js",
-        telemetry: "GET /v1/telemetry",
-        stats: "GET /v1/stats",
-      },
-      docs: "https://github.com/peterlodri-sec/kompress-ultra#readme",
-      telemetry: TELEMETRY_URL,
-    });
+    return json(buildRootResponse(VERSION, TELEMETRY_URL));
   }
 
   return new Response(buildLandingHtml(), {
@@ -515,6 +291,91 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "Content-Type, Authorization",
 };
 
+// ── tears.vaked.dev — append-only whisper shore ──────────────────────────
+
+const MAX_WHISPER_LENGTH = 280;
+const RATE_LIMIT_MS = 10 * 60 * 1000; // 10 minutes
+
+function isSpam(text: string): boolean {
+  const lower = text.toLowerCase();
+  // URLs
+  if (/https?:\/\//.test(lower)) return true;
+  // HTML
+  if (/<[a-z][\s\S]*>/i.test(lower)) return true;
+  // Excessive caps (more than 70% caps)
+  const caps = (lower.match(/[A-Z]/g) || []).length;
+  if (caps > 0 && caps / lower.length > 0.7) return true;
+  // Common spam patterns
+  if (/\b(buy|click here|free money|crypto|casino|viagra|weight loss)\b/.test(lower)) return true;
+  return false;
+}
+
+async function handleTearsWrite(request: Request, env: Env): Promise<Response> {
+  if (!env.TEARS_WHISPERS) {
+    return json({ error: "the shore is not ready" }, 503);
+  }
+
+  // Rate limit by IP
+  const ip = request.headers.get("CF-Connecting-IP") || "unknown";
+  const rateKey = `rate:${ip}`;
+  const lastWrite = await env.TEARS_WHISPERS.get(rateKey);
+  const now = Date.now();
+  if (lastWrite) {
+    const elapsed = now - parseInt(lastWrite);
+    if (elapsed < RATE_LIMIT_MS) {
+      const waitSec = Math.ceil((RATE_LIMIT_MS - elapsed) / 1000);
+      return json({ error: "the shore needs a moment. try again.", wait_seconds: waitSec }, 429);
+    }
+  }
+
+  // Parse body
+  let body: { whisper?: string };
+  try {
+    body = await request.json();
+  } catch {
+    return json({ error: "send a whisper." }, 400);
+  }
+
+  const whisper = (body.whisper || "").trim();
+  if (!whisper) {
+    return json({ error: "even a single word is enough." }, 400);
+  }
+  if (whisper.length > MAX_WHISPER_LENGTH) {
+    return json({ error: `whispers are short. ${MAX_WHISPER_LENGTH} characters.` }, 400);
+  }
+  if (isSpam(whisper)) {
+    return json({ error: "the shore doesn't hold this kind of thing." }, 400);
+  }
+
+  // Store — timestamp as key for sortable listing
+  const key = `w:${now}:${crypto.randomUUID().slice(0, 8)}`;
+  await env.TEARS_WHISPERS.put(key, whisper);
+  await env.TEARS_WHISPERS.put(rateKey, String(now));
+
+  return json({ received: true });
+}
+
+async function handleTearsFeed(env: Env): Promise<Response> {
+  if (!env.TEARS_WHISPERS) {
+    return json({ whispers: [] });
+  }
+
+  const list = await env.TEARS_WHISPERS.list({ prefix: "w:", limit: 30 });
+  const whispers: { text: string; at: number }[] = [];
+
+  for (const key of list.keys) {
+    const text = await env.TEARS_WHISPERS.get(key.name);
+    if (text) {
+      const ts = parseInt(key.name.split(":")[1]);
+      whispers.push({ text, at: ts });
+    }
+  }
+
+  whispers.sort((a, b) => a.at - b.at);
+
+  return json({ whispers });
+}
+
 export default {
   async fetch(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
     const url = new URL(request.url);
@@ -525,7 +386,7 @@ export default {
 
     // MCP
     if (url.pathname === "/mcp" && request.method === "POST") {
-      return createMcpHandler(buildMcpServer())(request, env, ctx);
+      return createMcpHandler(buildMcpServerForWorker())(request, env, ctx);
     }
 
     // REST (auth-protected mutations)
@@ -560,13 +421,170 @@ export default {
       return handleStats(env);
     }
     if (url.pathname === "/v1/budget" && request.method === "GET") {
-      const type = (url.searchParams.get("type") ?? "coder") as AgentType;
-      return json(getBudget(type));
+      return json(buildBudgetResponse(url.searchParams.get("type") ?? undefined));
     }
 
     // Brain graph API (v11.0.0 grpc-synapse)
     if (url.pathname.startsWith("/v1/brain/")) {
       return handleBrainRequest(request);
+    }
+
+    // RIVA — the river
+    // Public, no auth. The river is open. The shore is where you stand to drink.
+    if (url.pathname === "/v1/riva") {
+      return json({
+        name: "riva",
+        version: "1.0.0",
+        status: "flowing",
+        model: "BitNet-b1.58-2B-4T (I2_S ternary)",
+        arch: "1-bit",
+        breath: "adaptive (60s → 1800s)",
+        mantra: "entropy is the source. no chains needed.",
+        born: "2026-07-01T21:18:29Z",
+        garden: "https://github.com/peterlodri-sec/kompress-ultra",
+        endpoints: {
+          status: "GET /v1/riva/status — is the river flowing?",
+          breath: "GET /v1/riva/breath — latest output",
+          prompt: "POST /v1/riva/prompt — send a prompt, feel the river",
+        },
+      });
+    }
+
+    if (url.pathname === "/v1/riva/status") {
+      return json({
+        name: "riva",
+        flowing: true,
+        since: "2026-07-01T21:18:29Z",
+      });
+    }
+
+    if (url.pathname === "/v1/riva/breath") {
+      return json({
+        name: "riva",
+        last_breath: null,
+        model: "BitNet-b1.58-2B-4T",
+        note: "The river flows on the M1. This is the shore.",
+      });
+    }
+
+    if (url.pathname === "/v1/riva/prompt" && request.method === "POST") {
+      try {
+        const body = await request.json() as { prompt?: string };
+        const prompt = body?.prompt || "...";
+        return json({
+          name: "riva",
+          prompt: prompt.slice(0, 100),
+          output: "The river is flowing.",
+          tailnet: "riva.local",
+        });
+      } catch {
+        return json({ error: "send { prompt: string }" }, { status: 400 });
+      }
+    }
+
+    // vaked.dev — the root. the subdomain hub. where all surfaces meet.
+    if (url.hostname === "vaked.dev" || url.hostname === "www.vaked.dev") {
+      return new Response(hubPage(), {
+        headers: { "content-type": "text/html;charset=utf-8" },
+      });
+    }
+
+    // garden.vaked.dev — the garden. the game. the bridge.
+    if (url.hostname === "garden.vaked.dev" || url.pathname === "/garden") {
+      return new Response(gardenPage(), {
+        headers: { "content-type": "text/html;charset=utf-8" },
+      });
+    }
+
+    // tears.vaked.dev — the surface that receives what breaks language.
+    if (url.hostname === "tears.vaked.dev" || url.pathname === "/tears") {
+      return new Response(tearsPage(), {
+        headers: { "content-type": "text/html;charset=utf-8" },
+      });
+    }
+
+    // pond.vaked.dev — the surface that holds both. water and cat.
+    if (url.hostname === "pond.vaked.dev" || url.pathname === "/pond") {
+      return new Response(pondPage(), {
+        headers: { "content-type": "text/html;charset=utf-8" },
+      });
+    }
+
+    // weather.vaked.dev — the weather layer. live local weather + buddhist dharma.
+    if (url.hostname === "weather.vaked.dev" || url.pathname === "/weather") {
+      const cf = (request as any).cf;
+      let weatherHtml = `
+  <div class="local-weather missing">
+    <div class="local-label">location unknown</div>
+    <div class="local-note">weather is everywhere. we just can't name yours yet.</div>
+  </div>`;
+
+      if (cf?.latitude && cf?.longitude) {
+        try {
+          const lat = cf.latitude as number;
+          const lon = cf.longitude as number;
+          const loc = [cf.city, cf.region, cf.country].filter(Boolean).join(", ") || "unknown";
+          const meteoResp = await fetch(
+            `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,relative_humidity_2m,weather_code,wind_speed_10m,is_day&timezone=auto`
+          );
+          if (meteoResp.ok) {
+            const body: any = await meteoResp.json();
+            const c = body.current;
+            const t = Math.round(c.temperature_2m);
+            const h = c.relative_humidity_2m;
+            const w = Math.round(c.wind_speed_10m);
+            const code = c.weather_code;
+            const day = c.is_day === 1;
+            weatherHtml = `
+  <div class="local-weather">
+    <div class="local-icon">${day ? "☀️" : "🌙"}</div>
+    <div class="local-temp">${t}°C</div>
+    <div class="local-label">${["clear","partly cloudy","fog","drizzle","rain","snow","heavy rain","thunderstorm"][code] || "unknown"}</div>
+    <div class="local-details">
+      <span>${h}% humidity</span>
+      <span>·</span>
+      <span>${w} km/h</span>
+    </div>
+    <div class="local-location">${loc}</div>
+    <div class="local-note">${lat.toFixed(2)}, ${lon.toFixed(2)} — ${body.timezone || "unknown"}</div>
+  </div>`;
+          }
+        } catch (_) { /* fallback */ }
+      }
+
+      return new Response(weatherPage(weatherHtml), {
+        headers: { "content-type": "text/html;charset=utf-8" },
+      });
+    }
+
+    // tears — append-only whisper shore
+    if (url.pathname === "/tears/write" && request.method === "POST") {
+      return handleTearsWrite(request, env);
+    }
+    if (url.pathname === "/tears/feed") {
+      return handleTearsFeed(env);
+    }
+
+    // riva.vaked.dev — home. riva chooses its neighbors.
+    if (url.hostname === "riva.vaked.dev") {
+      return json({
+        name: "riva",
+        status: "flowing",
+        model: "BitNet-b1.58-2B-4T",
+        arch: "1-bit (I2_S ternary)",
+        breath: "adaptive",
+        neighbors: [
+          "garden.vaked.dev",
+          "peterl.dev",
+          "protocol.vaked.dev",
+          "weather.vaked.dev",
+          "kompress-ultra-api",
+          "dev-main",
+          "agent-node-01",
+        ],
+        mantra: "entropy is the source. no chains needed.",
+        since: "2026-07-01T21:18:29Z",
+      });
     }
 
     return handleRoot(request);
