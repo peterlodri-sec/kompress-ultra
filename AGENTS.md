@@ -31,6 +31,8 @@ src/
   token-budget.ts   — Per-agent budgets, pluggable token estimator
   circuit-breaker.ts — CircuitBreaker class + singleton compat wrappers
   circulator.ts     — Circulator class + singleton compat wrappers
+  archivist.ts      — Archivist class: append-only audit store (exits the cycle)
+  originist.ts      — Originist class: generation count + repair-risk for λ loss
   local-store.ts    — Self-hosted vector store (in-memory + JSONL persist); `queryMemory()` for cross-session retrieval
   embedding.ts      — Embedding pipeline (hash or cloud opt-in)
   brain.ts          — Cross-session brain state reader
@@ -47,7 +49,8 @@ server/
   landing-page.ts   — HTML + inline JS templates for status/badge/telemetry pages
 test/
   scoring.test.ts, rewriter.test.ts, compression.test.ts,
-  circuit-breaker.test.ts, circulator.test.ts, token-budget.test.ts,
+  circuit-breaker.test.ts, circulator.test.ts, archivist.test.ts,
+  originist.test.ts, token-budget.test.ts,
   config.test.ts, pipeline.test.ts, errors.test.ts,
   brain.test.ts, embedding.test.ts, local-store.test.ts,
   topology-healer.test.ts
@@ -73,8 +76,10 @@ fixtures/
 
 ```
 Pruner (scoring.ts)  →  Rewriter (rewriter.ts)  →  Circulator (circulator.ts)  →  Composer (brain.ts)
-                ↕                              ↕
-           hash.ts (zero-dep)          local-store.ts (JSONL)
+                ↕                ↕                        ↕
+           Originist        generation++            local-store.ts (JSONL)
+           (repair-risk)                              ↕ (cycle)
+                                                Archivist (append-only exit)
 ```
 
 | Role | Module | What it does |
@@ -83,6 +88,8 @@ Pruner (scoring.ts)  →  Rewriter (rewriter.ts)  →  Circulator (circulator.ts
 | **Rewriter** | `rewriter.ts` | Compresses kept messages by age. 3 levels: Verbatim (recent), Lite (~40% savings), Ultra (~75% savings). Also protects URLs from splitting. |
 | **Circulator** | `circulator.ts` | Enqueues pruned content for vector memory → `local-store.ts` (in-memory + JSONL). Instance-isolated queue with auto-flush. |
 | **Composer** | `brain.ts` | Reads cross-session brain state from `~/.cache/ultrameshai/brain-state.json`. |
+| **Archivist** | `archivist.ts` | *(sketch)* Append-only audit of permanent exits from the cycle — not automatic retrieval. |
+| **Originist** | `originist.ts` | *(sketch)* Generation count since verbatim original; folds repair-risk into λ-style loss. |
 
 ### Pipeline Flow
 

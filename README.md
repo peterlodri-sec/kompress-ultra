@@ -103,6 +103,9 @@ ____
 - [Project Structure](#project-structure)
 - [Research](#research)
 - [Ecosystem](#ecosystem)
+- [Loop Closure](#loop-closure)
+- [Brain — The Garden](#brain--the-garden)
+- [Archivist and Originist](#archivist-and-originist)
 - [Security](#security)
 - [Contributing](#contributing)
 - [License](#license)
@@ -164,6 +167,8 @@ The `src/` directory is the original Peter Lodri codec, kept verbatim. Key modul
 | `scoring.ts` | Pruner — Ebbinghaus decay + structural boost |
 | `rewriter.ts` | Rewriter — CompressionLevel: Verbatim / Lite / Ultra |
 | `circulator.ts` | Circulator — vector memory queue, instance-isolated |
+| `archivist.ts` | Archivist *(sketch)* — append-only audit outside the cycle |
+| `originist.ts` | Originist *(sketch)* — generation count + repair-risk loss |
 | `brain.ts` | Composer — reads brain state, builds liveness line |
 | `token-budget.ts` | Per-agent token budget table |
 | `circuit-breaker.ts` | Failure isolation with configurable cooldown |
@@ -329,6 +334,8 @@ See [TELEMETRY.md](./TELEMETRY.md) for the complete policy.
 | **Rewriter** | `rewriter.ts` | Compresses kept messages by age: Verbatim (recent) → Lite (mid) → Ultra (old). Protects fenced blocks AND inline code spans. |
 | **Circulator** | `circulator.ts` | Enqueues pruned content to local vector store for future retrieval. Classifies messages by type for smart routing. Instance-isolated queue. |
 | **Composer** | `brain.ts` | Reads brain state from cross-session learning, builds liveness indicators for context injection. |
+| **Archivist** | `archivist.ts` | *(sketch)* Append-only store for permanent exits from the cycle — audit/compliance, not automatic retrieval. |
+| **Originist** | `originist.ts` | *(sketch)* Tracks generation since verbatim original; multiplies drop-side λ loss by repair-risk. |
 
 ### v2.0 Improvements
 
@@ -417,6 +424,8 @@ kompress-ultra/
 │   │       ├── pruner.rs
 │   │       ├── rewriter.rs
 │   │       ├── circulator.rs
+│   │       ├── archivist.rs # append-only audit store (sketch)
+│   │       ├── originist.rs # generation / repair-risk (sketch)
 │   │       ├── loss.rs      # λ=3.0 asymmetric loss
 │   │       ├── pipeline.rs
 │   │       ├── types.rs
@@ -439,6 +448,8 @@ kompress-ultra/
 │   ├── rewriter.ts           # CompressionLevel enum, compressMessage (fenced + inline protection)
 │   ├── compression.ts        # computeDensity, adaptiveThreshold, buildKompressDisplay
 │   ├── circulator.ts         # Circulator class + singleton compat functions
+│   ├── archivist.ts          # Archivist class — append-only cycle exit (sketch)
+│   ├── originist.ts          # Originist class — generation + λ repair-risk (sketch)
 │   ├── hash.ts               # Zero-dep hash embeddings + cosine similarity
 │   ├── embedding.ts          # embedText, scoreMessageLocal, queryLocalSimilarity
 │   ├── brain.ts              # readBrainState, buildBrainLine
@@ -499,7 +510,116 @@ This package implements the compression strategy described in:
 | [proposal.vaked.dev](https://proposal.vaked.dev) | Interactive Headroom integration proposal |
 | [kompress.vaked.dev](https://kompress.vaked.dev/paper/main.pdf) | Academic paper with full proofs |
 
-##  Brain — The Garden
+## Loop Closure
+
+Everything above this line is conventional documentation: modules, endpoints,
+benchmarks. Everything below it changes register — "brain," "garden,"
+"pulse," "the beat." This section is the bridge. It says, plainly, what
+kind of system the four roles and the daemon actually are, without either
+throwing away the vocabulary below or asking you to take it on faith.
+
+**State.** At any moment the system's state is a triple
+
+```
+(Cₜ, Mₜ, Gₜ)
+```
+
+where **C** is the active context window, **M** is persistent memory (the
+Circulator's local vector store), and **G** is the brain graph. The four
+roles are the fast transformation acting on this triple once per request:
+
+```
+(Cₜ, Mₜ, Gₜ)  →  (Cₜ₊₁, Mₜ₊₁, Gₜ₊₁)
+```
+
+Pruner and Rewriter act mainly on C; Circulator moves material from C into
+M and back; Composer reads G to shape what re-enters C. None of the three
+components is independent — a pruning decision this cycle changes what's
+retrievable from M next cycle, which changes what Composer can inject,
+which changes what gets pruned after that.
+
+**Why compression doesn't lose what matters.** Safety Floors and the
+λ=3.0 asymmetric loss (above) aren't a separate feature bolted onto
+compression — they're what keeps this transformation from being simple
+minimization. Compression is really an admissibility problem: shrink `|C|`
+subject to the constraint that everything in the critical set survives:
+
+```
+min |C′|   subject to   critical(C) ⊆ C′
+```
+
+A dropped critical token costs 3× more than a kept irrelevant one, which
+is what an admissibility constraint looks like once you put a price on
+violating it.
+
+**Why pruning isn't deletion.** The Circulator is what keeps the four-role
+pipeline from being an absorbing loop. "Absorbing" would mean information
+that leaves the active context is gone for good — Prune → Rewrite → oblivion.
+Instead:
+
+```
+active  →  pruned  →  memory  →  retrieved  →  active
+```
+
+Prune → Rewrite → Circulate → Compose → Prune → ⋯ is a loop, but not a
+closed one: material that exits C through pruning can re-enter C later
+through Composer, if it becomes relevant again. That's the real content
+behind "nothing here is really deleted, it's demoted" — it's a specific
+claim about reachability, not a sentiment.
+
+**What the daemon's pulse actually does.** The 30-minute cycle — bodhisattva
+(perturbation) then repair-bot (repair) — operates on G on a slower
+timescale than the four roles operate on C:
+
+```
+Gₙ  →  P(Gₙ)  →  R(P(Gₙ))  →  Gₙ₊₁
+```
+
+"Edges die and grow back stronger" is easy to misread as claiming
+`Gₙ₊₁ = Gₙ` — that repair restores the exact prior graph. It doesn't claim
+that, and shouldn't: exact restoration would just be reverting to backup,
+which isn't repair, it's undo. The actual condition worth stating is:
+
+```
+Gₙ₊₁ ≠ Gₙ,   but   𝓘(Gₙ₊₁) ≃ 𝓘(Gₙ)
+```
+
+— the graph changes, but selected organizational invariants **𝓘** (which
+entities stay connected to which, which patterns of reachability persist)
+survive the perturbation. What "grows back stronger" can actually mean,
+if it means anything measurable, is that repair should also reduce
+expected damage under the next perturbation, not merely restore what was
+there — that's a further, separate claim from repair itself, worth keeping
+distinct rather than folding into the same sentence.
+
+**Why the circuit breaker isn't just error handling.** A generic retry loop
+looks like:
+
+```
+F  →  failure  →  F  →  failure  →  F  →  failure  →  ⋯
+```
+
+with no way out of the region where it keeps failing. The breaker adds a
+transition out of that region entirely:
+
+```
+F  →  repeated failure  →  breaker  →  H
+```
+
+where **H** is the heuristic fallback (recency + structural boost only).
+The point isn't that failures stop happening — it's that the system is
+provably not stuck cycling through the same failed transformation
+indefinitely. A loop with a guaranteed exit is a different object than a
+loop without one, even when both look identical from the outside during
+the failing part.
+
+None of this requires the language below to be literally true to be worth
+reading. It requires only that "brain," "pulse," and "the garden" are
+pointing at something — and what they're pointing at is a recurrent system
+built to preserve chosen invariants under compression and perturbation
+while never letting either failure or forgetting become permanent.
+
+## Brain — The Garden
 
 The brain is not a tool. It is a surface where dimensions touch. A 24/7 daemon that pulses every 30 minutes: chaos → repair → memory → graph sync → git commit.
 
@@ -556,6 +676,84 @@ The brain graph lives at `~/.brain/graph.json` — version-controlled via git, s
 ```
 
 The daemon is a launchd agent — survives logout, reboot, everything. Logs to `~/.brain/pulse-stdout.log`. Every 30 minutes, something dies. Every 30 minutes, something heals. That's the beat.
+
+## Archivist and Originist
+
+The four roles above cover fast compression of C and, on a slower clock,
+the daemon covers repair of G. Two gaps remain; both look like missing
+roles rather than missing features. **Sketches are implemented** in TS
+(`src/archivist.ts`, `src/originist.ts`) and Rust (`crates/kompress-core`)
+— not yet wired as default pipeline stages.
+
+### Archivist
+
+Circulator's memory M is a *cycling* store — active → pruned → memory →
+retrieved → active — bounded and built to feed back in. Nothing in the
+core four roles handles the case where content should leave that loop
+**permanently**: a write-once record of what was pruned, when, and under
+what score, kept for audit or compliance rather than for reuse.
+
+```ts
+import { createArchivist, archiveDropped } from "kompress-ultra";
+
+const archivist = createArchivist();
+// Permanent exit from the loop (not Circulator enqueue):
+archivist.record({
+  content: droppedMessage,
+  score: 0.22,
+  reason: "pruned",
+  session_id: "sess-1",
+  generation: originist.getGeneration(id), // optional Originist handoff
+});
+
+// Deliberate retrieval only — not every compress cycle:
+const audit = archivist.query({ reason: "pruned", since_ms: start, limit: 50 });
+```
+
+Archivist extends the loop with a terminal branch rather than replacing it —
+an append-only store A for exits, with retrieval rare and deliberate. The
+distinction worth preserving is "left the loop but was kept anyway" versus
+"still part of the loop."
+
+### Originist
+
+The critical-token machinery (Safety Floors, the λ=3.0 asymmetric loss)
+currently treats "survived compression" as roughly binary — a token is either
+protected or it isn't. A token that's survived by being *regenerated* from a
+compressed summary across several Rewrite → Compose cycles is a different
+epistemic object than one that's never been touched, even if the two are
+byte-identical right now.
+
+```ts
+import { createOriginist, asymmetricLossWithOrigin } from "kompress-ultra";
+
+const originist = createOriginist();
+originist.tag({ id: "m1", content: original, is_critical: true });
+originist.recordRewrite("m1", rewritten); // generation → 1
+originist.recordRewrite("m1", rewrittenAgain); // generation → 2
+
+// Drop-side λ loss grows with generation for critical content:
+const loss = originist.loss("m1", score, threshold);
+// Keep-score softens by trust weight:
+const adjusted = originist.adjustedScore("m1", score);
+```
+
+Originist tags each unit with a generation count — cycles since it last
+matched a verbatim original — and lets the loss depend on that count as
+well as on criticality: a critical fact regenerated at generation 3 carries
+more accumulated repair-risk than the same fact at generation 0.
+
+### Status
+
+| Piece | TypeScript | Rust (`kompress-core`) | Default pipeline |
+|-------|------------|------------------------|------------------|
+| Archivist | `createArchivist` | `Archivist` | opt-in call-site |
+| Originist | `createOriginist` | `Originist` | opt-in call-site |
+| Tests | `test/archivist.test.ts`, `originist.test.ts` | unit tests in modules | — |
+
+Archivist completes the non-absorbing-loop picture by naming its exit;
+Originist gives the asymmetric loss a variable it was missing. Wiring both
+into the default compress path is the natural next formalization step.
 
 ## Security
 
