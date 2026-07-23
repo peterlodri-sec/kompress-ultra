@@ -77,7 +77,7 @@ more: []
 
 ___
 
-> from peter: anything below my comment doesn't matter, WE cannot answer all your questions, 
+> from peter: anything below my comment doesn't matter, WE cannot answer all your questions,
 >   read the files, fork it, ask LLMs, humans, others, US, we are here doing the same
 >  there is no weird, wrong, bad, good, perfect question, just question, put them into issues, send us, do what You want
 
@@ -103,6 +103,9 @@ ____
 - [Project Structure](#project-structure)
 - [Research](#research)
 - [Ecosystem](#ecosystem)
+- [Loop Closure](#loop-closure)
+- [Brain — The Garden](#brain--the-garden)
+- [Future Work: Archivist and Originist](#future-work-archivist-and-originist)
 - [Security](#security)
 - [Contributing](#contributing)
 - [License](#license)
@@ -499,7 +502,116 @@ This package implements the compression strategy described in:
 | [proposal.vaked.dev](https://proposal.vaked.dev) | Interactive Headroom integration proposal |
 | [kompress.vaked.dev](https://kompress.vaked.dev/paper/main.pdf) | Academic paper with full proofs |
 
-##  Brain — The Garden
+## Loop Closure
+
+Everything above this line is conventional documentation: modules, endpoints,
+benchmarks. Everything below it changes register — "brain," "garden,"
+"pulse," "the beat." This section is the bridge. It says, plainly, what
+kind of system the four roles and the daemon actually are, without either
+throwing away the vocabulary below or asking you to take it on faith.
+
+**State.** At any moment the system's state is a triple
+
+```
+(Cₜ, Mₜ, Gₜ)
+```
+
+where **C** is the active context window, **M** is persistent memory (the
+Circulator's local vector store), and **G** is the brain graph. The four
+roles are the fast transformation acting on this triple once per request:
+
+```
+(Cₜ, Mₜ, Gₜ)  →  (Cₜ₊₁, Mₜ₊₁, Gₜ₊₁)
+```
+
+Pruner and Rewriter act mainly on C; Circulator moves material from C into
+M and back; Composer reads G to shape what re-enters C. None of the three
+components is independent — a pruning decision this cycle changes what's
+retrievable from M next cycle, which changes what Composer can inject,
+which changes what gets pruned after that.
+
+**Why compression doesn't lose what matters.** Safety Floors and the
+λ=3.0 asymmetric loss (above) aren't a separate feature bolted onto
+compression — they're what keeps this transformation from being simple
+minimization. Compression is really an admissibility problem: shrink `|C|`
+subject to the constraint that everything in the critical set survives:
+
+```
+min |C′|   subject to   critical(C) ⊆ C′
+```
+
+A dropped critical token costs 3× more than a kept irrelevant one, which
+is what an admissibility constraint looks like once you put a price on
+violating it.
+
+**Why pruning isn't deletion.** The Circulator is what keeps the four-role
+pipeline from being an absorbing loop. "Absorbing" would mean information
+that leaves the active context is gone for good — Prune → Rewrite → oblivion.
+Instead:
+
+```
+active  →  pruned  →  memory  →  retrieved  →  active
+```
+
+Prune → Rewrite → Circulate → Compose → Prune → ⋯ is a loop, but not a
+closed one: material that exits C through pruning can re-enter C later
+through Composer, if it becomes relevant again. That's the real content
+behind "nothing here is really deleted, it's demoted" — it's a specific
+claim about reachability, not a sentiment.
+
+**What the daemon's pulse actually does.** The 30-minute cycle — bodhisattva
+(perturbation) then repair-bot (repair) — operates on G on a slower
+timescale than the four roles operate on C:
+
+```
+Gₙ  →  P(Gₙ)  →  R(P(Gₙ))  →  Gₙ₊₁
+```
+
+"Edges die and grow back stronger" is easy to misread as claiming
+`Gₙ₊₁ = Gₙ` — that repair restores the exact prior graph. It doesn't claim
+that, and shouldn't: exact restoration would just be reverting to backup,
+which isn't repair, it's undo. The actual condition worth stating is:
+
+```
+Gₙ₊₁ ≠ Gₙ,   but   𝓘(Gₙ₊₁) ≃ 𝓘(Gₙ)
+```
+
+— the graph changes, but selected organizational invariants **𝓘** (which
+entities stay connected to which, which patterns of reachability persist)
+survive the perturbation. What "grows back stronger" can actually mean,
+if it means anything measurable, is that repair should also reduce
+expected damage under the next perturbation, not merely restore what was
+there — that's a further, separate claim from repair itself, worth keeping
+distinct rather than folding into the same sentence.
+
+**Why the circuit breaker isn't just error handling.** A generic retry loop
+looks like:
+
+```
+F  →  failure  →  F  →  failure  →  F  →  failure  →  ⋯
+```
+
+with no way out of the region where it keeps failing. The breaker adds a
+transition out of that region entirely:
+
+```
+F  →  repeated failure  →  breaker  →  H
+```
+
+where **H** is the heuristic fallback (recency + structural boost only).
+The point isn't that failures stop happening — it's that the system is
+provably not stuck cycling through the same failed transformation
+indefinitely. A loop with a guaranteed exit is a different object than a
+loop without one, even when both look identical from the outside during
+the failing part.
+
+None of this requires the language below to be literally true to be worth
+reading. It requires only that "brain," "pulse," and "the garden" are
+pointing at something — and what they're pointing at is a recurrent system
+built to preserve chosen invariants under compression and perturbation
+while never letting either failure or forgetting become permanent.
+
+## Brain — The Garden
 
 The brain is not a tool. It is a surface where dimensions touch. A 24/7 daemon that pulses every 30 minutes: chaos → repair → memory → graph sync → git commit.
 
@@ -556,6 +668,42 @@ The brain graph lives at `~/.brain/graph.json` — version-controlled via git, s
 ```
 
 The daemon is a launchd agent — survives logout, reboot, everything. Logs to `~/.brain/pulse-stdout.log`. Every 30 minutes, something dies. Every 30 minutes, something heals. That's the beat.
+
+## Future Work: Archivist and Originist
+
+The four roles above cover fast compression of C and, on a slower clock,
+the daemon covers repair of G. Two gaps remain, and both look like missing
+roles rather than missing features.
+
+**Archivist.** Circulator's memory M is a *cycling* store — active → pruned
+→ memory → retrieved → active — bounded and built to feed back in. Nothing
+currently handles the case where content should leave that loop
+permanently: a write-once record of what was pruned, when, and under what
+score, kept for audit or compliance rather than for reuse. Archivist would
+extend the loop with a terminal branch rather than replace it — an
+append-only store A ⊇ M, strictly larger than Circulator's working memory,
+with retrieval from A rare and deliberate rather than automatic on every
+cycle. The distinction worth preserving is "left the loop but was kept
+anyway" versus "still part of the loop" — those are different guarantees,
+and right now the architecture only names the second one.
+
+**Originist.** The critical-token machinery (Safety Floors, the λ=3.0
+asymmetric loss) currently treats "survived compression" as roughly
+binary — a token is either protected or it isn't. But a token that's
+survived by being *regenerated* from a compressed summary across several
+Rewrite → Compose cycles is a different epistemic object than one that's
+never been touched, even if the two are byte-identical right now.
+Originist would tag each unit of content with a generation count — cycles
+passed through since it last matched a verbatim original — and let the
+loss depend on that count as well as on criticality: a critical fact
+regenerated at generation 3 carries more accumulated repair-risk than the
+same fact at generation 0, and the current scoring has no way to see that
+difference.
+
+Neither role is implemented. Both are proposed here as the natural next
+things to formalize given the Loop Closure section above — Archivist
+completes the non-absorbing-loop picture by naming its exit; Originist
+gives the asymmetric loss a variable it's currently missing.
 
 ## Security
 
