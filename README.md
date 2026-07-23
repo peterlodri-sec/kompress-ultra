@@ -77,7 +77,7 @@ more: []
 
 ___
 
-> from peter: anything below my comment doesn't matter, WE cannot answer all your questions, 
+> from peter: anything below my comment doesn't matter, WE cannot answer all your questions,
 >   read the files, fork it, ask LLMs, humans, others, US, we are here doing the same
 >  there is no weird, wrong, bad, good, perfect question, just question, put them into issues, send us, do what You want
 
@@ -106,6 +106,7 @@ ____
 - [Loop Closure](#loop-closure)
 - [Brain — The Garden](#brain--the-garden)
 - [Archivist and Originist](#archivist-and-originist)
+- [Future Work: Archivist and Originist](#future-work-archivist-and-originist)
 - [Security](#security)
 - [Contributing](#contributing)
 - [License](#license)
@@ -754,6 +755,41 @@ more accumulated repair-risk than the same fact at generation 0.
 Archivist completes the non-absorbing-loop picture by naming its exit;
 Originist gives the asymmetric loss a variable it was missing. Wiring both
 into the default compress path is the natural next formalization step.
+## Future Work: Archivist and Originist
+
+The four roles above cover fast compression of C and, on a slower clock,
+the daemon covers repair of G. Two gaps remain, and both look like missing
+roles rather than missing features.
+
+**Archivist.** Circulator's memory M is a *cycling* store — active → pruned
+→ memory → retrieved → active — bounded and built to feed back in. Nothing
+currently handles the case where content should leave that loop
+permanently: a write-once record of what was pruned, when, and under what
+score, kept for audit or compliance rather than for reuse. Archivist would
+extend the loop with a terminal branch rather than replace it — an
+append-only store A ⊇ M, strictly larger than Circulator's working memory,
+with retrieval from A rare and deliberate rather than automatic on every
+cycle. The distinction worth preserving is "left the loop but was kept
+anyway" versus "still part of the loop" — those are different guarantees,
+and right now the architecture only names the second one.
+
+**Originist.** The critical-token machinery (Safety Floors, the λ=3.0
+asymmetric loss) currently treats "survived compression" as roughly
+binary — a token is either protected or it isn't. But a token that's
+survived by being *regenerated* from a compressed summary across several
+Rewrite → Compose cycles is a different epistemic object than one that's
+never been touched, even if the two are byte-identical right now.
+Originist would tag each unit of content with a generation count — cycles
+passed through since it last matched a verbatim original — and let the
+loss depend on that count as well as on criticality: a critical fact
+regenerated at generation 3 carries more accumulated repair-risk than the
+same fact at generation 0, and the current scoring has no way to see that
+difference.
+
+Neither role is implemented. Both are proposed here as the natural next
+things to formalize given the Loop Closure section above — Archivist
+completes the non-absorbing-loop picture by naming its exit; Originist
+gives the asymmetric loss a variable it's currently missing.
 
 ## Security
 
