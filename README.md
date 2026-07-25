@@ -105,6 +105,7 @@ ____
 - [Ecosystem](#ecosystem)
 - [Loop Closure](#loop-closure)
 - [Brain — The Garden](#brain--the-garden)
+- [Archivist and Originist](#archivist-and-originist)
 - [Future Work: Archivist and Originist](#future-work-archivist-and-originist)
 - [Security](#security)
 - [Contributing](#contributing)
@@ -167,6 +168,8 @@ The `src/` directory is the original Peter Lodri codec, kept verbatim. Key modul
 | `scoring.ts` | Pruner — Ebbinghaus decay + structural boost |
 | `rewriter.ts` | Rewriter — CompressionLevel: Verbatim / Lite / Ultra |
 | `circulator.ts` | Circulator — vector memory queue, instance-isolated |
+| `archivist.ts` | Archivist *(sketch)* — append-only audit outside the cycle |
+| `originist.ts` | Originist *(sketch)* — generation count + repair-risk loss |
 | `brain.ts` | Composer — reads brain state, builds liveness line |
 | `token-budget.ts` | Per-agent token budget table |
 | `circuit-breaker.ts` | Failure isolation with configurable cooldown |
@@ -332,6 +335,8 @@ See [TELEMETRY.md](./TELEMETRY.md) for the complete policy.
 | **Rewriter** | `rewriter.ts` | Compresses kept messages by age: Verbatim (recent) → Lite (mid) → Ultra (old). Protects fenced blocks AND inline code spans. |
 | **Circulator** | `circulator.ts` | Enqueues pruned content to local vector store for future retrieval. Classifies messages by type for smart routing. Instance-isolated queue. |
 | **Composer** | `brain.ts` | Reads brain state from cross-session learning, builds liveness indicators for context injection. |
+| **Archivist** | `archivist.ts` | *(sketch)* Append-only store for permanent exits from the cycle — audit/compliance, not automatic retrieval. |
+| **Originist** | `originist.ts` | *(sketch)* Tracks generation since verbatim original; multiplies drop-side λ loss by repair-risk. |
 
 ### v2.0 Improvements
 
@@ -420,6 +425,8 @@ kompress-ultra/
 │   │       ├── pruner.rs
 │   │       ├── rewriter.rs
 │   │       ├── circulator.rs
+│   │       ├── archivist.rs # append-only audit store (sketch)
+│   │       ├── originist.rs # generation / repair-risk (sketch)
 │   │       ├── loss.rs      # λ=3.0 asymmetric loss
 │   │       ├── pipeline.rs
 │   │       ├── types.rs
@@ -442,6 +449,8 @@ kompress-ultra/
 │   ├── rewriter.ts           # CompressionLevel enum, compressMessage (fenced + inline protection)
 │   ├── compression.ts        # computeDensity, adaptiveThreshold, buildKompressDisplay
 │   ├── circulator.ts         # Circulator class + singleton compat functions
+│   ├── archivist.ts          # Archivist class — append-only cycle exit (sketch)
+│   ├── originist.ts          # Originist class — generation + λ repair-risk (sketch)
 │   ├── hash.ts               # Zero-dep hash embeddings + cosine similarity
 │   ├── embedding.ts          # embedText, scoreMessageLocal, queryLocalSimilarity
 │   ├── brain.ts              # readBrainState, buildBrainLine
@@ -669,6 +678,83 @@ The brain graph lives at `~/.brain/graph.json` — version-controlled via git, s
 
 The daemon is a launchd agent — survives logout, reboot, everything. Logs to `~/.brain/pulse-stdout.log`. Every 30 minutes, something dies. Every 30 minutes, something heals. That's the beat.
 
+## Archivist and Originist
+
+The four roles above cover fast compression of C and, on a slower clock,
+the daemon covers repair of G. Two gaps remain; both look like missing
+roles rather than missing features. **Sketches are implemented** in TS
+(`src/archivist.ts`, `src/originist.ts`) and Rust (`crates/kompress-core`)
+— not yet wired as default pipeline stages.
+
+### Archivist
+
+Circulator's memory M is a *cycling* store — active → pruned → memory →
+retrieved → active — bounded and built to feed back in. Nothing in the
+core four roles handles the case where content should leave that loop
+**permanently**: a write-once record of what was pruned, when, and under
+what score, kept for audit or compliance rather than for reuse.
+
+```ts
+import { createArchivist, archiveDropped } from "kompress-ultra";
+
+const archivist = createArchivist();
+// Permanent exit from the loop (not Circulator enqueue):
+archivist.record({
+  content: droppedMessage,
+  score: 0.22,
+  reason: "pruned",
+  session_id: "sess-1",
+  generation: originist.getGeneration(id), // optional Originist handoff
+});
+
+// Deliberate retrieval only — not every compress cycle:
+const audit = archivist.query({ reason: "pruned", since_ms: start, limit: 50 });
+```
+
+Archivist extends the loop with a terminal branch rather than replacing it —
+an append-only store A for exits, with retrieval rare and deliberate. The
+distinction worth preserving is "left the loop but was kept anyway" versus
+"still part of the loop."
+
+### Originist
+
+The critical-token machinery (Safety Floors, the λ=3.0 asymmetric loss)
+currently treats "survived compression" as roughly binary — a token is either
+protected or it isn't. A token that's survived by being *regenerated* from a
+compressed summary across several Rewrite → Compose cycles is a different
+epistemic object than one that's never been touched, even if the two are
+byte-identical right now.
+
+```ts
+import { createOriginist, asymmetricLossWithOrigin } from "kompress-ultra";
+
+const originist = createOriginist();
+originist.tag({ id: "m1", content: original, is_critical: true });
+originist.recordRewrite("m1", rewritten); // generation → 1
+originist.recordRewrite("m1", rewrittenAgain); // generation → 2
+
+// Drop-side λ loss grows with generation for critical content:
+const loss = originist.loss("m1", score, threshold);
+// Keep-score softens by trust weight:
+const adjusted = originist.adjustedScore("m1", score);
+```
+
+Originist tags each unit with a generation count — cycles since it last
+matched a verbatim original — and lets the loss depend on that count as
+well as on criticality: a critical fact regenerated at generation 3 carries
+more accumulated repair-risk than the same fact at generation 0.
+
+### Status
+
+| Piece | TypeScript | Rust (`kompress-core`) | Default pipeline |
+|-------|------------|------------------------|------------------|
+| Archivist | `createArchivist` | `Archivist` | opt-in call-site |
+| Originist | `createOriginist` | `Originist` | opt-in call-site |
+| Tests | `test/archivist.test.ts`, `originist.test.ts` | unit tests in modules | — |
+
+Archivist completes the non-absorbing-loop picture by naming its exit;
+Originist gives the asymmetric loss a variable it was missing. Wiring both
+into the default compress path is the natural next formalization step.
 ## Future Work: Archivist and Originist
 
 The four roles above cover fast compression of C and, on a slower clock,
