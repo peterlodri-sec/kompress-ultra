@@ -12,6 +12,29 @@ export { CircuitBreaker, createCircuitBreaker } from "./circuit-breaker.js";
 export type { CircuitBreakerState, CircuitBreakerOptions } from "./circuit-breaker.js";
 export { Circulator, createCirculator } from "./circulator.js";
 export type { CirculatorEntry, CirculatorInput, CirculatorOptions } from "./circulator.js";
+export { Archivist, createArchivist, archiveDropped } from "./archivist.js";
+export type {
+  ArchiveRecord,
+  ArchiveInput,
+  ArchiveReason,
+  ArchiveClassification,
+  ArchivistQuery,
+  ArchivistOptions,
+} from "./archivist.js";
+export {
+  Originist,
+  createOriginist,
+  generationRisk,
+  trustWeight,
+  asymmetricLossWithOrigin,
+  originAdjustedScore,
+  nextGeneration,
+  isCriticalContent,
+  ORIGIN_LAMBDA,
+  GENERATION_RISK_STEP,
+  GENERATION_RISK_CAP,
+} from "./originist.js";
+export type { Provenance, OriginTagInput, OriginistOptions } from "./originist.js";
 export { LocalStore, createLocalStore, queryMemory } from "./local-store.js";
 
 // ── Embedding & brain graph ────────────────────────────────────────
