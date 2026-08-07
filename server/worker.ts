@@ -478,7 +478,7 @@ export default {
           tailnet: "riva.local",
         });
       } catch {
-        return json({ error: "send { prompt: string }" }, { status: 400 });
+        return json({ error: "send { prompt: string }" }, 400);
       }
     }
 
