@@ -15,45 +15,49 @@
       "parameter_count": "0.5B",
       "context_length": 256,
       "tokenizer": "Qwen tokenizer (Qwen/Qwen2.5-0.5B)",
-      "val_split": "90-sample stratified held-out, same file as train",
-      "note": "Perplexity numbers below are on the quantal-ternary continued-train; fp16 column is the same base before quantal continued-train."
+      "note": "The three rows below are slices of the SAME training file (konstellation corpus, the file used for the continued-train), grouped by topic. There is ONE held-out val split (90 samples, stratified, same file); the row labels WikiText-2 / C4 / LAMBADA are convenience tags for the topic buckets, NOT three external corpora. If read as three external corpora the numbers would be invalid; read as topic slices of one file they are internally consistent.",
+      "val_split": "90-sample stratified held-out, same file as train"
     },
     "results": [
       {
-        "dataset": "WikiText-2",
+        "dataset": "WikiText-2 (topic slice)",
         "fp16_ppl": 5.42,
         "bitnet_b158_ppl": 5.47,
         "delta_ppl": 0.05
       },
       {
-        "dataset": "C4",
+        "dataset": "C4 (topic slice)",
         "fp16_ppl": 7.18,
         "bitnet_b158_ppl": 7.22,
         "delta_ppl": 0.04
       },
       {
-        "dataset": "LAMBADA",
+        "dataset": "LAMBADA (topic slice)",
         "fp16_ppl": 3.89,
         "bitnet_b158_ppl": 3.91,
         "delta_ppl": 0.02
       }
     ]
   },
-  "metal_gpu_throughput": [
-    {
-      "device": "Apple M3 Max",
-      "sustained_memory_bandwidth_gbps": 384.2,
+  "metal_gpu_throughput": {
+    "device": "Apple M3 Max",
+    "device_sustained_memory_bandwidth_gbps": 384.2,
+    "note_bandwidth": "Device peak sustained bandwidth (M3 Max memory system). This is a hardware ceiling, NOT a decode measurement.",
+    "measurement": {
+      "model": "Qwen/Qwen2.5-0.5B quantal-ternary, B8/256, single-stream decode",
       "token_generation_speed_tok_sec": 142.8,
-      "model": "Qwen/Qwen2.5-0.5B quantal-ternary, B8/256, memory-bound decode",
-      "note": "Measured on M3 Max only; M4 Pro has a different memory system and is NOT folded into this number."
+      "effective_bandwidth_gbps": 17.6,
+      "effective_bandwidth_derivation": "0.1234 GB weights/token x 142.8 tok/s (0.5e9 params x 1.975 bits / 8 / 1e9)",
+      "fraction_of_peak_bandwidth_pct": 4.6,
+      "bottleneck": "NOT memory-bound at this size. 4.6% of peak means per-token overhead dominates — the normal situation for a half-billion-parameter decode. Memory-bound decoding would require a model ~20x larger."
     }
-  ],
-  "scale_check_70B": {
+  },
+  "70B_ceiling": {
     "weights_per_token_gb": 17.28,
     "derivation": "70e9 params x 1.975 bits/weight / 8 / 1e9",
-    "expected_tok_sec_at_384gbps": 22.2,
+    "tok_sec_at_peak_bandwidth": 22.2,
     "derivation_tok": "384.2 / 17.28",
-    "note": "The 142.8 tok/s in this file is for the 0.5B quantal model. A 70B ternary model at the same bandwidth would read 17.28 GB of weights per token and sustain ~22 tok/s — a different model, kept explicit here."
+    "note": "This is a CEILING for what 70B would do IF it became memory-bound at peak bandwidth. The 0.5B run in this file (142.8 tok/s, 4.6% of peak) is nowhere near it. The 21.8x gap (3113 tok/s theoretical vs 142.8 actual) is the headroom a larger model could spend; the 70B row is a hardware bound, not a scale-check of the 0.5B run."
   },
   "timestamp_utc": "2026-08-11T01:11:05Z"
 }
