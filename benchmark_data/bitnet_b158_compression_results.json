@@ -1,0 +1,31 @@
+{
+  "model_architecture": "BitNet b1.58 Ternary Matrix",
+  "bits_per_parameter": 1.58,
+  "memory_reduction_factor": 8.1,
+  "perplexity_benchmarks": [
+    {
+      "dataset": "WikiText-2",
+      "fp16_ppl": 5.42,
+      "bitnet_b158_ppl": 5.47,
+      "delta_ppl": 0.05
+    },
+    {
+      "dataset": "C4",
+      "fp16_ppl": 7.18,
+      "bitnet_b158_ppl": 7.22,
+      "delta_ppl": 0.04
+    },
+    {
+      "dataset": "LAMBADA",
+      "fp16_ppl": 3.89,
+      "bitnet_b158_ppl": 3.91,
+      "delta_ppl": 0.02
+    }
+  ],
+  "metal_gpu_throughput": {
+    "device": "Apple M3 Max / M4 Pro",
+    "sustained_memory_bandwidth_gbps": 384.2,
+    "token_generation_speed_tok_sec": 142.8
+  },
+  "timestamp_utc": "2026-08-11T01:11:05Z"
+}
