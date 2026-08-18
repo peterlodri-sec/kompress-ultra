@@ -3,6 +3,15 @@ main = "server/worker.ts"
 compatibility_date = "2026-06-29"
 compatibility_flags = ["nodejs_compat"]
 
+routes = [
+  { pattern = "kompress.vaked.dev/*", zone_name = "vaked.dev" },
+  { pattern = "api.kompress.vaked.dev/*", zone_name = "vaked.dev" }
+]
+
+[vars]
+VERSION = "14.0.0"
+REGION = "us"
+
 [[kv_namespaces]]
 binding = "KOMPRESS_STATS"
 id = "8dbcbdc2d5574e399abfebd7f31b7bb5"
@@ -15,16 +24,13 @@ class_name = "StatsDO"
 tag = "v1"
 new_classes = ["StatsDO"]
 
-routes = [{ pattern = "api.kompress.vaked.dev/*", zone_name = "vaked.dev" }]
-
-[vars]
-VERSION = "14.0.0"
-REGION = "us"
-
 # ── US region ──────────────────────────────────────────────────────────
 [env.us]
 vars = { REGION = "us", VERSION = "14.0.0" }
-routes = [{ pattern = "api.kompress.vaked.dev/*", zone_name = "vaked.dev" }]
+routes = [
+  { pattern = "kompress.vaked.dev/*", zone_name = "vaked.dev" },
+  { pattern = "api.kompress.vaked.dev/*", zone_name = "vaked.dev" }
+]
 
 # ── EU region ──────────────────────────────────────────────────────────
 [env.eu]

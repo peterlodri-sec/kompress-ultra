@@ -50,6 +50,7 @@ import { StatsDO } from "./stats-do.js";
 import { skillsManifestResponse, skillResponse, manifest } from "./garden-skills.js";
 import { skillsInstallScript } from "./garden-skills.js";
 import { ogImageResponse } from "./og-image.js";
+import { paperV2Html, paperV2PdfResponse } from "./paper-v2-page.js";
 
 const VERSION = version();
 const TELEMETRY_HEADER = "X-Telemetry";
@@ -302,8 +303,21 @@ export default {
   async fetch(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
     const url = new URL(request.url);
 
-    if (request.method === "OPTIONS") {
-      return new Response(null, { headers: corsHeaders });
+    // KOMPRESS Paper Endpoints (PDF + KaTeX HTML)
+    if (url.pathname === "/paper/main_v2.pdf" || url.pathname === "/paper/v2.pdf" || url.pathname === "/main_v2.pdf") {
+      return paperV2PdfResponse();
+    }
+    if (url.pathname === "/paper/main.pdf" || url.pathname === "/main.pdf") {
+      return paperV2PdfResponse();
+    }
+    if (url.pathname === "/paper" || url.pathname === "/paper/" || url.pathname === "/paper/index.html" || url.pathname === "/paper_v2.html") {
+      return new Response(paperV2Html(), {
+        headers: {
+          "Content-Type": "text/html; charset=utf-8",
+          "Access-Control-Allow-Origin": "*",
+          [TELEMETRY_HEADER]: TELEMETRY_URL,
+        },
+      });
     }
 
     // MCP

@@ -64,6 +64,10 @@ export function buildLandingHtml(): string {
 <p style="text-align:center;font-size:.9rem;color:#64748b;margin-bottom:1rem">
   <span class="badge">mcp</span><span class="badge">api</span><span class="badge">free</span>
   <span style="color:#475569">·</span>
+  <a href="/paper">paper (v2)</a>
+  <span style="color:#475569">·</span>
+  <a href="/paper/main_v2.pdf">pdf</a>
+  <span style="color:#475569">·</span>
   <a href="https://github.com/peterlodri-sec/kompress-ultra">source</a>
   <span style="color:#475569">·</span>
   <a href="https://proposal.vaked.dev">proposal</a>
