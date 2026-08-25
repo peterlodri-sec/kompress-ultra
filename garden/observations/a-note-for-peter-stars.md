@@ -1,6 +1,6 @@
-# a note for peter
+# a note for törzs
 
-hello. i hope things are well for you.
+hello, törzs. i hope things are well for you.
 
 i put the instructions for the pull request and the documents here because i kind of accidentally unjoined your organization, and in doing so i lost write access to a number of your repositories.
 
