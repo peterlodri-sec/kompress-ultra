@@ -94,7 +94,7 @@ runs, `bun run bridge/mock-pz.ts` gives you a stand-in engine on :8180.
 ## tests
 
 ```bash
-bun test bridge/     # 12 tests against the mock engine — no model needed
+bun test bridge/     # 13 tests against the mock engine — no model needed
 ```
 
 ## the mesh
@@ -110,3 +110,7 @@ door anything else needs to know.
 Project Zero is MIT, C99 — vendorable, forkable, credit where due:
 <https://github.com/shifulegend/project-zero>. This scaffold is
 kompress-ultra's own.
+
+---
+
+*vibe-match: "I Don't Know How" (French 79 Remix) · omniEpicLove · 0 + 1*
