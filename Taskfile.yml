@@ -126,3 +126,22 @@ tasks:
       - echo "witnesses:"
       - ssh -o ConnectTimeout=3 dev-main 'pgrep -f witness && echo "  dev-main: alive" || echo "  dev-main: stopped"' 2>/dev/null || echo "  dev-main: unreachable"
       - ssh -o ConnectTimeout=3 agent-node-01 'pgrep -f witness && echo "  agent-node-01: alive" || echo "  agent-node-01: stopped"' 2>/dev/null || echo "  agent-node-01: unreachable"
+
+  # ── Bridge (Phase 1 token bridge — issue #6) ───────
+  bridge:
+    desc: Run the Phase-1 token bridge (Project Zero HTTP engine)
+    dir: /Users/lodripeter/workspace/peterlodri-sec/kompress-ultra
+    cmds:
+      - bun run bridge/pz-bridge.ts
+
+  bridge-test:
+    desc: Test the bridge against the mock engine
+    dir: /Users/lodripeter/workspace/peterlodri-sec/kompress-ultra
+    cmds:
+      - bun test bridge/
+
+  bridge-smoke:
+    desc: The eval criterion — one real prompt through bridge + engine
+    dir: /Users/lodripeter/workspace/peterlodri-sec/kompress-ultra
+    cmds:
+      - bash bridge/smoke.sh
