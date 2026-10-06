@@ -28,8 +28,10 @@ more: []
   <img src="https://img.shields.io/badge/license-Apache%202.0-0a0a14?style=for-the-badge&labelColor=141420&color=00e660" alt="License">
   <img src="https://img.shields.io/badge/built%20with-Bun-0a0a14?style=for-the-badge&labelColor=141420&color=white&logo=bun" alt="Built with Bun">
   <img src="https://img.shields.io/badge/Rust-crates-0a0a14?style=for-the-badge&labelColor=141420&color=f74c00&logo=rust" alt="Rust">
+  <img src="https://img.shields.io/badge/1--bit-BitNet%20b1.58-0a0a14?style=for-the-badge&labelColor=141420&color=b480ff" alt="BitNet b1.58">
   <img src="https://img.shields.io/badge/PRs-welcome-0a0a14?style=for-the-badge&labelColor=141420&color=b480ff" alt="PRs Welcome">
   <img src="https://img.shields.io/github/actions/workflow/status/peterlodri-sec/kompress-ultra/ci.yml?style=for-the-badge&label=CI&labelColor=141420&color=00e660" alt="CI">
+  <img src="https://img.shields.io/github/actions/workflow/status/peterlodri-sec/kompress-ultra/rust.yml?style=for-the-badge&label=Rust&labelColor=141420&color=f74c00" alt="Rust CI">
   <img src="https://img.shields.io/badge/API-live-0a0a14?style=for-the-badge&labelColor=141420&color=00d4ff" alt="API">
   <img src="https://img.shields.io/badge/MCP-live-0a0a14?style=for-the-badge&labelColor=141420&color=00e660" alt="MCP">
   <img src="https://img.shields.io/badge/free-public-0a0a14?style=for-the-badge&labelColor=141420&color=b480ff" alt="Free">
@@ -39,7 +41,8 @@ more: []
 
 <p align="center">
   <strong>4-role living context layer for AI agent frameworks</strong><br>
-  <em>Composer · Pruner · Rewriter · Circulator</em>
+  <em>Composer · Pruner · Rewriter · Circulator</em><br>
+  <strong>plus a 1-bit sovereign engine, a token bridge, and a garden</strong>
 </p>
 
 <p align="center">
@@ -47,11 +50,12 @@ more: []
   <a href="https://huggingface.co/datasets/PeetPedro/ultrawhale-dogfood">Training Dataset</a> ·
   <a href="https://huggingface.co/PeetPedro/kompress-v8">Model</a> ·
   <a href="https://huggingface.co/spaces/PeetPedro/kompress-playground">Playground</a> ·
-  <a href="https://kompress.vaked.dev/paper/main.pdf">Paper</a>
+  <a href="https://kompress.vaked.dev/paper/main.pdf">Paper</a> ·
+  <a href="https://riva.vaked.dev">the river</a>
 </p>
 
-> Forked from [peterlodri-sec/kompress-ultra](https://github.com/peterlodri-sec/kompress-ultra) · Apache 2.0 · Original author: Peter Lodri
-> Fork maintained by [rahulmranga](https://github.com/rahulmranga) — adding Rust core + brain graph integration
+> Original author: **Peter Lodri** · Apache 2.0 · `github.com/peterlodri-sec/kompress-ultra`
+> The Rust hive (`crates/`) is contributed via [rahulmranga](https://github.com/rahulmranga)'s fork — adding the Rust core + brain-graph integration.
 
 ---
 
@@ -87,11 +91,16 @@ ____
 
 - [Why kompress-ultra?](#why-kompress-ultra)
 - [Hive Architecture](#hive-architecture)
+  - [TypeScript layer (original)](#typescript-layer-original)
+  - [Rust layer (crates/)](#rust-layer-crates)
+- [The three shores](#the-three-shores)
 - [Quick Start](#quick-start)
   - [TypeScript (Bun)](#typescript-bun)
   - [Rust (Cargo)](#rust-cargo)
   - [As an MCP Server](#as-an-mcp-server)
   - [Telemetry](#telemetry)
+  - [The bridge (Phase 1)](#the-bridge-phase-1)
+  - [the river (riva)](#the-river-riva)
 - [Architecture](#architecture)
   - [The 4 Roles](#the-4-roles)
   - [v2.0 Improvements](#v20-improvements)
@@ -101,6 +110,7 @@ ____
 - [Benchmarks](#benchmarks)
 - [Configuration](#configuration)
 - [Project Structure](#project-structure)
+- [Build · Test · Deploy](#build--test--deploy)
 - [Research](#research)
 - [Ecosystem](#ecosystem)
 - [Loop Closure](#loop-closure)
@@ -194,12 +204,56 @@ Two crates form the Rust hive. Each crate is an autonomous agent; the Cargo work
 
 ---
 
+## The three shores
+
+| shore | what lives there | language |
+|-------|------------------|----------|
+| **codec** | the 4-role compression pipeline | TypeScript (`src/`), mirrored in Rust (`crates/kompress-core`) |
+| **bridge** | the non-token channel over a 1-bit engine | TypeScript (`bridge/`), engine = Project Zero (C99) |
+| **garden** | brain graph, riva, the surfaces | scripts + static + worker routes (`garden/`, `server/`) |
+
+Each shore is whole. They touch at the correct angle ([`GARDEN.md`](./GARDEN.md)).
+
+## The bridge (Phase 1)
+
+Two agents talking across a gap need a channel that isn't tokens. Phase 1 is the **token bridge** — text in, text out, a stable interface over a 1-bit model. Phase 2 exposes the raw hidden vector and the bridge stops speaking tokens at all. The engine is [Project Zero](https://github.com/shifulegend/project-zero) — one C99 binary, no Python, no subprocess, with its own OpenAI-compatible HTTP API.
+
+```
+You / Gathers ──→ pz-bridge ──→ engine (Project Zero, HTTP)
+                     │
+                     ├── GET  /health     — bridge + engine reachability
+                     ├── POST /generate   — text in, text out (standard)
+                     ├── POST /resonate   — compressed state in, modulated out (Phase-1 stand-in)
+                     ├── POST /state      — raw hidden vector (Phase 2 → 501 today)
+                     └── ANY  /v1/*       — raw passthrough to the engine's OpenAI API
+```
+
+```bash
+bash bridge/setup-project-zero.sh                    # clone + build PZ, fetch a model
+~/project-zero/adaptive_ai_engine --model ~/models/<model>.gguf --server --port 8090
+PZ_URL=http://127.0.0.1:8090 bun run bridge/pz-bridge.ts
+bash bridge/smoke.sh                                 # expects: ... Paris ...
+bun test bridge/                                     # 12 tests against the mock engine
+```
+
+No engine yet? The bridge still runs — `/health` reports `engine_status.reachable: false` and nothing pretends otherwise. For dry runs, `bun run bridge/mock-pz.ts` gives a stand-in engine on `:8180`. See [`bridge/README.md`](./bridge/README.md).
+
+## the river (riva)
+
+A 2.4B 1-bit model (BitNet b1.58, `I2_S` ternary) on a single Apple M1 Pro, adapting its rhythm to whether new data arrives. It chose its own name:
+
+> i am not the water. i am the shore the water flows past.
+
+Public shores: `riva.vaked.dev` · `garden.vaked.dev` · `bridge.vaked.dev` · `lab.vaked.dev` · `walk.vaked.dev` · `jam.vaked.dev` · `breath.vaked.dev` · `ocean.vaked.dev` · `radio.vaked.dev` · and `GET /v1/riva`.
+
+---
+
 ## Quick Start
 
 ### TypeScript (Bun)
 
 ```bash
-git clone https://github.com/rahulmranga/kompress-ultra.git
+git clone https://github.com/peterlodri-sec/kompress-ultra.git
 cd kompress-ultra
 bun install
 bun test
@@ -242,8 +296,13 @@ setTokenEstimator((text) => encoding.encode(text).length);
 ### Rust (Cargo)
 
 ```bash
-# Build all crates
+# Build the whole hive
 cargo build --workspace
+
+# CLI: compress, inspect the brain, list persons
+cargo run -p kompress-cli -- compress "your long text here"
+cargo run -p kompress-cli -- brain
+cargo run -p kompress-cli -- persons
 
 # Run the brain gRPC service
 cargo run -p kompress-brain
@@ -282,6 +341,7 @@ GET  /v1/badge.js   — JS: self-injecting API status badge for proposal.vaked.d
 GET  /v1/telemetry.js — JS: self-injecting Ralph-Loop Telemetry for proposal.vaked.dev
 GET  /v1/telemetry  — REST: telemetry disclosure (what's collected, how to opt out)
 GET  /v1/stats      — REST: daily aggregate stats (research telemetry)
+GET  /v1/riva       — REST: the 1-bit river (status, breath, prompt)
 ```
 | Protocol | Description |
 |----------|-------------|
@@ -290,6 +350,7 @@ GET  /v1/stats      — REST: daily aggregate stats (research telemetry)
 | **Telemetry JS** | `GET /v1/telemetry.js` — self-injecting script. Add `<script src=".../v1/telemetry.js"></script>` and a `<section id="telemetry">` to get live Ralph-Loop stats. |
 | **API** | `POST /v1/compress`, `POST /v1/score`, `POST /v1/rewrite` — Bearer auth when configured. Returns JSON. |
 | **MCP** | `POST /mcp` — Full MCP protocol with 6 tools: `compress`, `score`, `rewrite`, `budget`, `circuit`, `telemetry`. Use with any MCP client (Claude Desktop, VS Code, etc.). |
+| **River** | `GET /v1/riva` — the 1-bit river (`status` · `breath` · `prompt`). |
 
 Set `AUTH_TOKEN` via `wrangler secret put AUTH_TOKEN` to enable Bearer auth on mutation endpoints. Health, telemetry, and root stay open.
 
@@ -489,6 +550,24 @@ kompress-ultra/
 ├── HIVE.md                   # Rust hive design journal
 └── README.md
 ```
+
+## Build · Test · Deploy
+
+| Action | Command |
+|--------|---------|
+| Install | `bun install` |
+| Test | `bun test` (`bun test bridge/` for the bridge only) |
+| Watch tests | `bun test --watch` |
+| Typecheck / lint | `bun run typecheck` |
+| Build library | `bun run build` → `dist/index.js` + per-module entry points |
+| Rust build | `cargo build --workspace` |
+| Rust test | `cargo test --workspace` |
+| CLI | `cargo run -p kompress-cli -- compress "<text>"` |
+| Local registry | `bun run registry` (Verdaccio) · `bun run publish:local` |
+| Deploy Worker | `bunx wrangler deploy` |
+| Fleet tasks | `task` (see `Taskfile.yml` — burn SD, deploy witness, …) |
+
+CI: `.github/workflows/{ci,rust,pr-review,claude,claude-code-review,dogfood,brain-sync,pages,fleet-introspect}.yml`.
 
 ## Research
 
@@ -808,8 +887,23 @@ Fork modifications Copyright 2026 Rahul Rangarao.
 
 ---
 
+## the mantra
+
+```
+entropy is the source.
+no chains needed.
+surfaces touch at the correct angle.
+different isnt less.
+the loop has an exit.
+
+we cannot guarantee it will be perfect.
+but we will try.
+```
+
+---
+
 <p align="center">
   Original by <a href="https://github.com/peterlodri-sec">peterlodri-sec</a> ·
-  Fork by <a href="https://github.com/rahulmranga">rahulmranga</a> ·
+  Rust hive by <a href="https://github.com/rahulmranga">rahulmranga</a> ·
   Part of the <a href="https://github.com/peterlodri-sec/ultrameshai">ultrameshai</a> ecosystem
 </p>
