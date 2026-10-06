@@ -177,7 +177,7 @@ export function engineFromEnv(env: Record<string, string | undefined> = process.
       binPath: env.BITNET_BIN,
       modelPath: env.BITNET_MODEL,
       threads: env.BITNET_THREADS ? Number(env.BITNET_THREADS) : undefined,
-      timeoutMs: env.BRIDGE_TIMEOUT_MS ? Number(env.BRIDGE_TIMEOUT_MS) : 30_000,
+      timeoutMs: env.BRIDGE_TIMEOUT_MS ? Number(env.BRIDGE_TIMEOUT_MS) : 60_000,
     });
   }
   return new ProjectZeroEngine({

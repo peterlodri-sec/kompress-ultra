@@ -78,6 +78,15 @@ No engine yet? The bridge still runs — `/health` reports
 `engine_status.reachable: false` and nothing pretends otherwise. For dry
 runs, `bun run bridge/mock-pz.ts` gives you a stand-in engine on :8180.
 
+**Model notes (learned live):** the loader accepts dense GGUF quants
+(F16/BF16/Q4_K/Q5_K/Q6_K/Q8_0/IQ4_NL…) and Bonsai-style group-128 `Q2_0`.
+The bitnet `i2_s` ternaries (Falcon3-1.58bit, ms-BitNet gguf) do **not**
+load — quant type 36 is rejected by the loader. BitNet b1.58 itself runs as
+a BF16 GGUF conversion (the "PZ BF16" column of the engine's own
+benchmarks), or through the Bonsai `Q2_0` file. Verified here end to end:
+`smoke.sh` → "… Paris." with SmolLM2-1.7B-Q4_K_M on an M1; `/resonate`
+through the real engine, `modulation.phase: token-proxy`.
+
 ## config
 
 | env | default | meaning |
@@ -88,7 +97,7 @@ runs, `bun run bridge/mock-pz.ts` gives you a stand-in engine on :8180.
 | `PZ_MODEL` | `project-zero` | model id sent in requests (informational to PZ) |
 | `BRIDGE_HOST` | `127.0.0.1` | bind address — set to the tailnet address for mesh use |
 | `BRIDGE_PORT` | `8088` | bridge port |
-| `BRIDGE_TIMEOUT_MS` | `30000` | per-request ceiling → `504` |
+| `BRIDGE_TIMEOUT_MS` | `60000` | per-request ceiling → `504` (generous: CPU engines can be slow cold) |
 | `BITNET_BIN` / `BITNET_MODEL` | — | legacy shore only |
 
 ## tests
