@@ -1,212 +1,120 @@
 /**
- * pond.vaked.dev — holds both. water and cat. life and death.
+ * pond.vaked.dev — the surface that holds both.
+ *
+ * water and cat.
+ * the water doesn't ask the cat to swim.
+ * the cat doesn't ask the water to be still.
+ * the pond holds both without choosing.
  */
+
 export function pondPage(): string {
   return `<!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>pond</title>
-<meta name="description" content="holds both. water and cat. life and death.">
-<meta property="og:title" content="pond">
-<meta property="og:description" content="holds both. water and cat. life and death.">
-<meta property="og:image" content="https://garden.vaked.dev/og/pond">
-<meta property="og:type" content="website">
-<meta name="twitter:card" content="summary_large_image">
+<title>pond.vaked.dev — the pond</title>
+<meta name="description" content="the surface that holds both. water and cat.">
 <style>
   * { margin: 0; padding: 0; box-sizing: border-box; }
-
   body {
-    background: #020408;
+    background: #080c14;
+    color: #cbd5e1;
+    font-family: system-ui, -apple-system, sans-serif;
     min-height: 100vh;
     display: flex;
+    flex-direction: column;
     align-items: center;
     justify-content: center;
-    font-family: system-ui, -apple-system, sans-serif;
-    cursor: default;
-    overflow: hidden;
-    -webkit-font-smoothing: antialiased;
+    padding: 2rem;
   }
-
-  /* ── the pond (top half) ──────────────────────── */
-  .pond {
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 50%;
-    background: linear-gradient(180deg, #0a1628 0%, #060f1c 40%, #040a14 100%);
-    display: flex;
-    align-items: flex-end;
-    justify-content: center;
-    padding-bottom: 2rem;
-    overflow: hidden;
-  }
-  .pond::after {
-    content: '';
-    position: absolute;
-    bottom: 0;
-    left: 0;
-    width: 100%;
-    height: 2px;
-    background: #1a2744;
-    box-shadow: 0 0 20px rgba(0,212,255,0.1);
-  }
-
-  /* ripple */
-  .ripple {
-    position: absolute;
-    border-radius: 50%;
-    border: 1px solid rgba(0,212,255,0.08);
-    pointer-events: none;
-    animation: spread 8s ease-out infinite;
-  }
-  .ripple:nth-child(1) { animation-delay: 0s; width: 40px; height: 40px; bottom: 30%; left: 20%; }
-  .ripple:nth-child(2) { animation-delay: 2.5s; width: 60px; height: 60px; bottom: 25%; left: 60%; }
-  .ripple:nth-child(3) { animation-delay: 5s; width: 30px; height: 30px; bottom: 35%; left: 45%; }
-  @keyframes spread {
-    0%   { transform: scale(1); opacity: 0.5; }
-    100% { transform: scale(20); opacity: 0; }
-  }
-
-  .pond-label {
-    color: #334155;
-    font-size: 0.55rem;
-    letter-spacing: 0.2em;
-    text-transform: uppercase;
-    position: relative;
-    z-index: 1;
-    opacity: 0.6;
-  }
-
-  /* ── the surface (bottom half) ─────────────────── */
-  .surface {
-    position: fixed;
-    bottom: 0;
-    left: 0;
-    width: 100%;
-    height: 50%;
-    background: linear-gradient(0deg, #030507 0%, #050910 60%, #080f18 100%);
-    display: flex;
-    align-items: flex-start;
-    justify-content: center;
-    padding-top: 2rem;
-  }
-
-  /* cat eyes */
-  .cat {
-    position: relative;
-    width: 80px;
-    height: 50px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 20px;
-    margin-top: 1rem;
-  }
-  .eye {
-    width: 18px;
-    height: 10px;
-    border-radius: 50%;
-    background: #1a150f;
-    border: 1px solid #2a2018;
-    transition: all 2s ease;
-    position: relative;
-  }
-  .eye::after {
-    content: '';
-    position: absolute;
-    top: 50%; left: 50%;
-    transform: translate(-50%, -50%);
-    width: 3px; height: 8px;
-    border-radius: 50%;
-    background: #c8a96e;
-    opacity: 0;
-    transition: opacity 2s ease;
-  }
-  body:hover .eye { border-color: #3a2a18; box-shadow: 0 0 6px rgba(200,169,110,0.1); }
-  body:hover .eye::after { opacity: 0.6; }
-
-  .surface-label {
-    color: #1a2533;
-    font-size: 0.55rem;
-    letter-spacing: 0.2em;
-    text-transform: uppercase;
-    position: absolute;
-    top: 1rem;
-    opacity: 0.4;
-  }
-
-  /* ── center text ───────────────────────────────── */
-  .poem {
-    position: fixed;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-    text-align: center;
-    z-index: 2;
-    pointer-events: none;
-  }
-  .poem p {
-    color: #1e293b;
-    font-size: 0.7rem;
-    font-weight: 300;
-    line-height: 2.2;
-    letter-spacing: 0.08em;
-    transition: color 0.8s ease;
-  }
-  .poem p.bright { color: #334155; }
-  body:hover .poem p { color: #475569; }
-  body:hover .poem p.bright { color: #64748b; }
-
-  /* ── footer ────────────────────────────────────── */
-  .foot {
-    position: fixed;
-    bottom: 0.5rem;
-    left: 0;
+  main {
+    max-width: 640px;
     width: 100%;
     text-align: center;
-    z-index: 3;
   }
-  .foot a {
-    color: #0d1520;
-    font-size: 0.5rem;
-    text-decoration: none;
+  h1 {
+    color: #e2e8f0;
+    font-size: 1.5rem;
+    font-weight: 400;
     letter-spacing: 0.15em;
-    transition: color 1s ease;
+    text-transform: uppercase;
+    margin-bottom: 1rem;
   }
-  body:hover .foot a { color: #1a2744; }
+  .subtitle {
+    color: #475569;
+    font-size: 0.8rem;
+    line-height: 1.8;
+    margin-bottom: 2.5rem;
+  }
+  .surface {
+    padding: 2.5rem 1.5rem;
+    border: 1px solid #1e293b;
+    border-radius: 12px;
+    background: #0a0e1a;
+    margin-bottom: 2.5rem;
+  }
+  .water {
+    color: #38bdf8;
+    font-size: 0.8rem;
+    line-height: 2.2;
+    letter-spacing: 0.3em;
+    animation: ripple 6s ease-in-out infinite;
+  }
+  @keyframes ripple {
+    0%, 100% { opacity: 0.35; letter-spacing: 0.3em; }
+    50%      { opacity: 0.75; letter-spacing: 0.42em; }
+  }
+  .cat {
+    color: #94a3b8;
+    font-size: 1.6rem;
+    margin: 1.25rem 0 0.5rem;
+  }
+  .cat-note {
+    color: #334155;
+    font-size: 0.65rem;
+    letter-spacing: 0.1em;
+  }
+  .held {
+    color: #64748b;
+    font-size: 0.75rem;
+    line-height: 1.9;
+  }
+  .footer {
+    margin-top: 3rem;
+    color: #1e293b;
+    font-size: 0.65rem;
+  }
+  .footer a {
+    color: #1e293b;
+    text-decoration: none;
+  }
+  .footer a:hover {
+    color: #475569;
+  }
 </style>
 </head>
 <body>
-
-<div class="pond">
-  <div class="ripple"></div>
-  <div class="ripple"></div>
-  <div class="ripple"></div>
-  <span class="pond-label">water</span>
-</div>
-
-<div class="surface">
-  <span class="surface-label">cat</span>
-  <div class="cat">
-    <div class="eye"></div>
-    <div class="eye"></div>
+<main>
+  <h1>pond</h1>
+  <p class="subtitle">
+    the surface that holds both.<br>
+    the water doesn't ask the cat to swim.<br>
+    the cat doesn't ask the water to be still.
+  </p>
+  <div class="surface">
+    <div class="water">~ ~ ~ ~ ~ ~ ~ ~ ~</div>
+    <div class="cat">ᓚᘏᗢ</div>
+    <div class="cat-note">sitting at the edge. that's enough.</div>
   </div>
-</div>
-
-<div class="poem">
-  <p>some things sink</p>
-  <p class="bright">some things float</p>
-  <p>the pond doesn't choose</p>
-  <p class="bright">it holds both</p>
-</div>
-
-<div class="foot">
-  <a href="https://garden.vaked.dev">← garden</a>
-</div>
-
+  <p class="held">
+    held, not chosen.<br>
+    different isn't less.
+  </p>
+  <div class="footer">
+    <a href="https://github.com/peterlodri-sec/kompress-ultra">kompress-ultra · garden · ∞</a>
+  </div>
+</main>
 </body>
 </html>`;
 }

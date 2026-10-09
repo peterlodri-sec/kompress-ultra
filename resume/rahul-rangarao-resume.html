@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Rahul Rangarao · Resume</title>
+<style>
+  :root {
+    --ink: #1c2333;
+    --accent: #2c3a8c;
+    --muted: #5a648c;
+    --faint: #8891b4;
+    --rule: #dfe4f2;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: -apple-system, "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+    color: var(--ink);
+    font-size: 10.5pt;
+    line-height: 1.45;
+    max-width: 8.5in;
+    margin: 0 auto;
+    padding: 0.55in 0.65in;
+    background: #fff;
+  }
+  a { color: var(--accent); text-decoration: none; }
+
+  header h1 { font-size: 24pt; letter-spacing: -0.5px; color: var(--accent); }
+  .tagline { font-size: 11pt; color: var(--muted); font-weight: 600; margin-top: 2px; }
+  .contact { font-size: 9pt; color: var(--muted); margin-top: 6px; }
+  .contact span::after { content: " · "; color: var(--faint); }
+  .contact span:last-child::after { content: ""; }
+
+  section { margin-top: 14px; }
+  h2 {
+    font-size: 10pt; text-transform: uppercase; letter-spacing: 1.5px;
+    color: var(--accent); border-bottom: 1.5px solid var(--rule);
+    padding-bottom: 3px; margin-bottom: 8px;
+  }
+  h3 { font-size: 11pt; }
+  h3 .role { color: var(--muted); font-weight: 600; }
+  .meta { font-size: 9pt; color: var(--faint); margin-bottom: 4px; }
+  ul { padding-left: 16px; margin: 4px 0 10px; }
+  li { margin-bottom: 3px; }
+  li::marker { color: var(--faint); }
+  strong { color: var(--accent); }
+  p.summary { color: var(--ink); }
+
+  .skills-grid { display: grid; grid-template-columns: 138px 1fr; gap: 3px 12px; font-size: 9.5pt; }
+  .skills-grid dt { font-weight: 700; color: var(--muted); }
+
+  .fill {
+    background: #fff3cd; border-radius: 3px; padding: 0 4px;
+    color: #7a5d00; font-style: italic;
+  }
+
+  .two-col { display: flex; justify-content: space-between; gap: 16px; flex-wrap: wrap; }
+  .two-col > div { flex: 1; min-width: 220px; }
+
+  @media print {
+    body { padding: 0.4in 0.55in; font-size: 10pt; }
+    .fill { background: none; border-bottom: 1px dashed #b8860b; }
+    a { color: var(--ink); }
+    header h1, h2, strong { color: var(--accent); }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>Rahul Rangarao</h1>
+  <div class="tagline">Analytics → AI Engineering</div>
+  <div class="contact">
+    <span>North Brunswick, NJ</span>
+    <span>rahulmohanrangarao@gmail.com</span>
+    <span><a href="https://www.linkedin.com/in/rahul-mohan/">linkedin.com/in/rahul-mohan</a></span>
+    <span><a href="https://github.com/rahulmranga">github.com/rahulmranga</a></span>
+    <span><a href="https://rahulrangarao.dev">rahulrangarao.dev</a></span>
+  </div>
+</header>
+
+<section>
+  <h2>Summary</h2>
+  <p class="summary">Analytics professional at Bristol Myers Squibb with an end-to-end data skill set, transitioning into AI engineering on the strength of shipped, production-quality open source. Author of <strong>knowledge-worker</strong>, a published PyPI package that gives AI assistants durable, provenance-backed memory: a local-first knowledge graph with graph analytics, LLM-backed ingest, and a hard provenance invariant. Generalist by nature: comfortable owning a problem from data ingestion through modeling, tooling, and the report on a stakeholder's desk.</p>
+</section>
+
+<section>
+  <h2>Open Source</h2>
+  <h3>knowledge-worker <span class="role">· Author &amp; Maintainer</span></h3>
+  <div class="meta">Local-first personal knowledge graph for durable AI memory · <a href="https://pypi.org/project/knowledge-worker/">PyPI</a> · <a href="https://github.com/rahulmranga/knowledge-worker">GitHub</a> · May 2026 – present</div>
+  <ul>
+    <li>Designed and shipped a <strong>provenance-first knowledge graph engine</strong>: every durable claim must carry a source document and literal excerpt before entering the graph, enforced by deterministic validation.</li>
+    <li>Built the full CLI surface: ingest, query, path-finding, review/merge, context export, deep-dive pre-ingest workspaces, and an offline HTML graph visualizer.</li>
+    <li>Implemented a <strong>graph-analytics audit layer</strong> (PageRank, betweenness, k-core, community detection, weak-claim queues) so users can see what their AI memory actually knows, and where it is thin.</li>
+    <li>Architected open-web storage: canonical JSON-LD, append-only JSONL history, Turtle/RDF interchange; <strong>zero runtime dependencies</strong> in the core, with LLM backends (Anthropic, OpenAI, Ollama) as optional extras.</li>
+    <li>Established a 9-benchmark public test suite guarding provenance, recall, privacy boundaries, and context compactness; GitHub Actions CI across Python 3.10–3.13.</li>
+    <li>Published to PyPI (v0.8.0); <strong>~500 downloads/month</strong> and adopted for real cross-session AI workflows.</li>
+  </ul>
+  <ul>
+    <li><strong>kompress-ultra</strong> · context-management middleware experiments for AI agent frameworks: live-data TUI dashboards, knowledge-graph visualizations, Pages deploy pipeline.</li>
+    <li><strong>AG-UI protocol</strong> · open protocol work for agent/UI interoperability.</li>
+  </ul>
+</section>
+
+<section>
+  <h2>Experience</h2>
+  <h3>Bristol Myers Squibb <span class="role">· Analytics Professional</span></h3>
+  <div class="meta"><span class="fill">exact title(s)</span> · New Brunswick NJ / Austin TX / Bengaluru India · <span class="fill">dates</span></div>
+  <ul>
+    <li>Delivered end-to-end analysis, from data ingestion to stakeholder-ready reporting, within a single day; recognized with the <strong>Impact Award</strong> (Sept 2021).</li>
+    <li>Recognized with a <strong>SPOT Award</strong> (Aug 2020) for stakeholder communication and building business context around analytics deliverables.</li>
+    <li><span class="fill">2–3 bullets on your biggest BMS projects: platforms, data scale, teams served, tools, any internal ML/LLM work</span></li>
+  </ul>
+</section>
+
+<section>
+  <h2>Education</h2>
+  <div class="two-col">
+    <div><strong>The University of Texas at Austin</strong> · <span class="fill">degree/program</span> · 2022 – 2023</div>
+    <div><span class="fill">Undergraduate institution · degree</span> · 2014 – 2018</div>
+  </div>
+</section>
+
+<section>
+  <h2>Skills</h2>
+  <dl class="skills-grid">
+    <dt>Languages &amp; Data</dt><dd>Python, SQL, Snowflake, data warehousing, JSON-LD / RDF / linked data</dd>
+    <dt>AI Engineering</dt><dd>LLM API integration (Anthropic, OpenAI, Ollama), agent context management, retrieval &amp; memory systems, prompt/context engineering</dd>
+    <dt>Graph &amp; Analysis</dt><dd>knowledge graphs, PageRank / betweenness / k-core / community detection, provenance modeling</dd>
+    <dt>Engineering Practice</dt><dd>CLI tooling, Python packaging (PyPI), GitHub Actions CI, benchmark-driven testing, local-first architecture</dd>
+  </dl>
+</section>
+
+<section>
+  <h2>Certifications &amp; Awards</h2>
+  <ul>
+    <li>Hands On Essentials: Data Warehouse · Snowflake, Oct 2022</li>
+    <li>Impact Award (2021) · SPOT Award (2020) · Bristol Myers Squibb</li>
+    <li>Programming for Everybody (Python) · Coursera, 2016</li>
+  </ul>
+  <p style="color: var(--muted); font-size: 9.5pt;">Languages: English · Kannada · Hindi</p>
+</section>
+
+</body>
+</html>

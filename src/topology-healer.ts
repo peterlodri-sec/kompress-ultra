@@ -1,5 +1,5 @@
 /**
- * TopologyHealer — Self-healing brain graph topology (v14.0.0)
+ * TopologyHealer — Self-healing brain graph topology (v16.0.0)
  *
  * Detects and repairs common graph issues:
  *   - Orphaned nodes (no incoming/outgoing edges)

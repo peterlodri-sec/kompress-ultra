@@ -4,12 +4,10 @@
  * In-memory vector store with cosine similarity search and JSONL persistence.
  * Replaces Milvus. Zero external deps. Runs on any machine.
  *
- * Why JSONL: append-only log format. Each line = one vector + metadata.
- * Fast writes (append), readable (JSON), easy to debug.
- * For <10K entries, linear scan cosine sim is fast enough.
+ * Persistence currently uses a complete JSONL snapshot. Each line contains
+ * one vector and its metadata. The file is human-readable and easy to debug.
  *
- * Education: this is what vector DBs do internally — store vectors,
- * compute similarity, return top-K. Just at smaller scale.
+ * For <10K entries, linear cosine-similarity scanning is fast enough.
  *
  * Cross-session memory: singleton auto-loads from disk on first use.
  * Data survives restarts. Write + persist in session N → read in session N+1.
@@ -31,12 +29,44 @@ export interface SearchResult {
   metadata: Record<string, unknown>;
 }
 
-const DEFAULT_PATH = `${process.env.HOME}/.cache/ultrameshai/vector-store.jsonl`;
+const DEFAULT_PATH =
+  `${process.env.HOME}/.cache/ultrameshai/vector-store.jsonl`;
+
+/**
+ * Maintain only the best topK results while scanning.
+ *
+ * topK is normally very small (3–5), so keeping a tiny sorted array is
+ * simpler than maintaining a full heap and avoids sorting every match.
+ *
+ * Array is kept in ascending order: weakest result first.
+ */
+function insertTopK(
+  results: SearchResult[],
+  candidate: SearchResult,
+  topK: number,
+): void {
+  if (topK <= 0) return;
+
+  if (results.length < topK) {
+    results.push(candidate);
+    results.sort((a, b) => a.score - b.score);
+    return;
+  }
+
+  if (candidate.score <= results[0].score) return;
+
+  results[0] = candidate;
+  results.sort((a, b) => a.score - b.score);
+}
 
 export class LocalStore {
   private entries = new Map<string, StoreEntry>();
 
-  add(id: string, vector: number[], metadata: Record<string, unknown> = {}): void {
+  add(
+    id: string,
+    vector: number[],
+    metadata: Record<string, unknown> = {},
+  ): void {
     this.entries.set(id, {
       id,
       vector,
@@ -59,17 +89,30 @@ export class LocalStore {
 
   /**
    * Search top-K similar vectors by cosine similarity.
-   * O(n*d) — linear scan. Fast enough for <10K entries.
+   *
+   * Vector comparison remains O(n*d), but result selection is O(n*k)
+   * for small k rather than collecting and sorting all matching entries.
    */
   search(query: number[], topK: number = 5): SearchResult[] {
-    const scored: SearchResult[] = [];
+    const best: SearchResult[] = [];
+
     for (const entry of this.entries.values()) {
       const score = cosineSimilarity(query, entry.vector);
+
       if (score > 0) {
-        scored.push({ id: entry.id, score, metadata: entry.metadata });
+        insertTopK(
+          best,
+          {
+            id: entry.id,
+            score,
+            metadata: entry.metadata,
+          },
+          topK,
+        );
       }
     }
-    return scored.sort((a, b) => b.score - a.score).slice(0, topK);
+
+    return best.sort((a, b) => b.score - a.score);
   }
 
   /**
@@ -81,41 +124,66 @@ export class LocalStore {
     filter: (m: Record<string, unknown>) => boolean,
     topK: number = 5,
   ): SearchResult[] {
-    const scored: SearchResult[] = [];
+    const best: SearchResult[] = [];
+
     for (const entry of this.entries.values()) {
       if (!filter(entry.metadata)) continue;
+
       const score = cosineSimilarity(query, entry.vector);
+
       if (score > 0) {
-        scored.push({ id: entry.id, score, metadata: entry.metadata });
+        insertTopK(
+          best,
+          {
+            id: entry.id,
+            score,
+            metadata: entry.metadata,
+          },
+          topK,
+        );
       }
     }
-    return scored.sort((a, b) => b.score - a.score).slice(0, topK);
+
+    return best.sort((a, b) => b.score - a.score);
   }
 
-  /** Persist all entries to JSONL file. Overwrites file. */
+  /**
+   * Persist the current store as a complete JSONL snapshot.
+   */
   async persist(filepath: string = DEFAULT_PATH): Promise<void> {
     try {
       const dir = filepath.substring(0, filepath.lastIndexOf("/"));
-      if (!existsSync(dir)) mkdirSync(dir, { recursive: true });
+
+      if (!existsSync(dir)) {
+        mkdirSync(dir, { recursive: true });
+      }
+
       const lines: string[] = [];
+
       for (const entry of this.entries.values()) {
         lines.push(JSON.stringify(entry));
       }
+
       await Bun.write(filepath, lines.join("\n") + "\n");
     } catch {
       // silent — in-memory store still works
     }
   }
 
-  /** Load entries from JSONL file. Appends to current in-memory entries. */
+  /**
+   * Load entries from a JSONL snapshot into the current in-memory store.
+   */
   async load(filepath: string = DEFAULT_PATH): Promise<void> {
     try {
       if (!existsSync(filepath)) return;
+
       const text = await Bun.file(filepath).text();
       if (!text.trim()) return;
+
       for (const line of text.trim().split("\n")) {
         try {
           const entry = JSON.parse(line) as StoreEntry;
+
           if (entry && entry.id && entry.vector) {
             this.entries.set(entry.id, entry);
           }
@@ -124,17 +192,12 @@ export class LocalStore {
         }
       }
     } catch {
-      // silent — in-memory entries unaffected; retry on next load
+      // silent — in-memory entries unaffected
     }
   }
 }
 
 // ── Default singleton with auto-load ────────────────────────────────
-// Cross-session: loads persisted vectors from disk on first access.
-// No explicit init call needed — just import and use.
-//
-// @deprecated Use `createLocalStore()` + class API for isolated instances.
-// Singletons share state across modules and tests. Prefer new LocalStore().
 
 const defaultStore = new LocalStore();
 let loaded = false;
@@ -157,7 +220,10 @@ export async function addToStore(
 }
 
 /** @deprecated Use `store.search()` on a class instance. */
-export async function searchStore(query: number[], topK = 5): Promise<SearchResult[]> {
+export async function searchStore(
+  query: number[],
+  topK = 5,
+): Promise<SearchResult[]> {
   await ensureLoaded();
   return defaultStore.search(query, topK);
 }
@@ -192,7 +258,7 @@ export function storeSize(): number {
 /** @deprecated Use `store.clear()` on a class instance. */
 export function clearStore(): void {
   defaultStore.clear();
-  loaded = true; // prevent reload
+  loaded = true;
 }
 
 export function createLocalStore(): LocalStore {
@@ -201,25 +267,28 @@ export function createLocalStore(): LocalStore {
 
 /**
  * Query past memory relevant to a topic/goal.
- * Hash-embeds the topic, searches store, returns formatted context string.
- * Inject this into system prompt for cross-session continuity.
- *
- * Example usage:
- *   const memory = await queryMemory("build authentication");
- *   systemPrompt += "\n" + memory;
  */
-export async function queryMemory(topic: string, topK = 3): Promise<string> {
+export async function queryMemory(
+  topic: string,
+  topK = 3,
+): Promise<string> {
   const queryEmb = hashEmbedding(topic);
   const results = await searchStore(queryEmb, topK);
+
   if (results.length === 0) return "";
 
   const lines = ["── past memory ──"];
+
   for (const r of results) {
     const meta = r.metadata;
     const content = String(meta.content ?? meta.summary ?? r.id);
-    const source = String(meta.source ?? meta.classification ?? "store");
+    const source = String(
+      meta.source ?? meta.classification ?? "store",
+    );
+
     lines.push(`  [${source}] ${content.slice(0, 200)}`);
   }
+
   lines.push("──");
   return lines.join("\n");
 }

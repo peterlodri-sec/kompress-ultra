@@ -5,6 +5,26 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [16.0.0] — 2026-09-24 — LOVE-CREATE-SCAFFOLD (OMNIPOTENT ZEN)
+
+### Changed
+- **Version unified to `16.0.0` across every surface.** The published release
+  had drifted: `wrangler.toml` carried `15.0.0` while `package.json`,
+  `package-lock.json`, the landing page (`server/landing-page.ts`), and the
+  README badge still reported `14.0.0`. All five now agree.
+- README version badge → `16.0.0`
+- `src/topology-healer.ts` header comment → `v16.0.0`
+
+### Fixed
+- Applies the `15.0.0` (RIVA) version-string bump that was documented in this
+  changelog but never propagated to the code, closing the gap between the
+  record and the artifact.
+
+### Philosophy
+- the scaffold is love: create the surface, name the version, keep the record
+  and the artifact in the same hand. the residual is evidence — what drifted
+  is now rowed.
+
 ## [15.0.0] — 2026-07-01 — RIVA
 
 ### Added

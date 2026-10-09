@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Space Match</title>
+<meta name="description" content="Flip the cards, find the pairs — a memory game in the daytime cosmos.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600&display=swap" rel="stylesheet">
+<style>
+* { margin:0; padding:0; box-sizing:border-box; }
+html, body { height:100%; }
+body {
+  font-family:'Fredoka', system-ui, sans-serif;
+  background:linear-gradient(180deg, #0a0d2a 0%, #141838 60%, #241a45 100%);
+  color:#e6ecff;
+  display:flex; flex-direction:column; align-items:center;
+  min-height:100%; padding:16px;
+}
+body::before {
+  content:''; position:fixed; inset:0; pointer-events:none;
+  background-image:
+    radial-gradient(2px 2px at 12% 18%, #ffffffcc, transparent),
+    radial-gradient(1.5px 1.5px at 68% 8%, #ffffff99, transparent),
+    radial-gradient(2px 2px at 85% 32%, #ffffffbb, transparent),
+    radial-gradient(1.5px 1.5px at 30% 68%, #ffffff88, transparent),
+    radial-gradient(2px 2px at 55% 88%, #ffffffaa, transparent),
+    radial-gradient(1.5px 1.5px at 92% 72%, #ffffff99, transparent);
+}
+header { text-align:center; margin:8px 0 16px; }
+h1 { font-size:clamp(28px, 7vw, 44px); font-weight:600; letter-spacing:1px; color:#aee3ff; }
+.sub { font-size:15px; color:#8891b4; }
+#stats {
+  display:flex; gap:24px; margin-bottom:16px;
+  font-size:16px; color:#cfe4ff; font-weight:500;
+}
+#grid {
+  display:grid; grid-template-columns:repeat(4, 1fr); gap:10px;
+  width:min(92vw, 460px);
+}
+.card {
+  aspect-ratio:1; perspective:600px; cursor:pointer; border:none; background:none;
+}
+.card-inner {
+  width:100%; height:100%; position:relative;
+  transform-style:preserve-3d; transition:transform .35s ease;
+}
+.card.flipped .card-inner, .card.matched .card-inner { transform:rotateY(180deg); }
+.face {
+  position:absolute; inset:0; border-radius:16px;
+  display:flex; align-items:center; justify-content:center;
+  backface-visibility:hidden; -webkit-backface-visibility:hidden;
+}
+.back {
+  background:#2c3a8c; color:#aee3ff; font-size:clamp(20px, 6vw, 30px);
+  box-shadow:0 3px 0 #1c2870, 0 0 14px #2c3a8c66;
+}
+.front {
+  background:#1a2050; transform:rotateY(180deg);
+  font-size:clamp(28px, 9vw, 46px);
+  box-shadow:0 3px 0 #0c1030;
+}
+.card.matched .front { outline:3px solid #4ade8c; outline-offset:-3px; box-shadow:0 3px 0 #0c1030, 0 0 16px #4ade8c55; }
+.card.matched { animation:pop .4s ease; cursor:default; }
+@keyframes pop { 50% { transform:scale(1.08); } }
+.card:focus-visible { outline:3px solid #7ab3ff; outline-offset:2px; border-radius:16px; }
+#win {
+  position:fixed; inset:0; background:#0a0d2aee;
+  display:none; flex-direction:column; align-items:center; justify-content:center; gap:12px;
+  text-align:center; z-index:10;
+}
+#win h2 { font-size:clamp(28px, 8vw, 42px); color:#aee3ff; }
+#win p { color:#8891b4; font-size:17px; }
+.big-btn {
+  margin-top:12px; padding:14px 36px; border:none; border-radius:28px;
+  background:#0e5bd8; color:#fff; font-family:inherit; font-size:18px; font-weight:600;
+  cursor:pointer; box-shadow:0 4px 0 #0a41a0;
+}
+.big-btn:active { transform:translateY(3px); box-shadow:0 1px 0 #0a41a0; }
+.home {
+  margin-top:18px; font-size:15px; color:#8891b4; text-decoration:none;
+  padding:8px 16px; border-radius:20px; background:#ffffff14;
+}
+.home:hover { color:#cfe4ff; }
+.confetti {
+  position:fixed; top:-40px; font-size:26px; z-index:9; pointer-events:none;
+  animation:fall linear forwards;
+}
+@keyframes fall { to { transform:translateY(110vh) rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) {
+  .card-inner { transition:none; }
+  .card.matched { animation:none; }
+  .confetti { display:none; }
+}
+</style>
+</head>
+<body>
+
+<header>
+  <h1>SPACE MATCH</h1>
+  <div class="sub">flip the cards · find the pairs</div>
+</header>
+
+<div id="stats">
+  <span>Moves: <b id="moves">0</b></span>
+  <span>Pairs: <b id="pairs">0</b>/8</span>
+</div>
+
+<div id="grid"></div>
+
+<a class="home" href="games.html">🏠 all games</a>
+
+<div id="win">
+  <h2>You matched the cosmos! 🎉</h2>
+  <p id="win-stats"></p>
+  <button class="big-btn" onclick="newGame()">Play again</button>
+  <a class="home" href="games.html">🏠 all games</a>
+</div>
+
+<script>
+const EMOJI = ['🚀','🪐','⭐','🌙','☄️','👽','🛸','🌞'];
+const grid = document.getElementById('grid');
+let first = null, lock = false, moves = 0, pairs = 0;
+
+function shuffle(a) {
+  for(let i=a.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [a[i],a[j]]=[a[j],a[i]]; }
+  return a;
+}
+
+function newGame() {
+  document.getElementById('win').style.display='none';
+  grid.innerHTML=''; first=null; lock=false; moves=0; pairs=0;
+  document.getElementById('moves').textContent='0';
+  document.getElementById('pairs').textContent='0';
+  shuffle([...EMOJI, ...EMOJI]).forEach(e => {
+    const card = document.createElement('button');
+    card.className='card'; card.dataset.emoji=e;
+    card.setAttribute('aria-label','hidden card');
+    card.innerHTML=`<div class="card-inner">
+      <div class="face back">✦</div>
+      <div class="face front">${e}</div>
+    </div>`;
+    card.addEventListener('click', () => flip(card));
+    grid.appendChild(card);
+  });
+}
+
+function flip(card) {
+  if(lock || card.classList.contains('flipped') || card.classList.contains('matched')) return;
+  card.classList.add('flipped');
+  card.setAttribute('aria-label', card.dataset.emoji);
+  if(!first) { first = card; return; }
+
+  moves++;
+  document.getElementById('moves').textContent = moves;
+
+  if(first.dataset.emoji === card.dataset.emoji) {
+    first.classList.add('matched'); card.classList.add('matched');
+    first = null; pairs++;
+    document.getElementById('pairs').textContent = pairs;
+    if(pairs === 8) setTimeout(win, 500);
+  } else {
+    lock = true;
+    const a = first; first = null;
+    setTimeout(() => {
+      a.classList.remove('flipped'); card.classList.remove('flipped');
+      a.setAttribute('aria-label','hidden card');
+      card.setAttribute('aria-label','hidden card');
+      lock = false;
+    }, 800);
+  }
+}
+
+function win() {
+  document.getElementById('win-stats').textContent = `All 8 pairs in ${moves} moves`;
+  document.getElementById('win').style.display='flex';
+  // Emoji confetti
+  const bits = ['⭐','🌟','✨','🎉','🪐'];
+  for(let i=0;i<24;i++) {
+    const c = document.createElement('div');
+    c.className='confetti';
+    c.textContent = bits[i % bits.length];
+    c.style.left = Math.random()*100+'vw';
+    c.style.animationDuration = (2+Math.random()*2)+'s';
+    c.style.animationDelay = (Math.random()*0.8)+'s';
+    document.body.appendChild(c);
+    setTimeout(() => c.remove(), 5000);
+  }
+}
+
+newGame();
+</script>
+</body>
+</html>

@@ -3,8 +3,8 @@ import type { Message, KompressStats } from "./types.js";
 export function computeDensity(messages: Message[]): number {
   if (messages.length < 2) return 0.0;
   const windowStart = Math.floor(messages.length / 3);
-  const recent = messages.slice(windowStart);
-  return recent.length / (messages.length || 1);
+  const recentLength = messages.length - windowStart;
+  return recentLength / messages.length;
 }
 
 export function adaptiveThreshold(density: number, base: number): number {

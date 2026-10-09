@@ -1,6 +1,6 @@
 {
   "name": "kompress-ultra",
-  "version": "15.0.0",
+  "version": "16.0.0",
   "description": "4-role living context layer for AI agent frameworks. Pluggable token estimation, instance-isolated state, auth-protected API.",
   "type": "module",
   "main": "./dist/index.js",
@@ -21,6 +21,14 @@
     "./circulator": {
       "import": "./dist/circulator.js",
       "types": "./dist/circulator.d.ts"
+    },
+    "./archivist": {
+      "import": "./dist/archivist.js",
+      "types": "./dist/archivist.d.ts"
+    },
+    "./originist": {
+      "import": "./dist/originist.js",
+      "types": "./dist/originist.d.ts"
     },
     "./errors": {
       "import": "./dist/errors.js",

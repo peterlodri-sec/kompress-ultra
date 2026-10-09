@@ -9,7 +9,11 @@
  */
 
 import { hashEmbedding } from "./hash.js";
-import { addToStore, searchStore, persistStore } from "./local-store.js";
+import {
+  addToStore,
+  searchStoreFiltered,
+  persistStore,
+} from "./local-store.js";
 import type { Node, Edge } from "./types.js";
 
 interface EmbeddingResult {
@@ -18,16 +22,36 @@ interface EmbeddingResult {
   text: string;
 }
 
-function embed(id: string, text: string): EmbeddingResult {
-  return { id, embedding: hashEmbedding(text), text };
+function embed(
+  id: string,
+  text: string,
+): EmbeddingResult {
+  return {
+    id,
+    embedding: hashEmbedding(text),
+    text,
+  };
 }
 
-export function embedNode(node: Node): EmbeddingResult {
-  return embed(node.id, `${node.id} ${node.label} ${node.type} layer:${node.layer} state:${node.state}`);
+export function embedNode(
+  node: Node,
+): EmbeddingResult {
+  return embed(
+    node.id,
+    `${node.id} ${node.label} ${node.type} ` +
+      `layer:${node.layer} state:${node.state}`,
+  );
 }
 
-export function embedEdge(edge: Edge): EmbeddingResult {
-  return embed(edge.id, `${edge.source} → ${edge.target} type:${edge.type} label:${edge.label} dir:${edge.direction}`);
+export function embedEdge(
+  edge: Edge,
+): EmbeddingResult {
+  return embed(
+    edge.id,
+    `${edge.source} → ${edge.target} ` +
+      `type:${edge.type} label:${edge.label} ` +
+      `dir:${edge.direction}`,
+  );
 }
 
 async function syncToStore(
@@ -36,45 +60,114 @@ async function syncToStore(
   text: string,
   metadata: Record<string, unknown>,
 ): Promise<boolean> {
-  await addToStore(storeId, embedding, { summary: text.slice(0, 8192), ...metadata });
+  await addToStore(
+    storeId,
+    embedding,
+    {
+      summary: text.slice(0, 8192),
+      ...metadata,
+    },
+  );
+
   await persistStore();
+
   return true;
 }
 
-export async function syncNodeToStore(node: Node): Promise<boolean> {
-  const { id, embedding, text } = embedNode(node);
-  return syncToStore(`brain-node-${id}`, embedding, text, {
-    type: node.type,
-    layer: node.layer,
-    state: node.state,
-    confidence: node.score,
-    source: "brain-node",
-  });
+export async function syncNodeToStore(
+  node: Node,
+): Promise<boolean> {
+  const {
+    id,
+    embedding,
+    text,
+  } = embedNode(node);
+
+  return syncToStore(
+    `brain-node-${id}`,
+    embedding,
+    text,
+    {
+      type: node.type,
+      layer: node.layer,
+      state: node.state,
+      confidence: node.score,
+      source: "brain-node",
+    },
+  );
 }
 
-export async function syncEdgeToStore(edge: Edge): Promise<boolean> {
-  const { id, embedding, text } = embedEdge(edge);
-  return syncToStore(`brain-edge-${id}`, embedding, text, {
-    type: edge.type,
-    direction: edge.direction,
-    confidence: edge.conductivity,
-    source: "brain-edge",
-  });
+export async function syncEdgeToStore(
+  edge: Edge,
+): Promise<boolean> {
+  const {
+    id,
+    embedding,
+    text,
+  } = embedEdge(edge);
+
+  return syncToStore(
+    `brain-edge-${id}`,
+    embedding,
+    text,
+    {
+      type: edge.type,
+      direction: edge.direction,
+      confidence: edge.conductivity,
+      source: "brain-edge",
+    },
+  );
 }
 
-async function searchBySource(query: string, sourcePrefix: string, topK = 5): Promise<string[]> {
+/**
+ * Search only entries belonging to the requested brain source.
+ *
+ * Filtering happens inside the vector-store scan, before top-K selection.
+ * This prevents unrelated memory entries from occupying the top-K slots
+ * and subsequently being discarded.
+ */
+async function searchBySource(
+  query: string,
+  sourcePrefix: string,
+  topK = 5,
+): Promise<string[]> {
   const queryEmb = hashEmbedding(query);
-  const results = await searchStore(queryEmb, topK);
+
+  const results = await searchStoreFiltered(
+    queryEmb,
+    (metadata) =>
+      String(metadata.source ?? "")
+        .startsWith(sourcePrefix),
+    topK,
+  );
+
   return results
-    .filter((r) => String(r.metadata.source ?? "").startsWith(sourcePrefix))
-    .map((r) => String(r.metadata.summary ?? "") || r.id)
+    .map(
+      (r) =>
+        String(r.metadata.summary ?? "") ||
+        r.id,
+    )
     .filter(Boolean);
 }
 
-export async function searchSimilarNodes(query: string, topK = 5): Promise<string[]> {
-  return searchBySource(query, "brain-node", topK);
+export async function searchSimilarNodes(
+  query: string,
+  topK = 5,
+): Promise<string[]> {
+  return searchBySource(
+    query,
+    "brain-node",
+    topK,
+  );
 }
 
-export async function searchSimilarEdges(query: string, topK = 5): Promise<string[]> {
-  return searchBySource(query, "brain-edge", topK);
+export async function searchSimilarEdges(
+  query: string,
+  topK = 5,
+): Promise<string[]> {
+  return searchBySource(
+    query,
+    "brain-edge",
+    topK,
+  );
 }

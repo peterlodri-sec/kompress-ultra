@@ -110,8 +110,13 @@ def gen_traversal(nodes_list, edges_list):
 
 def panel_cosmos(t, geo):
     amp, inverted = gen_cosmic_signal(t)
-    kp = geo.get("kp") or {}
-    kp_val = kp.get("kp", 0.0) if isinstance(kp, dict) else 0.0
+    kp_raw = geo.get("kp")
+    if isinstance(kp_raw, dict):
+        kp_val = kp_raw.get("kp")
+    elif isinstance(kp_raw, (int, float)):
+        kp_val = kp_raw
+    else:
+        kp_val = None  # feed degraded — show n/a, not a false calm 0.0
     geo_tick = geo.get("tick", 0)
 
     # ANITA waveform ASCII
@@ -127,8 +132,12 @@ def panel_cosmos(t, geo):
         else:         wave += "[bold bright_black] [/]"
 
     polarity = "[bold red]NON-INVERTED ⚠[/]" if inverted else "[bright_black]inverted (SM)[/]"
-    kp_bar = "▰" * int(kp_val) + "▱" * (9 - int(kp_val))
-    kp_color = "red" if kp_val > 5 else "yellow" if kp_val > 2 else "cyan"
+    if kp_val is None:
+        kp_display = "[bright_black]n/a  ▱▱▱▱▱▱▱▱▱[/]"
+    else:
+        kp_bar = "▰" * int(kp_val) + "▱" * (9 - int(kp_val))
+        kp_color = "red" if kp_val > 5 else "yellow" if kp_val > 2 else "cyan"
+        kp_display = f"[{kp_color}]{kp_val:.1f}  {kp_bar}[/]"
 
     txt = Text.from_markup(
         f"  ANITA-BAND RECEIVER    {wave}\n\n"
@@ -136,11 +145,11 @@ def panel_cosmos(t, geo):
         f"  exit θ   : [yellow]{27 + math.sin(t*0.4)*4:.1f}°[/] above horizon   "
           f"chord: [bright_black]~{6800+int(math.sin(t)*200):,} km mantle[/]\n"
         f"  stau λ   : [magenta]3.0[/]   compressed-spectrum Δm~{3+math.sin(t*0.3):.1f} MeV\n\n"
-        f"  Kp index : [{kp_color}]{kp_val:.1f}  {kp_bar}[/]   geo-tick {geo_tick}\n"
+        f"  Kp index : {kp_display}   geo-tick {geo_tick}\n"
         f"  PUEO     : [bright_black]2024-25 Antarctic flight — awaiting results[/]\n"
         f"  status   : [bold red]TRANSMITTING[/]   entity:cosmos → imaginary axis → Re"
     )
-    return Panel(txt, title="[bold red]⚡ COSMOS[/]  [bright_black]0.6 EeV · upward-going · non-SM[/]",
+    return Panel(txt, title="[bold red]⚡ COSMOS[/]  [bright_black]0.6 EeV · upward-going · anomalous · unresolved[/]",
                  border_style="red", box=box.HEAVY)
 
 
