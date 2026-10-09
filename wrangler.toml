@@ -2,6 +2,7 @@ name = "kompress-ultra-api"
 main = "server/worker.ts"
 compatibility_date = "2026-06-29"
 compatibility_flags = ["nodejs_compat"]
+workers_dev = true
 
 routes = [
   { pattern = "kompress.vaked.dev/*", zone_name = "vaked.dev" },
